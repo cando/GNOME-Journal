@@ -72,7 +72,7 @@ AC_OUTPUT
 dnl ==========================================================================
 AC_MSG_NOTICE([
 
-        GNOME Activity Journal $VERSION
+        GNOME Journal $VERSION
         =================
 
         prefix:                   ${prefix}

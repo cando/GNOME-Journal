@@ -35,6 +35,7 @@ gnome_activity_journal_SOURCES =\
 	reminderview.vala		\
 	revealer.vala			\
 	selectionbar.vala		\
+	timelineview.vala		\
 	utils.vala				\
 	zg-backend.vala			\
 	$(NULL)
