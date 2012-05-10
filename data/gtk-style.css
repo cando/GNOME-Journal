@@ -1,0 +1,114 @@
+@define-color journal_roundbox_bg_color lighter (@theme_bg_color);
+@define-color journal_timeline_color darker(@theme_bg_color);
+@define-color journal_label_color shade (@theme_bg_color, 0.9);
+
+/* DAY VIEW STYLE */
+.dayview {
+    background-color: @journal_label_color;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-image: none;
+    background-image: none;
+}
+
+@define-color label shade (@journal_label_color, 0.4);
+#dayview-label {
+    font-size: 11;
+    font-weight: bold;
+    color: @label;
+
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+/* TIMELINE STYLE */
+.roundbox {
+    background-color: @journal_roundbox_bg_color;
+    border-color: @journal_timeline_color;
+}
+
+.timeline-gtk {
+    color: @journal_timeline_color;
+    border-color: @journal_roundbox_bg_color;
+}
+
+.timeline-clutter {
+    background-color: @journal_timeline_color;
+    color: @journal_roundbox_bg_color;
+}
+
+GtkDrawingArea {
+    background-color: alpha(#000, 0.0);
+}
+
+/* OSD STYLE */
+.separator {
+    -GtkWidget-wide-separators: true;
+    -GtkWidget-separator-height: 1;
+}
+
+.throbber {
+    background-image: none;
+    background-color: alpha(#000, 0.0);
+}
+
+.osd {
+    background-image: none;
+    background-color: alpha(#000, 0.0);
+    color: #ffffff;
+}
+
+.osd .toolbar {
+    padding: 6px 6px;
+    border-style: none;
+    border-radius: 5px;
+    border-width: 0;
+
+    background-image: none;
+    background-color: alpha(#fff, 0.15);
+
+    text-shadow: 1 1 black;
+    icon-shadow: 1 1 black;
+}
+
+.osd .toolbar .favorite {
+    color: shade(@theme_selected_bg_color, 1.20);
+}
+
+.osd .toolbar .separator {
+    color: alpha(@theme_tooltip_fg_color, 0.30);
+}
+
+.osd .toolbar .button:hover {
+    background-image: -gtk-gradient(linear, left top, left bottom,
+                                    from(alpha(@theme_tooltip_fg_color, 0.00)),
+                                    color-stop(0.50, alpha(@theme_tooltip_fg_color, 0.15)),
+                                    to(alpha(@theme_tooltip_fg_color, 0.00)));
+
+    border-image: none;
+    border-style: none;
+    border-radius: 2px;
+    border-width: 0;
+}
+
+.osd .toolbar .button:active {
+    background-image: none;
+    background-color: alpha(@theme_tooltip_fg_color, 0.15);
+
+    border-image: none;
+    border-style: none;
+    border-radius: 2px;
+    border-width: 0;
+}
+
+.osd .toolbar .button:active:hover {
+    background-image: -gtk-gradient(linear, left top, left bottom,
+                                    from(alpha(@theme_tooltip_fg_color, 0.15)),
+                                    color-stop(0.50, alpha(@theme_tooltip_fg_color, 0.30)),
+                                    to(alpha(@theme_tooltip_fg_color, 0.15)));
+
+    border-style: none;
+    border-image: none;
+    border-radius: 2px;
+    border-width: 0;
+}
+

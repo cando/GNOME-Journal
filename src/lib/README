@@ -1,0 +1,5 @@
+
+GdMainColumns columns; (adjust in gd-main-view-generic? and other files?
+utils not useful;
+
+gnome-desktop-3.0 vapi..use only DesktopThumbnailFactory??

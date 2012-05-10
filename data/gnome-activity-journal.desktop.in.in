@@ -1,0 +1,11 @@
+[Desktop Entry]
+_Name=Activity Journal
+_GenericName=Simple journal application
+_Comment=View your activities
+Exec=gnome-activity-journal
+Icon=gnome-activity-journal
+Terminal=false
+Type=Application
+StartupNotify=true
+OnlyShowIn=GNOME;
+Categories=GNOME;GTK;

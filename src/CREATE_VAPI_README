@@ -1,0 +1,26 @@
+***************************************************************+
+Create libgdprivate-1.0 vapi:
+
+execute these commands in order from this directory.
+
+1) g-ir-scanner --namespace=Gd --nsversion=1.0 --include=Gtk-3.0 --pkg=gtk+-3.0 --library=./libgdprivate-1.0.la ./lib/* -o Gd-1.0.gir
+
+2) g-ir-compiler Gd-1.0.gir -o Gd-1.0.typelib
+
+IMPORTANT! Remove the <package ="gtk+-3.0"..> xml node from the gir...
+
+3) vapigen -d ../vapi --library ./libgdprivate-1.0.la --pkg gtk+-3.0 Gd-1.0.gir
+
+IMPORTANT: correct the cheader_filename field in the vapi!
+
+The add the Gd-1.0.h header including all the important headers
+
+
+**************************************************************************************
+Create gnome-desktop-3 vapi:
+
+vapigen --library libgnome-desktop /usr/share/gir-1.0/GnomeDesktop-3.0.gir --pkg gtk+-3.0
+
+***********************************************************************************
+
+//TODO scriptize this!
