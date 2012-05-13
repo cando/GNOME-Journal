@@ -7,6 +7,7 @@ private class Journal.Selectionbar: GLib.Object {
     public static const float spacing = 60.0f;
 
     private App app;
+    private Clutter.Stage stage;
     private GtkClutter.Actor gtk_actor;
     private Gtk.Toolbar toolbar;
     private Gtk.ToggleToolButton favorite_btn;
@@ -14,8 +15,9 @@ private class Journal.Selectionbar: GLib.Object {
     
     private bool _visible;
 
-    public Selectionbar (App app) {
+    public Selectionbar (App app, Clutter.Stage stage) {
         this.app = app;
+        this.stage = stage;
         
         _visible = false;
 
@@ -46,7 +48,7 @@ private class Journal.Selectionbar: GLib.Object {
             toggle_visible ();
         });
 
-        app.stage.add_actor (actor);
+        stage.add_actor (actor);
     }
 
     public void toggle_visible () {

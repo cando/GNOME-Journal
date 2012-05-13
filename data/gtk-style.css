@@ -2,6 +2,14 @@
 @define-color journal_timeline_color darker(@theme_bg_color);
 @define-color journal_label_color shade (@theme_bg_color, 0.9);
 
+GtkDrawingArea {
+    background-color: alpha(#000, 0.0);
+}
+
+GtkNotebook{
+    background-color: alpha(#000, 0.0);
+}
+
 /* DAY VIEW STYLE */
 .dayview {
     background-color: @journal_label_color;
@@ -36,8 +44,34 @@
     color: @journal_roundbox_bg_color;
 }
 
-GtkDrawingArea {
-    background-color: alpha(#000, 0.0);
+/*TIMELINE FILTER*/
+
+GtkScale.mark {
+    color: @theme_fg_color;
+}
+
+.vtimenav GtkButton {
+    background-color: @journal_label_color;
+    border-image: none;
+    background-image: none;
+    padding: 10px;
+    border-bottom-right-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+.htimenav GtkButton{
+    background-color: @journal_label_color;
+    border-image: none;
+    background-image: none;
+    padding: 10px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+@define-color journal_label_hover_color lighter (@journal_label_color);
+.vtimenav GtkButton:hover,
+.htimenav GtkButton:hover{
+    background-color: @journal_label_hover_color;
 }
 
 /* OSD STYLE */
@@ -112,3 +146,8 @@ GtkDrawingArea {
     border-width: 0;
 }
 
+.frame {
+    color: lighter (@theme_fg_color);
+    border-style: none;
+    border-width: 0;
+}

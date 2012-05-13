@@ -2,7 +2,6 @@
 using Gtk;
 
 public class Journal.App: GLib.Object {
-    public Clutter.Actor actor { get { return stage; } }
     public Gtk.ApplicationWindow window;
     public bool fullscreen {
         get { return Gdk.WindowState.FULLSCREEN in window.get_window ().get_state (); }
@@ -15,22 +14,23 @@ public class Journal.App: GLib.Object {
     }
     private bool maximized { get { return Gdk.WindowState.MAXIMIZED in window.get_window ().get_state (); } }
     public Gtk.Notebook notebook;
-    public Gtk.Box main_box;
-    public GtkClutter.Embed embed;
-    public Clutter.Stage stage;
+    public Gtk.Box main_box; 
     public Clutter.Actor box; // the whole app box
     public GLib.SimpleAction action_fullscreen;
     public uint duration;
 
     private Gtk.Application application;
-    private Clutter.BoxLayout box_table;
-    private LoadingActor loading_actor;
     private DayView day_view;
-    private ClutterRoundBoxView crv;
-    private GtkRoundBoxView grv;
+    private ClutterVTL cvtl;
+    private ClutterHTL chtl;
+    private GtkVTL gvtl;
     private ReminderView reminder_view;
     private Revealer revealer;
     private Gd.MainToolbar main_toolbar;
+    
+    //Loading actor
+    private LoadingActor loading;
+    private LoadingActor loading2;
 
     private ZeitgeistBackend _backend;
     
@@ -94,7 +94,6 @@ public class Journal.App: GLib.Object {
         application.activate.connect_after ((app) => {
             window.present ();
         });
-    
     }
 
     public int run () {
@@ -118,6 +117,7 @@ public class Journal.App: GLib.Object {
         window = new Gtk.ApplicationWindow (application);
         window.show_menubar = false;
         window.hide_titlebar_when_maximized = true;
+        window.set_default_size (840, 680);
 
         // restore window geometry/position
         var size = Utils.settings.get_value ("window-size");
@@ -159,14 +159,14 @@ public class Journal.App: GLib.Object {
                 if (mode) {
                     this.main_toolbar.set_mode (Gd.MainToolbarMode.SELECTION);
                     main_toolbar.set_labels (null, _("(Click on items to select them)"));
-                    //revealer.reveal ();
+                    revealer.reveal ();
                 }
                 else {
                     main_toolbar.set_mode (Gd.MainToolbarMode.OVERVIEW);
                     int num_days = 3;
                     string label = _(@"Last $num_days days");
                     main_toolbar.set_labels (_("Timeline"), label);
-                    //revealer.unreveal ();
+                    revealer.unreveal ();
                 }
         });
         notebook = new Gtk.Notebook ();
@@ -176,47 +176,73 @@ public class Journal.App: GLib.Object {
         main_box.pack_start (main_toolbar, false, false, 0);
         main_box.pack_start (notebook, true, true, 0);
 
+        window.delete_event.connect (() => { return quit (); });
+        window.key_press_event.connect (on_key_pressed);
+        
+        //CLUTTER VTL
+        var embed = new GtkClutter.Embed ();
+        var stage = embed.get_stage () as Clutter.Stage;
+        stage.set_color (Utils.gdk_rgba_to_clutter_color (Utils.get_journal_bg_color ()));
+        cvtl = new ClutterVTL (this, stage);
+        TimeNav vnav = new TimeNav (Orientation.VERTICAL);
+        vnav.go_to_date.connect ((date) => {cvtl.jump_to_day(date);});
+        
+        stage.add_actor (cvtl.viewport);
+        var box = new Box (Orientation.HORIZONTAL, 0);
+        box.pack_start (vnav, false, false, 0);
+        box.pack_start (embed, true, true, 0);
+        notebook.append_page (box, null);
+        
+        loading = new LoadingActor (this, stage);
+        loading.start ();
+        //CLUTTER HTL
+        var embed2 = new GtkClutter.Embed ();
+        var stage2 = embed2.get_stage () as Clutter.Stage;
+        stage2.set_color (Utils.gdk_rgba_to_clutter_color (Utils.get_journal_bg_color ()));
+        chtl = new ClutterHTL (this, stage2);
+        TimeNav hnav = new TimeNav (Orientation.HORIZONTAL);
+        hnav.go_to_date.connect ((date) => {chtl.jump_to_day(date);});
+        
+        stage2.add_actor (chtl.viewport);
+        var box2 = new Grid ();
+        box2.orientation = Orientation.VERTICAL;
+        box2.add (embed2);
+        box2.add (hnav);
+        notebook.append_page (box2, null);
+        
+        loading2 = new LoadingActor (this, stage2);
+        loading2.start ();
+        //GTK VTL FIXME doesn't work!
+        gvtl = new GtkVTL (this);
+        ScrolledWindow sw = new ScrolledWindow (null, null);
+        sw.set_policy (PolicyType.AUTOMATIC, PolicyType.AUTOMATIC);
+        sw.add_with_viewport (gvtl);
+        //notebook.append_page (sw, null);
+
+        //THREE COLUMN VIEW
         //FIXME Make the num of days displayed a preferences??
         int num_days = 3;
         day_view = new DayView (this, num_days);
         
-//        revealer = new Revealer ();
-//        reminder_view = new ReminderView (this);
-//        reminder_view.set_hexpand (false);
-//        revealer.add (reminder_view);
+        string label = _(@"Last $num_days days");
+        main_toolbar.set_labels (_("Timeline"), label);
+        
+        revealer = new Revealer ();
+        reminder_view = new ReminderView (this);
+        reminder_view.set_hexpand (false);
+        revealer.add (reminder_view);
 
         var grid = new Grid ();
         grid.set_orientation (Orientation.HORIZONTAL);
         grid.add (day_view);
-        //grid.add (revealer);
+        grid.add (revealer);
         notebook.append_page (grid, null);
 
-        string label = _(@"Last $num_days days");
-        main_toolbar.set_labels (_("Timeline"), label);
+        window.show_all();
 
-        embed = new GtkClutter.Embed ();
-        notebook.append_page (embed, null);
-        stage = embed.get_stage () as Clutter.Stage;
-        stage.set_color (Utils.gdk_rgba_to_clutter_color (Utils.get_journal_bg_color ()));
-
-        window.delete_event.connect (() => { return quit (); });
-        window.key_press_event.connect (on_key_pressed);
-
-        crv = new ClutterRoundBoxView (this);
-        grv = new GtkRoundBoxView (this);
-        ScrolledWindow sw = new ScrolledWindow (null, null);
-        sw.set_policy (PolicyType.AUTOMATIC, PolicyType.AUTOMATIC);
-        sw.add_with_viewport (grv);
-        notebook.append_page (sw, null);
         
-        loading_actor = new LoadingActor(this);
-        loading_actor.start ();
-        
-        
-        main_box.show_all ();
-        
-//        revealer.set_no_show_all (true);
-//        revealer.hide ();
+        revealer.set_no_show_all (true);
+        revealer.hide ();
     }
 
     public bool quit () {

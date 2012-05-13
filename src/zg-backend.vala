@@ -99,7 +99,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
         rs = yield zg_log.find_events (tr, (owned) ptr_arr,
                                        Zeitgeist.StorageState.ANY,
                                        256,
-                                       Zeitgeist.ResultType.MOST_POPULAR_SUBJECTS,
+                                       Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
                                        null);
 
         foreach (Zeitgeist.Event e1 in rs)
@@ -117,7 +117,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
         rs = yield zg_log.find_events (tr, (owned) ptr_arr,
                                        Zeitgeist.StorageState.ANY,
                                        128,
-                                       Zeitgeist.ResultType.MOST_POPULAR_SUBJECTS,
+                                       Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
                                        null);
 
         foreach (Zeitgeist.Event e2 in rs)
@@ -147,9 +147,9 @@ public class Journal.ZeitgeistBackend: GLib.Object
           DateTime date = new DateTime.from_unix_utc (timestamp).to_local ();
           //TODO efficiency here? Use String? Int? Quark?
           string key = date.format("%Y-%m-%d");
-          if (!days_map.has_key(key))
+          if (days_map.has_key(key) == false)
             days_map[key] = new Gee.ArrayList<Zeitgeist.Event> ();
-          days_map[key].add(e1);
+          days_map[key].add (e1);
         }
         
         events_loaded ();

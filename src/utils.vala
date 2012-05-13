@@ -43,6 +43,24 @@ private class Journal.Utils : Object{
         style.add_class ("theme_bg_color");
         return style.get_background_color (0);
     }
+    
+    public static Gdk.RGBA get_timeline_bg_color () {
+        var style = new Gtk.StyleContext ();
+        var path = new Gtk.WidgetPath ();
+        path.append_type (typeof (Gtk.Window));
+        style.set_path (path);
+        style.add_class ("timeline-clutter");
+        return style.get_background_color (0);
+    }
+    
+    public static Gdk.RGBA get_timeline_circle_color () {
+        var style = new Gtk.StyleContext ();
+        var path = new Gtk.WidgetPath ();
+        path.append_type (typeof (Gtk.Window));
+        style.set_path (path);
+        style.add_class ("timeline-clutter");
+        return style.get_color (0);
+    }
 
     public static int getIconSize() {
 //        int view_type = settings.get_int ("mainview-type");
