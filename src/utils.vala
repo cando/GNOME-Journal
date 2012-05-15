@@ -110,5 +110,29 @@ private class Journal.Utils : Object{
     yield;
     return result;
     }
+    
+    //DATE UTILS
+    public static string get_start_of_the_day_string (int64 time) {
+        var start_of_day = get_start_of_the_day (time);
+        return start_of_day.format("%Y-%m-%d");
+    }
+    
+    public static DateTime get_start_of_the_day (int64 time) {
+        int64 timestamp = time / 1000;
+        //TODO To localtime here? Zeitgeist uses UTC timestamp, right?
+        DateTime date = new DateTime.from_unix_utc (timestamp).to_local ();
+        int day, month, year;
+        date.get_ymd (out year, out month, out day);
+        var start_of_day = new DateTime.local (year, month, day, 0, 0, 0);
+        return start_of_day;
+    }
+    
+    public static DateTime get_start_of_today () {
+        var today = new DateTime.now_local ();
+        int day, month, year;
+        today.get_ymd (out year, out month, out day);
+        today = new DateTime.local (year, month, day, 0, 0, 0);
+        return today;
+    }
 
 }

@@ -8,127 +8,6 @@ enum Side {
  BOTTOM
 }
 
-private class Journal.TimeNav : Box {
-    private Scale slider;
-    private ButtonBox button_box;
-
-    private Pango.AttrList attr_list;
-    
-    private int slide_offset = 10;
-
-    public static string[] times_label = {
-      "Today",
-      "Yesterday",
-      "2 Days Ago",
-      "3 Days Ago",
-      "This Week",
-      "Two Weeks Ago",
-      "This Month",
-      "3 Month Ago",
-      "Last year"
-    };
-    
-    private Gee.HashMap<string, DateTime> jump_date;
-    
-    public signal void go_to_date (string date);
-
-    public TimeNav (Orientation orientation){
-        var box_orientation = Orientation.VERTICAL;
-        if (orientation == Orientation.VERTICAL)
-            box_orientation = Orientation.HORIZONTAL;
-        
-        Object (orientation: box_orientation, spacing: 0);
-        button_box = new ButtonBox (orientation);
-        button_box.set_layout (ButtonBoxStyle.SPREAD);
-        
-        var offset = slide_offset;
-        Adjustment adj = new Adjustment (0, 0, times_label.length*offset, 1, offset, offset);
-        slider = new Scale (orientation, adj);
-        slider.draw_value = false;
-        slider.sensitive = false;
-        slider.change_value.connect ((st, new_value) => {
-            calculate_jump_date (new_value);
-            return false;
-        });
-
-        float i = 0;
-        foreach(string s in times_label) {
-            slider.add_mark(i, PositionType.TOP, s);
-            i += offset;
-        }
-        
-        this.jump_date = new Gee.HashMap<string, DateTime> ();
-        var today = new DateTime.now_local ();
-        int day, month, year;
-        today.get_ymd (out year, out month, out day);
-        today = new DateTime.local (year, month, day, 0, 0, 0);
-
-        jump_date.set (times_label[0], today);
-        jump_date.set (times_label[1], today.add_days (-1));
-        jump_date.set (times_label[2], today.add_days (-2));
-        jump_date.set (times_label[3], today.add_days (-3));
-        jump_date.set (times_label[4], today.add_days (-7));
-        jump_date.set (times_label[5], today.add_days (-7*2));
-        jump_date.set (times_label[6], today.add_days (-30));
-        jump_date.set (times_label[7], today.add_days (-30*3));
-        jump_date.set (times_label[8], today.add_days (-365));
-
-        setup_ui ();
-        if (orientation == Orientation.VERTICAL)
-            this.get_style_context ().add_class ("vtimenav");
-        else
-            this.get_style_context ().add_class ("htimenav");
-    }
-    
-    private void load_attributes () {
-        attr_list = new Pango.AttrList ();
-        var desc = new Pango.FontDescription ();
-        desc.set_weight (Pango.Weight.BOLD);
-        var attr_f = new Pango.AttrFontDesc (desc);
-        attr_list.insert ((owned) attr_f);
-    }
-    
-    private void setup_ui () {
-        load_attributes ();
-        
-        this.pack_start (button_box, true, true, 0);
-        //FIXME
-        //this.pack_start (slider, false, false, 0);
-        int i = 0;
-        foreach(string s in times_label) {
-            Button b = new Button.with_label (s);
-            //Let's highlight Today.
-            if (i == 0) {
-                Label label = (Label) b.get_child ();
-                label.attributes = attr_list;
-           }
-            b.clicked.connect (() => {
-                foreach (Widget w in button_box.get_children ()) {
-                    Label other_label = (Label)((Button)w).get_child ();
-                    other_label.attributes = null;
-                 }
-                Label label = (Label) b.get_child ();
-                label.attributes = attr_list;
-                DateTime date = jump_date.get (label.label);
-                this.go_to_date (date.format("%Y-%m-%d"));
-            });
-            button_box.pack_start (b, true, true, 0);
-            i++;
-        }
-        this.show_all();
-    }
-    
-    private void calculate_jump_date (double new_value) {
-        if (new_value % slide_offset == 0) {
-            int i = (int) (new_value / slide_offset);
-            DateTime date = jump_date.get (times_label[i]);
-            this.go_to_date (date.format("%Y-%m-%d"));
-        }
-        else {
-            //TODO
-        }
-    }
-}
 
 private class Journal.ClutterVTL : Object {
     public Clutter.Actor viewport;
@@ -136,8 +15,9 @@ private class Journal.ClutterVTL : Object {
     private ActivityModel model;
     private App app;
     private Clutter.Stage stage;
-    private Clutter.Actor timeline;
-    private VTimeline timeline_gtk;
+    private VTimeline timeline;
+    
+    private ActivityFactory activity_factory;
     
     private Gee.HashMap<string, int> y_positions;
 
@@ -145,6 +25,7 @@ private class Journal.ClutterVTL : Object {
         this.model = new ActivityModel ();
         this.app = app;
         this.stage = stage;
+        this.activity_factory = new ActivityFactory ();
         y_positions = new Gee.HashMap<string, int> ();
 
         app.backend.events_loaded.connect (() => {
@@ -157,12 +38,11 @@ private class Journal.ClutterVTL : Object {
         viewport.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.WIDTH, 0));
         
         //Timeline
-        timeline_gtk = new VTimeline ();
-        timeline = new GtkClutter.Actor.with_contents (timeline_gtk);
-        timeline.add_constraint (new Clutter.BindConstraint (viewport, Clutter.BindCoordinate.HEIGHT, 0));
+        timeline = new VTimeline ();
+        //timeline.add_constraint (new Clutter.BindConstraint (viewport, Clutter.BindCoordinate.HEIGHT, 0));
         timeline.add_constraint (new Clutter.AlignConstraint (stage, Clutter.AlignAxis.X_AXIS, 0.5f));
         
-        viewport.add_actor (timeline); 
+        viewport.add_actor (timeline);
         viewport.scroll_event.connect ( (e) => {
         
         float old_y;
@@ -199,10 +79,10 @@ private class Journal.ClutterVTL : Object {
         int type = 0;
         Side side;
         float offset = 0;
-        GtkClutter.Actor actor = null;
+        GtkClutter.Actor actor;
         foreach (Zeitgeist.Event e in all_activities)
         {
-            GenericActivity activity = new GenericActivity (e);
+            GenericActivity activity = activity_factory.get_activity_for_event (e);
             model.add_activity (activity);
             if (type % 2 == 0) 
                 side = Side.RIGHT;
@@ -214,11 +94,38 @@ private class Journal.ClutterVTL : Object {
             r.add (rc);
             r.show_all ();
             
-            string date = get_date (activity.time);
+            string date = Utils.get_start_of_the_day_string (activity.time);
             if(y_positions.has_key (date) == false)
                 y_positions.set (date, i);
 
             actor = new GtkClutter.Actor.with_contents (r);
+            /****TODO MOVE THIS WHOLE CODE IN A CLASS WRAPPING THE RoundBoxContent***/
+            actor.reactive = true;
+            actor.background_color = {255, 255, 0, 255};
+            actor.enter_event.connect ((e) => {
+                double scale_x;
+                double scale_y;
+
+                actor.get_scale (out scale_x, out scale_y);
+
+                actor.animate (Clutter.AnimationMode.LINEAR, 1000,
+                       "scale-x", scale_x * 2,
+                       "scale-y", scale_y * 2,
+                       "opacity", 0);
+                
+                return false;
+            });
+            actor.leave_event.connect ((e) => {actor.set_scale (1.0, 1.0); return false;});
+            actor.button_release_event.connect ((e) => {
+                //TODO Improve here?
+                try {
+                    AppInfo.launch_default_for_uri (activity.uri, null);
+                } catch (Error e) {
+                    warning ("Error in launching: "+ activity.uri);
+                }
+                return false;
+            });
+            /****************************************************/
             viewport.add_actor (actor);
             if (type % 2 == 0)
                 offset = -(5 + actor.get_width());
@@ -226,31 +133,24 @@ private class Journal.ClutterVTL : Object {
                 offset = 5 + timeline.get_width ();
             actor.add_constraint (new Clutter.BindConstraint (timeline, Clutter.BindCoordinate.X, offset));  // timeline!
             actor.set_y (i);
-            timeline_gtk.add_circle (i);
+            timeline.add_circle (i);
             //i +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
             if (type % 2 == 1) i += 20;
             else i +=  (int)actor.get_height();
             type ++;
-        }
-    }
-    
-    private string get_date (int64 time) {
-        int64 timestamp = time / 1000;
-        //TODO To localtime here? Zeitgeist uses UTC timestamp, right?
-        DateTime date = new DateTime.from_unix_utc (timestamp).to_local ();
-        int day, month, year;
-        date.get_ymd (out year, out month, out day);
-        var start_of_day = new DateTime.local (year, month, day, 0, 0, 0);
-        return start_of_day.format("%Y-%m-%d");
+       }
+       
+       timeline.invalidate ();
     }
     
     public void jump_to_day (string date) {
         int y = 0;
         if (y_positions.has_key (date) == true) 
             y = this.y_positions.get (date);
-        else 
+        else {
             //jump to TODAY (y == 0)
-            warning ("Impossible to jump to this data...jumping to today");
+            app.osd_label.set_message_and_show (_("Impossible to jump to this data! Jumping to Today"));
+        }
 
          viewport.animate (Clutter.AnimationMode.EASE_OUT_CUBIC,
                           350,
@@ -267,20 +167,22 @@ private class Journal.ClutterHTL : Object {
     private Clutter.Actor timeline;
     private HTimeline timeline_gtk;
     
+    private ActivityFactory activity_factory;
+    
     private Gee.HashMap<string, int> x_positions;
 
     public ClutterHTL (App app, Clutter.Stage stage){
         this.model = new ActivityModel ();
         this.app = app;
         this.stage = stage;
+        this.activity_factory = new ActivityFactory ();
         x_positions = new Gee.HashMap<string, int> ();
 
 
         app.backend.events_loaded.connect (() => {
             load_events ();
         });
-        
-        
+
         viewport = new Clutter.Actor ();
         viewport.set_clip_to_allocation (true);
         viewport.set_reactive (true);
@@ -289,7 +191,8 @@ private class Journal.ClutterHTL : Object {
         //Timeline
         timeline_gtk = new HTimeline ();
         timeline = new GtkClutter.Actor.with_contents (timeline_gtk);
-        timeline.add_constraint (new Clutter.BindConstraint (viewport, Clutter.BindCoordinate.WIDTH, 0));
+        timeline.width = 8000;
+        //timeline.add_constraint (new Clutter.BindConstraint (viewport, Clutter.BindCoordinate.WIDTH, 0));
         timeline.add_constraint (new Clutter.AlignConstraint (stage, Clutter.AlignAxis.Y_AXIS, 0.5f));
 
         viewport.add_actor (timeline); 
@@ -330,7 +233,7 @@ private class Journal.ClutterHTL : Object {
         GtkClutter.Actor actor = null;
         foreach (Zeitgeist.Event e in all_activities)
         {
-            GenericActivity activity = new GenericActivity (e);
+            GenericActivity activity = activity_factory.get_activity_for_event (e);
             model.add_activity (activity);
             if (type % 2 == 0) 
                 side = Side.BOTTOM;
@@ -342,7 +245,7 @@ private class Journal.ClutterHTL : Object {
             r.add (rc);
             r.show_all ();
             
-            string date = get_date (activity.time);
+            string date = Utils.get_start_of_the_day_string (activity.time);
             if(x_positions.has_key (date) == false)
                 x_positions.set (date, i);
 
@@ -360,16 +263,6 @@ private class Journal.ClutterHTL : Object {
             else i +=  (int)actor.get_width();
             type ++;
         }
-    }
-    
-    private string get_date (int64 time) {
-        int64 timestamp = time / 1000;
-        //TODO To localtime here? Zeitgeist uses UTC timestamp, right?
-        DateTime date = new DateTime.from_unix_utc (timestamp).to_local ();
-        int day, month, year;
-        date.get_ymd (out year, out month, out day);
-        var start_of_day = new DateTime.local (year, month, day, 0, 0, 0);
-        return start_of_day.format("%Y-%m-%d");
     }
     
     public void jump_to_day (string date) {
@@ -518,7 +411,6 @@ private class Journal.GtkVTL : Layout {
         this.show_all ();
         
         adjust_ui ();
-    
     }
     
     private void adjust_ui (){
@@ -549,7 +441,7 @@ private class Journal.GtkVTL : Layout {
    }
 }
 
-private class Journal.VTimeline : DrawingArea {
+private class Journal.VTimeline : Clutter.CairoTexture {
 
     private Gee.ArrayList<int> point_circle;
     private const int len_arrow = 20; // hardcoded
@@ -559,27 +451,24 @@ private class Journal.VTimeline : DrawingArea {
     
     public VTimeline () {
         this.point_circle = new Gee.ArrayList<int> ();
-        this.get_style_context ().add_class ("timeline-clutter");
+        this.auto_resize = true;
+        invalidate ();
     }
     
     public void add_circle (int y) {
-        this.point_circle.add (y + arrow_origin - len_arrow / 2 + radius * 2 - 2); //?? why?
+        this.point_circle.add (y + arrow_origin + len_arrow /2 );
     }
     
-    public override bool draw(Cairo.Context ctx) {
-        var bg = this.get_style_context ().get_background_color (0);
+    public override bool draw (Cairo.Context ctx) {
+        var bg =  Utils.get_timeline_bg_color ();
         Clutter.Color backgroundColor = Utils.gdk_rgba_to_clutter_color (bg);
-        var color = this.get_style_context ().get_color (0);
+        var color = Utils.get_timeline_circle_color ();
         Clutter.Color circleColor = Utils.gdk_rgba_to_clutter_color (color);
 
-        Allocation allocation;
-        get_allocation (out allocation);
-        var height = allocation.height;
         var cr = ctx;
-        ctx.set_source_rgba (1.0, 1.0, 1.0, 0.0);
-        // Paint the entire window transparent to start with.
-        ctx.set_operator (Cairo.Operator.SOURCE);
-        ctx.paint ();
+        this.clear ();
+        uint height, width;
+        get_surface_size (out width, out height);
         //Draw the timeline
         Clutter.cairo_set_source_color(cr, backgroundColor);
         ctx.rectangle (radius, 0, timeline_width , height);
@@ -597,15 +486,16 @@ private class Journal.VTimeline : DrawingArea {
             ctx.fill ();
         }
 
-        return false;
+        return true;
         }
         
-   public override Gtk.SizeRequestMode get_request_mode () {
-       return SizeRequestMode.HEIGHT_FOR_WIDTH;
-   }
   
-   public override void get_preferred_width (out int min_width, out int nat_width) {
+   public override void get_preferred_width (float for_height,out float min_width, out float nat_width) {
        nat_width = min_width = 2 * radius + timeline_width;
+   }
+   
+   public override void get_preferred_height (float for_width,out float min_height, out float nat_height) {
+       nat_height = min_height = 8000;
    }
 
 }
@@ -623,7 +513,7 @@ private class Journal.HTimeline : DrawingArea {
     }
     
     public void add_circle (int x) {
-        this.point_circle.add (x + arrow_origin - len_arrow / 2 + radius * 2 - 2); //?? why?
+        this.point_circle.add (x + arrow_origin + len_arrow / 2); //?? why?
     }
     
     public override bool draw(Cairo.Context ctx) {
@@ -670,11 +560,13 @@ private class Journal.HTimeline : DrawingArea {
 
 }
 
-private class Journal.RoundBox : Frame {
+private class Journal.RoundBox : Button {
     private Side _arrowSide;
     private int _arrowOrigin = 30; 
-
+    private bool highlight;
+    
     public static int BORDER_WIDTH = 10;
+    
     
     public Side arrow_side {
         get { return _arrowSide; }
@@ -683,7 +575,11 @@ private class Journal.RoundBox : Frame {
     public RoundBox (Side side) {
        this._arrowSide = side;
        this.border_width = BORDER_WIDTH;
+       this.highlight = false;
        this.get_style_context ().add_class ("roundbox");
+
+       add_events (Gdk.EventMask.ENTER_NOTIFY_MASK|
+                   Gdk.EventMask.LEAVE_NOTIFY_MASK);
     }
 
     public override bool draw (Cairo.Context ctx) {
@@ -695,9 +591,15 @@ private class Journal.RoundBox : Frame {
 
         var halfBorder = borderWidth / 2;
         var halfBase = Math.floor(baseL/2);
-
-        var bc = this.get_style_context ().get_border_color (0);
-        Clutter.Color borderColor = Utils.gdk_rgba_to_clutter_color (bc);
+        
+        Clutter.Color borderColor;
+        if (!highlight) {
+            var bc = this.get_style_context ().get_border_color (0);
+            borderColor = Utils.gdk_rgba_to_clutter_color (bc);
+        }
+        else {
+            borderColor = {150, 220, 0, 255};
+        }
         var bg = this.get_style_context ().get_background_color (0);
         Clutter.Color backgroundColor = Utils.gdk_rgba_to_clutter_color(bg);
 
@@ -820,8 +722,19 @@ private class Journal.RoundBox : Frame {
 
         return false;
     }
+    
+    public override bool enter_notify_event (Gdk.EventCrossing  event) {
+        highlight = true;
+        queue_draw ();
+        return true;
+    }
+    
+    public override bool leave_notify_event (Gdk.EventCrossing  event) {
+        highlight = false;
+        queue_draw ();
+        return true;
+    }
 
- 
    public override Gtk.SizeRequestMode get_request_mode () {
        return SizeRequestMode.HEIGHT_FOR_WIDTH;
    }
@@ -865,16 +778,15 @@ private class Journal.RoundBoxContent : DrawingArea {
             this.width = width;
 
         // Enable the events you wish to get notified about.
-        // The 'draw' event is already enabled by the DrawingArea.
-        add_events (Gdk.EventMask.BUTTON_PRESS_MASK
-                  | Gdk.EventMask.BUTTON_RELEASE_MASK
-                  | Gdk.EventMask.POINTER_MOTION_MASK);
+        add_events (Gdk.EventMask.BUTTON_RELEASE_MASK);
         
         activity.thumb_loaded.connect (() => {
-                  thumb = activity.thumb_icon;
-                  is_thumb = true;
-                  //resize and redraw but now let's use the thumb
-                  queue_resize (); 
+                  if (activity.thumb_icon != null) {
+                    thumb = activity.thumb_icon;
+                    is_thumb = true;
+                    //resize and redraw but now let's use the thumb
+                    queue_resize (); 
+                   }
         });
     }
 
@@ -885,17 +797,20 @@ private class Journal.RoundBoxContent : DrawingArea {
 
         // Draw pixbuf
         var x_pix = 0;
+        var y_pix = 0;
         var pad = 0;
         if (is_thumb == true) {
             x_pix = RoundBox.BORDER_WIDTH;
             pad = xy_padding + x_pix;
-            
+            y_pix = RoundBox.BORDER_WIDTH;
         }
-        var y_pix = (height - thumb.height) / 2;
         cr.set_operator (Cairo.Operator.OVER);
-        Gdk.cairo_set_source_pixbuf(cr, thumb, x_pix, y_pix);
-        cr.rectangle (x_pix, y_pix, thumb.width, thumb.height);
-        cr.fill();
+        if (thumb != null)  {
+            y_pix = (height - thumb.height) / 2;
+            Gdk.cairo_set_source_pixbuf(cr, thumb, x_pix, y_pix);
+            cr.rectangle (x_pix, y_pix, thumb.width, thumb.height);
+            cr.fill();
+        }
         
         //Draw title
         Pango.Rectangle rect;
@@ -940,8 +855,11 @@ private class Journal.RoundBoxContent : DrawingArea {
 		layout.set_attributes (attr_list);
         layout.get_extents (null, out rect);
         
+        var pad = xy_padding;
+        if (is_thumb == true)
+            pad += RoundBox.BORDER_WIDTH;
         text_width = rect.width;
-        var p_width = (width - xy_padding - thumb.width) * Pango.SCALE;
+        var p_width = (width - pad - thumb.width) * Pango.SCALE;
         f_width = int.min (p_width, text_width);
         layout.set_width (f_width);
         
@@ -973,6 +891,16 @@ private class Journal.RoundBoxContent : DrawingArea {
 
         this.time_layout = layout;
    }
+   
+    public override bool button_release_event (Gdk.EventButton event) {
+        //TODO Improve here?
+        try {
+            AppInfo.launch_default_for_uri (this.activity.uri, null);
+        } catch (Error e) {
+            warning ("Error in launching: "+ this.activity.uri);
+        }
+        return false;
+    }
     
    public override Gtk.SizeRequestMode get_request_mode () {
        return SizeRequestMode.HEIGHT_FOR_WIDTH;

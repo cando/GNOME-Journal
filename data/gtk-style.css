@@ -91,6 +91,25 @@ GtkScale.mark {
     color: #ffffff;
 }
 
+.osd GtkButton{
+    border-image: none;
+    background-image: none;
+    padding-left: 10px;
+    padding-right: 10px;
+    background-color: alpha(#000, 0.8);
+    color: #ffffff;
+    border-radius: 10px;
+}
+
+.osd GtkButton GtkLabel {
+    font-size: 11;
+    font-weight: bold;
+    color: white;
+
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
 .osd .toolbar {
     padding: 6px 6px;
     border-style: none;

@@ -31,6 +31,11 @@ public class Journal.App: GLib.Object {
     //Loading actor
     private LoadingActor loading;
     private LoadingActor loading2;
+    //OSD Label
+
+    public OSDLabel osd_label {
+        get ; private set;
+    }
 
     private ZeitgeistBackend _backend;
     
@@ -184,7 +189,7 @@ public class Journal.App: GLib.Object {
         var stage = embed.get_stage () as Clutter.Stage;
         stage.set_color (Utils.gdk_rgba_to_clutter_color (Utils.get_journal_bg_color ()));
         cvtl = new ClutterVTL (this, stage);
-        TimeNav vnav = new TimeNav (Orientation.VERTICAL);
+        TimelineNavigator vnav = new TimelineNavigator (Orientation.VERTICAL);
         vnav.go_to_date.connect ((date) => {cvtl.jump_to_day(date);});
         
         stage.add_actor (cvtl.viewport);
@@ -193,14 +198,18 @@ public class Journal.App: GLib.Object {
         box.pack_start (embed, true, true, 0);
         notebook.append_page (box, null);
         
+        osd_label = new OSDLabel (stage);
+        stage.add_actor (osd_label.actor);
+        
         loading = new LoadingActor (this, stage);
         loading.start ();
+
         //CLUTTER HTL
         var embed2 = new GtkClutter.Embed ();
         var stage2 = embed2.get_stage () as Clutter.Stage;
         stage2.set_color (Utils.gdk_rgba_to_clutter_color (Utils.get_journal_bg_color ()));
         chtl = new ClutterHTL (this, stage2);
-        TimeNav hnav = new TimeNav (Orientation.HORIZONTAL);
+        TimelineNavigator hnav = new TimelineNavigator (Orientation.HORIZONTAL);
         hnav.go_to_date.connect ((date) => {chtl.jump_to_day(date);});
         
         stage2.add_actor (chtl.viewport);

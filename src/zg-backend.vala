@@ -28,7 +28,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
       //TODO data for histogram? we need only the events count?
       int64 end = Zeitgeist.Timestamp.now ();
       //FIXME only 6 days atm
-      int64 start = end - Zeitgeist.Timestamp.DAY * 6;
+      int64 start = end - Zeitgeist.Timestamp.DAY * 50;
       load_uri_events.begin (start, end);
       load_application_events.begin (start, end);
       return true;
@@ -99,7 +99,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
         rs = yield zg_log.find_events (tr, (owned) ptr_arr,
                                        Zeitgeist.StorageState.ANY,
                                        256,
-                                       Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
+                                       Zeitgeist.ResultType.MOST_RECENT_EVENTS,
                                        null);
 
         foreach (Zeitgeist.Event e1 in rs)
@@ -117,7 +117,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
         rs = yield zg_log.find_events (tr, (owned) ptr_arr,
                                        Zeitgeist.StorageState.ANY,
                                        128,
-                                       Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
+                                       Zeitgeist.ResultType.MOST_RECENT_EVENTS,
                                        null);
 
         foreach (Zeitgeist.Event e2 in rs)

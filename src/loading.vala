@@ -48,3 +48,42 @@ private class Journal.LoadingActor: GLib.Object {
         gtk_actor_throbber.hide ();
     }
 }
+
+public class Journal.OSDLabel: GLib.Object {
+    public GtkClutter.Actor actor;
+    
+    private Clutter.Stage stage;
+    private Button button;
+
+    public OSDLabel (Clutter.Stage stage) {
+        this.stage = stage;
+        
+        button = new Button ();
+        button.sensitive = false;
+        
+        actor = new GtkClutter.Actor.with_contents (button);
+        actor.get_widget ().get_style_context ().add_class ("osd");
+        
+        actor.add_constraint (new Clutter.AlignConstraint (stage, Clutter.AlignAxis.X_AXIS, 0.5f));
+        actor.add_constraint (new Clutter.AlignConstraint (stage, Clutter.AlignAxis.Y_AXIS, 0.8f));
+        button.show ();
+        
+        actor.hide ();
+    }
+    
+    public void set_message_and_show (string message) {
+        button.label = message;
+        
+        actor.show ();
+        actor.animate (Clutter.AnimationMode.EASE_OUT_CUBIC,
+                          500,
+                          "opacity", 255);
+        Timeout.add_seconds (3, () => {
+            var animation = actor.animate (Clutter.AnimationMode.EASE_OUT_CUBIC,
+                          500,
+                          "opacity", 0);
+            animation.completed.connect (()=> {actor.hide ();}); 
+            return false;
+        });
+    }
+}

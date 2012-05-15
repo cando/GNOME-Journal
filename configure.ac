@@ -46,7 +46,7 @@ GLIB_GSETTINGS
 
 pkg_modules="gtk+-3.0
 	     glib-2.0
-	     clutter-gtk-1.0
+	     clutter-gtk-1.0 >= 1.0.1
 	     gee-0.8
 	     zeitgeist-1.0
 	     gnome-desktop-3.0
@@ -68,6 +68,7 @@ AC_CONFIG_FILES([
 ])
 
 AC_OUTPUT
+
 
 dnl ==========================================================================
 AC_MSG_NOTICE([

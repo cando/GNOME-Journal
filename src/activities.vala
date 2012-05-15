@@ -24,6 +24,10 @@ using Gtk;
 
 private class Journal.GenericActivity : Object {
 
+    public Zeitgeist.Event event {
+        get; construct set;
+    }
+    
     public string uri {
         get; private set;
     }
@@ -56,12 +60,20 @@ private class Journal.GenericActivity : Object {
         get; private set;
     }
     
+    public string interpretation {
+        get; private set;
+    }
+    
     public signal void thumb_loaded (GenericActivity activity);
     
     private Zeitgeist.Subject subject;
     private string thumb_path;
 
     public GenericActivity (Zeitgeist.Event event) {
+        Object (event: event);
+    }
+    
+    construct {
         this.subject = event.get_subject (0);
         this.uri = subject.get_uri ();
         this.title = subject.get_text ();
@@ -71,7 +83,8 @@ private class Journal.GenericActivity : Object {
         this.time = event.get_timestamp ();
         this.selected = false;
         this.mimetype = subject.get_mimetype ();
-        
+        this.interpretation = subject.get_interpretation ();
+
         updateActivityIcon ();
     }
     
@@ -141,7 +154,8 @@ private class Journal.GenericActivity : Object {
         if (_icon != null)
             icon_info = 
                 Gtk.IconTheme.get_default().lookup_by_gicon (_icon, Utils.getIconSize (),
-                                            IconLookupFlags.FORCE_SVG);
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
         if (icon_info != null) {
             try {
                 this.type_icon = icon_info.load_icon();
@@ -149,6 +163,26 @@ private class Journal.GenericActivity : Object {
                 this.thumb_icon = this.type_icon;
             } catch (Error e) {
                 warning ("Unable to load pixbuf: " + e.message);
+            }
+        }
+        
+        //If the icon is still null let's use a default text/plain mime icon.
+        if (type_icon == null) {
+            _icon = ContentType.get_icon ("text/plain");
+
+            if (_icon != null)
+                icon_info = 
+                    Gtk.IconTheme.get_default().lookup_by_gicon (_icon, Utils.getIconSize (),
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
+            if (icon_info != null) {
+                try {
+                    this.type_icon = icon_info.load_icon();
+                    //Let's use this for the moment.
+                    this.thumb_icon = this.type_icon;
+                } catch (Error e) {
+                    warning ("Unable to load pixbuf: " + e.message);
+                }
             }
         }
     }
@@ -169,9 +203,61 @@ private class Journal.GenericActivity : Object {
     }
 }
 
-//private class Journal.DocumentActivity : GenericActivity {
+/**Single Activity**/
+private class Journal.DocumentActivity : GenericActivity {
+    public DocumentActivity (Zeitgeist.Event event) {
+        Object (event:event);
+    }
+}
 
-//}
+private class Journal.AudioActivity : GenericActivity {
+    public AudioActivity (Zeitgeist.Event event) {
+        Object (event:event);
+    }
+}
+
+private class Journal.ImageActivity : GenericActivity {
+    public ImageActivity (Zeitgeist.Event event) {
+        Object (event:event);
+    }
+}
+
+private class Journal.VideoActivity : GenericActivity {
+    public VideoActivity (Zeitgeist.Event event) {
+        Object (event:event);
+    }
+}
+
+/**Collection of Activity**/
+//TODO
+
+
+private class Journal.ActivityFactory : Object {
+    
+    private static Gee.Map<string, Type> interpretation_types;
+    
+    static construct {
+        interpretation_types = new Gee.HashMap<string, Type> ();
+        //Fill in all interpretations
+        interpretation_types.set (Zeitgeist.NFO_DOCUMENT, typeof (DocumentActivity));
+        interpretation_types.set (Zeitgeist.NFO_IMAGE, typeof (ImageActivity));
+        interpretation_types.set (Zeitgeist.NFO_AUDIO, typeof (AudioActivity));
+        interpretation_types.set (Zeitgeist.NFO_VIDEO, typeof (VideoActivity));
+    }
+    
+    /****PUBLIC METHODS****/
+    
+    public GenericActivity get_activity_for_event (Zeitgeist.Event event) {
+        string intpr = event.get_subject (0).get_interpretation ();
+        if (interpretation_types.has_key (intpr)){
+            Type activity_class = interpretation_types.get (intpr);
+            GenericActivity activity = (GenericActivity) 
+                                        Object.new (activity_class, event:event);
+            return activity;
+        }
+        return new GenericActivity (event);
+    }
+}
 
 
 private class Journal.ActivityModel : Object {
