@@ -90,8 +90,17 @@ private class Journal.GenericActivity : Object {
     
     private string create_display_uri () {
         string home = Environment.get_home_dir ();
-        string uri = this.subject.get_origin ().split ("://")[1];
-        return uri.replace (home, "~");
+        string origin = this.subject.get_origin ();
+        string uri, display_uri;
+        if (origin != null) {
+            uri = origin.split ("://")[1];
+            display_uri = uri.replace (home, "~");
+        }
+        else {
+            uri = this.uri.split ("://")[1];
+            display_uri = uri;
+        }
+        return display_uri;
     }
     
     //The code related to this function is extracted, ported and adapted

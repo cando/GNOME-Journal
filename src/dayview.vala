@@ -79,7 +79,7 @@ private class Journal.DayView: Box{
 
         setup_ui ();
         
-        app.backend.events_loaded.connect (() => {
+        app.backend.events_loaded.connect ((tr) => {
             load_events ();
         });
     }
@@ -101,7 +101,7 @@ private class Journal.DayView: Box{
     public void load_events () {
         for (int i = 0; i < num_days; i++) {
             var key = day_views[i].get_day_string ();
-            day_views[i].load_events (app.backend.get_events_for_day (key));
+            day_views[i].load_events (app.backend.get_events_for_date (key));
         }
     }
     
