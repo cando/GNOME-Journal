@@ -9,29 +9,37 @@ enum Side {
 }
 
 
-private class Journal.ClutterVTL : Object {
+private class Journal.ClutterVTL : Box {
     public Clutter.Actor viewport;
     
     private ActivityModel model;
     private App app;
     private Clutter.Stage stage;
     private VTimeline timeline;
+    private Scrollbar scrollbar;
+    private TimelineNavigator vnav;
+    
+    private OSDLabel osd_label;
+    private LoadingActor loading;
     
     private ActivityFactory activity_factory;
     
     private Gee.HashMap<string, int> y_positions;
 
-    public ClutterVTL (App app, Clutter.Stage stage){
+    public ClutterVTL (App app){
+        Object (orientation: Orientation.HORIZONTAL, spacing : 0);
         this.model = new ActivityModel ();
         this.app = app;
-        this.stage = stage;
+        var embed = new GtkClutter.Embed ();
+        this.stage = embed.get_stage () as Clutter.Stage;
+        this.stage.set_color (Utils.gdk_rgba_to_clutter_color (Utils.get_journal_bg_color ()));
         this.activity_factory = new ActivityFactory ();
         y_positions = new Gee.HashMap<string, int> ();
 
         app.backend.events_loaded.connect (() => {
             load_events ();
         });
-
+        
         viewport = new Clutter.Actor ();
         viewport.set_clip_to_allocation (true);
         viewport.set_reactive (true);
@@ -48,15 +56,21 @@ private class Journal.ClutterVTL : Object {
         float old_y;
         var y = old_y = viewport.get_y ();
         var direction = e.direction;
-        var offset = viewport.height * 0.05f;
+        var offset = (float)scrollbar.adjustment.step_increment;
 
         switch (direction)
         {
             case Clutter.ScrollDirection.UP:
-                y -= offset;
+                old_y -= offset;
+                y = old_y.clamp (stage.get_height () - viewport.get_height (), 0.0f);
+                if( y != stage.get_height () - viewport.get_height ())
+                    scrollbar.move_slider (ScrollType.STEP_DOWN);
                 break;
             case Clutter.ScrollDirection.DOWN:
-                y += offset;
+                old_y += offset;
+                y = old_y.clamp (stage.get_height () - viewport.get_height (), 0.0f);
+                if( y != 0.0f)
+                    scrollbar.move_slider (ScrollType.STEP_UP);
                 break;
 
             /* we're only interested in up and down */
@@ -64,13 +78,36 @@ private class Journal.ClutterVTL : Object {
             case Clutter.ScrollDirection.RIGHT:
             break;
        }
-       y = y.clamp (stage.get_height () - viewport.get_height (), 0.0f);
        /* animate the change to the scrollable's y coordinate */
        viewport.animate ( Clutter.AnimationMode.EASE_OUT_CUBIC,
                          150,
                          "y", y);
        return true;
        });
+       
+       stage.add_actor (viewport);
+       
+       Adjustment adj = new Adjustment (0, 0, 0, 0, 0, stage.height);
+       scrollbar = new Scrollbar (Orientation.VERTICAL, adj);
+       viewport.queue_relayout.connect (() => {
+           scrollbar.adjustment.upper = viewport.height;
+           scrollbar.adjustment.step_increment = viewport.height/200;
+           scrollbar.adjustment.page_increment = viewport.height/10;
+       });
+       adj.value_changed.connect (() => { this.on_scrollbar_scroll ();});
+        
+       vnav = new TimelineNavigator (Orientation.VERTICAL);
+       vnav.go_to_date.connect ((date) => {this.jump_to_day(date);});
+
+       this.pack_start (vnav, false, false, 0);
+       this.pack_start (embed, true, true, 0);
+       this.pack_start (scrollbar, false, false, 0);
+       
+       osd_label = new OSDLabel (stage);
+       stage.add_actor (osd_label.actor);
+        
+       loading = new LoadingActor (this.app, stage);
+       loading.start ();
     }
     
     public void load_events () {
@@ -79,7 +116,6 @@ private class Journal.ClutterVTL : Object {
         int type = 0;
         Side side;
         float offset = 0;
-        GtkClutter.Actor actor;
         foreach (Zeitgeist.Event e in all_activities)
         {
             GenericActivity activity = activity_factory.get_activity_for_event (e);
@@ -98,26 +134,35 @@ private class Journal.ClutterVTL : Object {
             if(y_positions.has_key (date) == false)
                 y_positions.set (date, i);
 
-            actor = new GtkClutter.Actor.with_contents (r);
+            GtkClutter.Actor actor = new GtkClutter.Actor.with_contents (r);
             /****TODO MOVE THIS WHOLE CODE IN A CLASS WRAPPING THE RoundBoxContent***/
             actor.reactive = true;
-            actor.background_color = {255, 255, 0, 255};
+            if (type % 2 == 0) 
+                actor.scale_center_x = actor.width;
             actor.enter_event.connect ((e) => {
                 double scale_x;
                 double scale_y;
 
                 actor.get_scale (out scale_x, out scale_y);
 
-                actor.animate (Clutter.AnimationMode.LINEAR, 1000,
-                       "scale-x", scale_x * 2,
-                       "scale-y", scale_y * 2,
-                       "opacity", 0);
+                actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
+                       "scale-x", scale_x * 1.05,
+                       "scale-y", scale_y * 1.05);
                 
                 return false;
             });
-            actor.leave_event.connect ((e) => {actor.set_scale (1.0, 1.0); return false;});
+            actor.leave_event.connect ((e) => {
+                actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
+                       "scale-x", 1.0,
+                       "scale-y", 1.0);
+                return false;
+            });
+            
             actor.button_release_event.connect ((e) => {
                 //TODO Improve here?
+                actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
+                       "scale-x", 1.0,
+                       "scale-y", 1.0);
                 try {
                     AppInfo.launch_default_for_uri (activity.uri, null);
                 } catch (Error e) {
@@ -137,6 +182,7 @@ private class Journal.ClutterVTL : Object {
             //i +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
             if (type % 2 == 1) i += 20;
             else i +=  (int)actor.get_height();
+            
             type ++;
        }
        
@@ -149,12 +195,17 @@ private class Journal.ClutterVTL : Object {
             y = this.y_positions.get (date);
         else {
             //jump to TODAY (y == 0)
-            app.osd_label.set_message_and_show (_("Impossible to jump to this data! Jumping to Today"));
+            osd_label.set_message_and_show (_("Impossible to jump to this data! Jumping to Today"));
         }
 
          viewport.animate (Clutter.AnimationMode.EASE_OUT_CUBIC,
                           350,
                           "y", (float)(-y));
+    }
+    
+    public void on_scrollbar_scroll () {
+       float y = (float)(-scrollbar.adjustment.value);
+       viewport.y = y;
     }
 }
 
@@ -616,6 +667,11 @@ private class Journal.RoundBox : Button {
             boxWidth -= rise;
         }
         var cr = ctx;
+        cr.save ();
+        cr.set_source_rgba (0.0, 0.0, 0.0, 0.0);
+        cr.set_operator (Cairo.Operator.SOURCE);
+        cr.paint ();
+        cr.restore ();
         Clutter.cairo_set_source_color(cr, borderColor);
 
         // Translate so that box goes from 0,0 to boxWidth,boxHeight,
