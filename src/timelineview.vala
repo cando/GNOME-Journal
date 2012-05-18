@@ -130,6 +130,7 @@ private class Journal.ClutterVTL : Box {
         int type = 0;
         Side side;
         float offset = 0;
+        int last_actor_height = 0;
         foreach (string d in date_to_load)
         {
             var event_list = app.backend.get_events_for_date (d);
@@ -149,8 +150,45 @@ private class Journal.ClutterVTL : Box {
                 r.show_all ();
             
                 string date = Utils.get_start_of_the_day_string (activity.time);
-                if(y_positions.has_key (date) == false)
-                    y_positions.set (date, i);
+                if(y_positions.has_key (date) == false) {
+                    //Add a visual representation of the change of the day
+                    //Add a line
+                    Clutter.Actor day_line = new Clutter.Actor ();
+                    var color = Utils.get_timeline_bg_color ();
+                    Clutter.Color bgColor = Utils.gdk_rgba_to_clutter_color (color);
+                    day_line.background_color = bgColor.shade (1);
+                    day_line.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.WIDTH, 0));
+                    day_line.set_height (2);
+                    day_line.opacity = 150;
+                    
+                    //Text's date
+                    Pango.FontDescription fd = Utils.get_default_font_description ();
+                    string text = Utils.get_start_of_the_day (activity.time).format (_("%A, %x"));
+                    Clutter.Text date_text = new Clutter.Text.with_text(null, text);
+                    date_text.font_description = fd;
+                    var attr_list = new Pango.AttrList ();
+                    int text_size = 11;
+                    var attr_s = new Pango.AttrSize (text_size * Pango.SCALE);
+                    attr_s.absolute = 1;
+                    attr_list.insert ((owned) attr_s);
+                    var desc = new Pango.FontDescription ();
+                    desc.set_weight (Pango.Weight.BOLD);
+                    var attr_f = new Pango.AttrFontDesc (desc);
+                    attr_list.insert ((owned) attr_f);
+                    date_text.attributes = attr_list;
+                    date_text.add_constraint (new Clutter.BindConstraint (day_line, Clutter.BindCoordinate.Y, -2));
+                    date_text.set_x (10);
+                    date_text.anchor_y = date_text.height;
+                    if (type % 2 == 0) 
+                        //Means that the last bubble displayed is on the left
+                        i += last_actor_height + text_size;
+                    day_line.set_y (i);
+                    viewport.add_actor (day_line);
+                    viewport.add_actor (date_text);
+                    i += (int)(day_line.height + text_size);
+                    
+                    y_positions.set (date, (int)(day_line.y - text_size*3));
+                }
 
                 GtkClutter.Actor actor = new GtkClutter.Actor.with_contents (r);
                 /****TODO MOVE THIS WHOLE CODE IN A CLASS WRAPPING THE RoundBoxContent***/
@@ -198,8 +236,9 @@ private class Journal.ClutterVTL : Box {
                 actor.set_y (i);
                 timeline.add_circle (i);
                 //i +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
+                last_actor_height = (int)actor.get_height();
                 if (type % 2 == 1) i += 20;
-                else i +=  (int)actor.get_height();
+                else i +=  last_actor_height;
                 type ++;
             }
        }
@@ -228,8 +267,18 @@ private class Journal.ClutterVTL : Box {
     }
     
     public void on_scrollbar_scroll () {
-       float y = (float)(-scrollbar.adjustment.value);
-       viewport.y = y;
+        float y = (float)(-scrollbar.adjustment.value);
+        viewport.y = y;
+        
+        //We are moving so we should highligth the right TimelineNavigator's label
+        string final_key = "";
+        foreach (Gee.Map.Entry<string, int> entry in y_positions.entries) {
+            if (entry.value <= (int)(-y)) {
+                final_key = entry.key;
+                break;
+            }
+        }
+        vnav.highlight_date (final_key);
     }
 }
 
@@ -655,6 +704,7 @@ private class Journal.RoundBox : Button {
 
        add_events (Gdk.EventMask.ENTER_NOTIFY_MASK|
                    Gdk.EventMask.LEAVE_NOTIFY_MASK);
+                   
     }
 
     public override bool draw (Cairo.Context ctx) {

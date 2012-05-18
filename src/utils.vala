@@ -61,6 +61,14 @@ private class Journal.Utils : Object{
         style.add_class ("timeline-clutter");
         return style.get_color (0);
     }
+    
+    public static Pango.FontDescription get_default_font_description () {
+        var style = new Gtk.StyleContext ();
+        var path = new Gtk.WidgetPath ();
+        path.append_type (typeof (Gtk.Window));
+        style.set_path (path);
+        return style.get_font (StateFlags.NORMAL);
+    }
 
     public static int getIconSize() {
 //        int view_type = settings.get_int ("mainview-type");
