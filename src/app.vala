@@ -15,20 +15,13 @@ public class Journal.App: GLib.Object {
     private bool maximized { get { return Gdk.WindowState.MAXIMIZED in window.get_window ().get_state (); } }
     public Gtk.Notebook notebook;
     public Gtk.Box main_box; 
-    public Clutter.Actor box; // the whole app box
     public GLib.SimpleAction action_fullscreen;
     public uint duration;
 
     private Gtk.Application application;
-    private DayView day_view;
     private ClutterVTL cvtl;
     private ClutterHTL chtl;
-    private ReminderView reminder_view;
-    private Revealer revealer;
     private Gd.MainToolbar main_toolbar;
-    
-    //Loading actor
-    private LoadingActor loading2;
 
     private ZeitgeistBackend _backend;
     
@@ -169,7 +162,7 @@ public class Journal.App: GLib.Object {
         });
         notebook = new Gtk.Notebook ();
         notebook.show_border = false;
-        //notebook.show_tabs = false;
+        notebook.show_tabs = false;
         
         main_box.pack_start (main_toolbar, false, false, 0);
         main_box.pack_start (notebook, true, true, 0);
@@ -183,47 +176,24 @@ public class Journal.App: GLib.Object {
 
         //CLUTTER HTL
         //TODO include in an unique widget
-        var embed2 = new GtkClutter.Embed ();
-        var stage2 = embed2.get_stage () as Clutter.Stage;
-        stage2.set_color (Utils.gdk_rgba_to_clutter_color (Utils.get_journal_bg_color ()));
-        chtl = new ClutterHTL (this, stage2);
-        TimelineNavigator hnav = new TimelineNavigator (Orientation.HORIZONTAL);
-        hnav.go_to_date.connect ((date) => {chtl.jump_to_day (date);});
-        
-        stage2.add_actor (chtl.viewport);
-        var box2 = new Grid ();
-        box2.orientation = Orientation.VERTICAL;
-        box2.add (embed2);
-        box2.add (hnav);
-        notebook.append_page (box2, null);
-        
-        loading2 = new LoadingActor (this, stage2);
-        loading2.start ();
-
-        //THREE COLUMN VIEW
-        //FIXME Make the num of days displayed a preferences??
-        int num_days = 3;
-        day_view = new DayView (this, num_days);
-        
-        string label = _(@"Last $num_days days");
-        main_toolbar.set_labels (_("Timeline"), label);
-        
-        revealer = new Revealer ();
-        reminder_view = new ReminderView (this);
-        reminder_view.set_hexpand (false);
-        revealer.add (reminder_view);
-
-        var grid = new Grid ();
-        grid.set_orientation (Orientation.HORIZONTAL);
-        grid.add (day_view);
-        grid.add (revealer);
-        notebook.append_page (grid, null);
+//        var embed2 = new GtkClutter.Embed ();
+//        var stage2 = embed2.get_stage () as Clutter.Stage;
+//        stage2.set_color (Utils.gdk_rgba_to_clutter_color (Utils.get_journal_bg_color ()));
+//        chtl = new ClutterHTL (this, stage2);
+//        TimelineNavigator hnav = new TimelineNavigator (Orientation.HORIZONTAL);
+//        hnav.go_to_date.connect ((date) => {chtl.jump_to_day (date);});
+//        
+//        stage2.add_actor (chtl.viewport);
+//        var box2 = new Grid ();
+//        box2.orientation = Orientation.VERTICAL;
+//        box2.add (embed2);
+//        box2.add (hnav);
+//        notebook.append_page (box2, null);
+//        
+//        var loading2 = new LoadingActor (this, stage2);
+//        loading2.start ();
 
         window.show_all();
-
-        
-        revealer.set_no_show_all (true);
-        revealer.hide ();
     }
 
     public bool quit () {
