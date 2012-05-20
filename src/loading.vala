@@ -27,10 +27,6 @@ private class Journal.LoadingActor: GLib.Object {
         gtk_actor_box.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.SIZE, 0));
         stage.add_actor (gtk_actor_box);
         stage.add_actor (gtk_actor_throbber);
-        
-        app.backend.events_loaded.connect ( () => {
-            stop ();
-        });
 
         box.show_all ();
         throbber.show_all ();

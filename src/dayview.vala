@@ -5,7 +5,7 @@ private class Journal.SingleDayView: Box {
     private App app;
 
     private Gd.MainView view;
-    private ActivityModel model;
+    private OldActivityModel model;
     
     private ScrolledWindow scrolled_window;
     //TODO Custom widget?
@@ -22,7 +22,7 @@ private class Journal.SingleDayView: Box {
         this.day = day;
 
         view = new Gd.MainView (Gd.MainViewType.LIST);
-        model = new ActivityModel ();
+        model = new OldActivityModel ();
 
         scrolled_window = new ScrolledWindow (null, null);
         scrolled_window.set_policy (PolicyType.AUTOMATIC, PolicyType.AUTOMATIC);

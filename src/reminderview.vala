@@ -5,7 +5,7 @@ private class Journal.SingleReminderView: Box {
     private App app;
 
     private Gd.MainView view;
-    private ActivityModel model;
+    private OldActivityModel model;
     
     private ScrolledWindow scrolled_window;
 
@@ -15,7 +15,7 @@ private class Journal.SingleReminderView: Box {
         this.app = app;
 
         view = new Gd.MainView (Gd.MainViewType.ICON);
-        model = new ActivityModel ();
+        model = new OldActivityModel ();
         view.set_model (model.get_model ());
 
         scrolled_window = new ScrolledWindow (null, null);

@@ -245,7 +245,7 @@ private class Journal.ActivityFactory : Object {
     
     private static Gee.Map<string, Type> interpretation_types;
     
-    static construct {
+    private static void init () {
         interpretation_types = new Gee.HashMap<string, Type> ();
         //Fill in all interpretations
         interpretation_types.set (Zeitgeist.NFO_DOCUMENT, typeof (DocumentActivity));
@@ -256,7 +256,9 @@ private class Journal.ActivityFactory : Object {
     
     /****PUBLIC METHODS****/
     
-    public GenericActivity get_activity_for_event (Zeitgeist.Event event) {
+    public static GenericActivity get_activity_for_event (Zeitgeist.Event event) {
+        if (interpretation_types == null)
+            init ();
         string intpr = event.get_subject (0).get_interpretation ();
         if (interpretation_types.has_key (intpr)){
             Type activity_class = interpretation_types.get (intpr);
@@ -268,8 +270,116 @@ private class Journal.ActivityFactory : Object {
     }
 }
 
+private class Journal.DayActivityModel : Object {
+
+    //Key: Zeitgeist.Interpretation
+    public Gee.HashMap<string, Gee.List<GenericActivity>> activities {
+        get; private set;
+    }
+
+    public DayActivityModel () {
+        activities = new Gee.HashMap<string, Gee.List<GenericActivity>> ();
+    }
+    
+    public void add_activity (GenericActivity activity) {
+        string interpretation = activity.interpretation;
+        if (!activities.has_key (interpretation))
+            activities.set (activity.interpretation, 
+                            new Gee.ArrayList<GenericActivity> ((a, b) => {
+                                GenericActivity first = (GenericActivity) a;
+                                GenericActivity second = (GenericActivity) b;
+                                return (first.uri == second.uri);
+                            }));
+                            
+        var list = activities.get (interpretation);
+        if (!list.contains (activity))
+            list.add (activity);
+    }
+    
+    public void remove_activity (GenericActivity activity) {
+        string interpretation = activity.interpretation;
+        if (!activities.has_key (interpretation))
+            return;
+
+        var list = activities.get (interpretation);
+        list.remove (activity);
+        if (list.size == 0)
+            activities.unset (interpretation);
+    }
+}
 
 private class Journal.ActivityModel : Object {
+
+    private ZeitgeistBackend backend;
+    
+    //Key: Date format YYYY-MM-DD
+    public Gee.HashMap<string, DayActivityModel> activities {
+        get; private set;
+    }
+    
+    public signal void activities_loaded (Gee.ArrayList<string> dates_loaded);
+
+    public ActivityModel () {
+        activities = new Gee.HashMap<string, DayActivityModel> ();
+        backend = new ZeitgeistBackend ();
+        
+        backend.load_events_on_start ();
+        backend.events_loaded.connect ((tr) => {
+            on_events_loaded (tr);
+        });
+    }
+    
+    private void on_events_loaded (Zeitgeist.TimeRange tr) {
+        int64 start = tr.get_start () / 1000;
+        int64 end = tr.get_end () / 1000;
+        DateTime start_date = new DateTime.from_unix_utc (start).to_local ();
+        DateTime end_date = new DateTime.from_unix_utc (end).to_local ();
+        
+        var dates_loaded = new Gee.ArrayList<string> ();
+        DateTime next_date = end_date;
+        string day = next_date.format("%Y-%m-%d");
+        if (add_day (day))
+            dates_loaded.add (day);
+        while (next_date.compare (start_date) != 0) {
+            next_date = next_date.add_days (-1);
+            day = next_date.format("%Y-%m-%d");
+            if (add_day (day))
+                dates_loaded.add (day);
+        }
+        
+        activities_loaded (dates_loaded);
+    }
+    
+    private bool add_day (string day) {
+        var model = new DayActivityModel ();
+        var event_list = backend.get_events_for_date (day);
+        if (event_list == null)
+                return false;
+        foreach (Zeitgeist.Event e in event_list) {
+            GenericActivity activity = ActivityFactory.get_activity_for_event (e);
+            model.add_activity (activity);
+        }
+        activities.set (day, model);
+        return true;
+    }
+    
+    public void load_activities (DateTime start) {
+        TimeVal tv;
+        //add some days to the jump date, permitting the user to navigate more.
+        // FIXME always 3? Something better?
+        DateTime larger_date = start.add_days (-3);
+        larger_date.to_timeval (out tv);
+        Date start_date = {};
+        start_date.set_time_val (tv);
+        backend.last_loaded_date.to_timeval (out tv);
+        Date end_date = {};
+        end_date.set_time_val (tv);
+        backend.load_events_for_date_range (start_date, end_date);
+    }
+}
+
+//USED by the old three column view prototype
+private class Journal.OldActivityModel : Object {
 
     private ListStore model;
     private Gee.ArrayList<GenericActivity> _activities;
@@ -278,7 +388,7 @@ private class Journal.ActivityModel : Object {
         get { return this._activities; }
     }
 
-    public ActivityModel () {
+    public OldActivityModel () {
         this._activities = new Gee.ArrayList<GenericActivity> ();
         this.model = new ListStore (6, 
                                    typeof (string), // URI

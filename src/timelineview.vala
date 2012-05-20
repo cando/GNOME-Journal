@@ -119,8 +119,6 @@ private class Journal.ClutterVTL : Box {
     private OSDLabel osd_label;
     private LoadingActor loading;
     
-    private ActivityFactory activity_factory;
-    
     private Gee.HashMap<string, int> y_positions;
     
     //Position and type of last drawn bubble
@@ -141,7 +139,6 @@ private class Journal.ClutterVTL : Box {
         var embed = new GtkClutter.Embed ();
         this.stage = embed.get_stage () as Clutter.Stage;
         this.stage.set_color (Utils.gdk_rgba_to_clutter_color (Utils.get_journal_bg_color ()));
-        this.activity_factory = new ActivityFactory ();
         y_positions = new Gee.HashMap<string, int> ();
         
         last_y_position = 50;
@@ -149,10 +146,6 @@ private class Journal.ClutterVTL : Box {
         last_y_visible = 0;
         date_to_jump = null;
         on_loading = false;
-        
-        app.backend.events_loaded.connect ((tr) => {
-            load_events (tr);
-        });
         
         viewport = new ScrollableViewport ();
         viewport.scroll_mode = ScrollMode.Y;
@@ -204,7 +197,7 @@ private class Journal.ClutterVTL : Box {
        
        Adjustment adj = new Adjustment (0, 0, 0, 0, 0, stage.height);
        scrollbar = new Scrollbar (Orientation.VERTICAL, adj);
-       container.queue_relayout.connect (() => {
+       container.queue_relayout.connect (() => { 
            scrollbar.adjustment.upper = container.height;
            uint num_child = container.get_children ().length ();
            scrollbar.adjustment.step_increment = container.height / (num_child*10);
@@ -227,150 +220,138 @@ private class Journal.ClutterVTL : Box {
         
        loading = new LoadingActor (this.app, stage);
        loading.start ();
+       
+       model.activities_loaded.connect ((dates_loaded)=> {
+            load_activities (dates_loaded);
+            loading.stop ();
+       });
     }
     
-    public void load_events (Zeitgeist.TimeRange tr) {
-        int64 start = tr.get_start () / 1000;
-        int64 end = tr.get_end () / 1000;
-        DateTime start_date = new DateTime.from_unix_utc (start).to_local ();
-        DateTime end_date = new DateTime.from_unix_utc (end).to_local ();
-        
-        Gee.ArrayList<string> date_to_load = new Gee.ArrayList<string> ();
-        DateTime next_date = end_date;
-        date_to_load.add (next_date.format("%Y-%m-%d"));
-        while (next_date.compare (start_date) != 0) {
-            next_date = next_date.add_days (-1);
-            date_to_load.add (next_date.format("%Y-%m-%d"));
-        }
+    public void load_activities (Gee.ArrayList<string> dates_loaded) {
         Side side;
         float offset = 0;
         int last_actor_height = 0;
-        foreach (string d in date_to_load)
+        foreach (string date in dates_loaded)
         {
-            var event_list = app.backend.get_events_for_date (d);
-            if (event_list == null)
-                continue;
-            foreach (Zeitgeist.Event e in event_list) {
-                GenericActivity activity = activity_factory.get_activity_for_event (e);
-                model.add_activity (activity);
-                if (last_type % 2 == 0) 
-                    side = Side.RIGHT;
-                else 
-                    side = Side.LEFT;
-                
-                RoundBox r = new RoundBox (side);
-                RoundBoxContent rc = new RoundBoxContent (activity, null);
-                r.add (rc);
-                r.show_all ();
+          var list = model.activities.get (date);
+          foreach (Gee.Map.Entry<string, Gee.List<GenericActivity>> day_entry in list.activities.entries)
+          {
+            foreach (GenericActivity activity in day_entry.value)
+            {
+            if (last_type % 2 == 0) 
+                side = Side.RIGHT;
+            else 
+                side = Side.LEFT;
             
-                string date = Utils.get_start_of_the_day_string (activity.time);
-                if(y_positions.has_key (date) == false) {
-                    //Add a visual representation of the change of the day
-                    //Add a line
-                    Clutter.Actor day_line = new Clutter.Actor ();
-                    var color = Utils.get_timeline_bg_color ();
-                    Clutter.Color bgColor = Utils.gdk_rgba_to_clutter_color (color);
-                    day_line.background_color = bgColor.shade (1);
-                    day_line.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.WIDTH, 0));
-                    day_line.set_height (2);
-                    day_line.opacity = 150;
-                    
-                    //Text's date
-                    Pango.FontDescription fd = Utils.get_default_font_description ();
-                    string text = Utils.get_start_of_the_day (activity.time).format (_("%A, %x"));
-                    Clutter.Text date_text = new Clutter.Text.with_text(null, text);
-                    date_text.font_description = fd;
-                    var attr_list = new Pango.AttrList ();
-                    int text_size = 11;
-                    var attr_s = new Pango.AttrSize (text_size * Pango.SCALE);
-                    attr_s.absolute = 1;
-                    attr_list.insert ((owned) attr_s);
-                    var desc = new Pango.FontDescription ();
-                    desc.set_weight (Pango.Weight.BOLD);
-                    var attr_f = new Pango.AttrFontDesc (desc);
-                    attr_list.insert ((owned) attr_f);
-                    date_text.attributes = attr_list;
-                    date_text.add_constraint (new Clutter.BindConstraint (day_line, Clutter.BindCoordinate.Y, -2));
-                    date_text.set_x (10);
-                    date_text.anchor_y = date_text.height;
-                    if (last_type % 2 == 0) 
-                        //Means that the last bubble displayed is on the left
-                        last_y_position += last_actor_height + text_size;
-                    else 
-                        last_y_position += 20 + text_size;
-                    day_line.set_y (last_y_position);
-                    container.add_actor (day_line);
-                    container.add_actor (date_text);
-                    last_y_position += (int)(day_line.height + text_size);
-                    
-                    y_positions.set (date, (int)(day_line.y - text_size * 3));
-                }
-
-                GtkClutter.Actor actor = new GtkClutter.Actor.with_contents (r);
-                /****TODO MOVE THIS WHOLE CODE IN A CLASS WRAPPING THE RoundBoxContent***/
-                actor.reactive = true;
-                if (last_type % 2 == 0) 
-                    actor.scale_center_x = actor.width;
-                    actor.enter_event.connect ((e) => {
-                        double scale_x;
-                        double scale_y;
-
-                        actor.get_scale (out scale_x, out scale_y);
-
-                        actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
-                           "scale-x", scale_x * 1.05,
-                           "scale-y", scale_y * 1.05);
-                
-                        return false;
-                });
-                actor.leave_event.connect ((e) => {
-                    actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
-                           "scale-x", 1.0,
-                           "scale-y", 1.0);
-                    return false;
-                });
+            RoundBox r = new RoundBox (side);
+            RoundBoxContent rc = new RoundBoxContent (activity, null);
+            r.add (rc);
+            r.show_all ();
             
-                actor.button_release_event.connect ((e) => {
-                    //TODO Improve here?
-                     actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
-                           "scale-x", 1.0,
-                           "scale-y", 1.0);
-                    try {
-                        AppInfo.launch_default_for_uri (activity.uri, null);
-                    } catch (Error e) {
-                        warning ("Error in launching: "+ activity.uri);
-                    }
-                    return false;
-                }); 
-                /****************************************************/
-                container.add_actor (actor);
-                if (last_type % 2 == 0)
-                    offset = -(5 + actor.get_width());
+            if(y_positions.has_key (date) == false) {
+                //Add a visual representation of the change of the day
+                //Add a line
+                Clutter.Actor day_line = new Clutter.Actor ();
+                var color = Utils.get_timeline_bg_color ();
+                Clutter.Color bgColor = Utils.gdk_rgba_to_clutter_color (color);
+                day_line.background_color = bgColor.shade (1);
+                day_line.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.WIDTH, 0));
+                day_line.set_height (2);
+                day_line.opacity = 150;
+                
+                //Text's date
+                Pango.FontDescription fd = Utils.get_default_font_description ();
+                string text = Utils.get_start_of_the_day (activity.time).format (_("%A, %x"));
+                Clutter.Text date_text = new Clutter.Text.with_text(null, text);
+                date_text.font_description = fd;
+                var attr_list = new Pango.AttrList ();
+                int text_size = 11;
+                var attr_s = new Pango.AttrSize (text_size * Pango.SCALE);
+                attr_s.absolute = 1;
+                attr_list.insert ((owned) attr_s);
+                var desc = new Pango.FontDescription ();
+                desc.set_weight (Pango.Weight.BOLD);
+                var attr_f = new Pango.AttrFontDesc (desc);
+                attr_list.insert ((owned) attr_f);
+                date_text.attributes = attr_list;
+                date_text.add_constraint (new Clutter.BindConstraint (day_line, Clutter.BindCoordinate.Y, -2));
+                date_text.set_x (10);
+                date_text.anchor_y = date_text.height;
+                if (last_type % 2 == 0) 
+                    //Means that the last bubble displayed is on the left
+                    last_y_position += last_actor_height + text_size;
                 else 
-                    offset = 5 + timeline.get_width ();
-                actor.add_constraint (new Clutter.BindConstraint (timeline, Clutter.BindCoordinate.X, offset));  // timeline!
-                actor.set_y (last_y_position);
-                timeline.add_circle (last_y_position);
-                //last_y_position +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
-                last_actor_height = (int)actor.get_height();
-                if (last_type % 2 == 1) last_y_position += 20;
-                else last_y_position +=  last_actor_height;
-                last_type ++;
+                    last_y_position += 20 + text_size;
+                day_line.set_y (last_y_position);
+                container.add_actor (day_line);
+                container.add_actor (date_text);
+                last_y_position += (int)(day_line.height + text_size);
+                
+                y_positions.set (date, (int)(day_line.y - text_size * 3));
             }
+
+            GtkClutter.Actor actor = new GtkClutter.Actor.with_contents (r);
+            /****TODO MOVE THIS WHOLE CODE IN A CLASS WRAPPING THE RoundBoxContent***/
+            actor.reactive = true;
+            if (last_type % 2 == 0) 
+                actor.scale_center_x = actor.width;
+                actor.enter_event.connect ((e) => {
+                    double scale_x;
+                    double scale_y;
+
+                    actor.get_scale (out scale_x, out scale_y);
+
+                    actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
+                       "scale-x", scale_x * 1.05,
+                       "scale-y", scale_y * 1.05);
+            
+                    return false;
+            });
+            actor.leave_event.connect ((e) => {
+                actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
+                       "scale-x", 1.0,
+                       "scale-y", 1.0);
+                return false;
+            });
+            
+            actor.button_release_event.connect ((e) => {
+                //TODO Improve here?
+                actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
+                       "scale-x", 1.0,
+                       "scale-y", 1.0);
+                try {
+                    AppInfo.launch_default_for_uri (activity.uri, null);
+                } catch (Error e) {
+                    warning ("Error in launching: "+ activity.uri);
+                }
+                return false;
+            }); 
+            /****************************************************/
+            container.add_actor (actor);
+            if (last_type % 2 == 0)
+                offset = -(5 + actor.get_width());
+            else 
+                offset = 5 + timeline.get_width ();
+            actor.add_constraint (new Clutter.BindConstraint (timeline, Clutter.BindCoordinate.X, offset));  // timeline!
+            actor.set_y (last_y_position);
+            timeline.add_circle (last_y_position);
+            //last_y_position +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
+            last_actor_height = (int)actor.get_height();
+            if (last_type % 2 == 1) last_y_position += 20;
+            else last_y_position +=  last_actor_height;
+            last_type ++;
+        }
        }
-       
+       }
        timeline.invalidate ();
        
        if (container.height <= stage.height)
             scrollbar.hide ();
-       
-       
+
        if(date_to_jump != null) {
             jump_to_day (date_to_jump);
             osd_label.hide ();
        }
-
-       on_loading = false;
     }
     
     public void jump_to_day (DateTime date) {
@@ -381,21 +362,13 @@ private class Journal.ClutterVTL : Box {
             viewport.scroll_to_point (0.0f, y);
             scrollbar.adjustment.upper = container.height;
             scrollbar.adjustment.value = y;
+            on_loading = false;
         }
         else {
             osd_label.set_message_and_show (_("Loading Activities..."));
-            TimeVal tv;
+            loading.start ();
             date_to_jump = date;
-            //add some days to the jump date, permitting the user to navigate more.
-            // FIXME always 7? Something better?
-            DateTime larger_date = date.add_days (-7);
-            larger_date.to_timeval (out tv);
-            Date start_date = {};
-            start_date.set_time_val (tv);
-            app.backend.last_loaded_date.to_timeval (out tv);
-            Date end_date = {};
-            end_date.set_time_val (tv);
-            app.backend.load_events_for_date_range (start_date, end_date);
+            model.load_activities (date);
             on_loading = true;
         }
     }
@@ -409,10 +382,11 @@ private class Journal.ClutterVTL : Box {
         //FIXME
 //        if (!on_loading && (y == (container.get_height () - stage.get_height ()))) {
 //            //We can't scroll anymmore! Let's load another day!
-//            osd_label.set_message_and_show (_("Loading Activities..."));
 //            on_loading = true;
+//            osd_label.set_message_and_show (_("Loading Activities..."));
 //            TimeVal tv;
 //            DateTime new_date = app.backend.last_loaded_date.add_days (-1);
+//            warning("aa"+new_date.to_string ());
 //            date_to_jump = new_date;
 //            new_date.to_timeval (out tv);
 //            Date start_date = {};
@@ -445,20 +419,17 @@ private class Journal.ClutterHTL : Object {
     private Clutter.Actor timeline;
     private HTimeline timeline_gtk;
     
-    private ActivityFactory activity_factory;
-    
     private Gee.HashMap<string, int> x_positions;
 
     public ClutterHTL (App app, Clutter.Stage stage){
         this.model = new ActivityModel ();
         this.app = app;
         this.stage = stage;
-        this.activity_factory = new ActivityFactory ();
         x_positions = new Gee.HashMap<string, int> ();
 
 
-        app.backend.events_loaded.connect ((tr) => {
-            load_events ();
+        model.activities_loaded.connect ((dates_loaded)=> {
+            load_activities ();
         });
 
         viewport = new Clutter.Actor ();
@@ -502,7 +473,7 @@ private class Journal.ClutterHTL : Object {
        });
     }
     
-    public void load_events () {
+    public void load_activities () {
         Gee.ArrayList<Zeitgeist.Event> all_activities= app.backend.all_activities;
         int i = 50;
         int type = 0;
@@ -511,8 +482,7 @@ private class Journal.ClutterHTL : Object {
         GtkClutter.Actor actor = null;
         foreach (Zeitgeist.Event e in all_activities)
         {
-            GenericActivity activity = activity_factory.get_activity_for_event (e);
-            model.add_activity (activity);
+            GenericActivity activity = ActivityFactory.get_activity_for_event (e);
             if (type % 2 == 0) 
                 side = Side.BOTTOM;
             else 
@@ -558,167 +528,167 @@ private class Journal.ClutterHTL : Object {
     }
 }
 
-private class Journal.GtkVTL : Layout {
-    private ActivityModel model;
-    private App app;
-    private Gee.ArrayList<int> point_circle;
-    
-    private int total_height;
-    
-    //Timeline stuffs
-    private const int len_arrow = 20; // hardcoded
-    private const int arrow_origin = 30;
-    private const int timeline_width = 2;
-    private const int radius = 6;
+//private class Journal.GtkVTL : Layout {
+//    private ActivityModel model;
+//    private App app;
+//    private Gee.ArrayList<int> point_circle;
+//    
+//    private int total_height;
+//    
+//    //Timeline stuffs
+//    private const int len_arrow = 20; // hardcoded
+//    private const int arrow_origin = 30;
+//    private const int timeline_width = 2;
+//    private const int radius = 6;
 
 
-    public GtkVTL (App app){
-        this.model = new ActivityModel ();
-        this.app = app;
-        this.point_circle = new Gee.ArrayList<int> ();
+//    public GtkVTL (App app){
+//        this.model = new ActivityModel ();
+//        this.app = app;
+//        this.point_circle = new Gee.ArrayList<int> ();
 
-        this.get_style_context ().add_class ("timeline-gtk");
-        this.hexpand = true;
-        this.total_height = 0;
-        
-        this.realize.connect (() => {
-            this.setup_ui ();
-        });
-        
-       this.app.window.configure_event.connect (() => {
-            this.adjust_ui ();
-            return false;
-        });
-        
-        this.app.window.window_state_event.connect (() => {
-            this.adjust_ui ();
-            return false;
-        });
-        
-        app.backend.events_loaded.connect (() => {
-            load_events ();
-        });
-    }
-    
-    private void add_circle (int y) {
-        this.point_circle.add (y + arrow_origin - len_arrow / 2 + radius * 2 - 2); //?? why?
-    }
-    
-    public override bool draw (Cairo.Context ctx) {
-        var bg = this.get_style_context ().get_color (0);
-        Clutter.Color backgroundColor = Utils.gdk_rgba_to_clutter_color (bg);
-        var color = this.get_style_context ().get_border_color (0);
-        Clutter.Color circleColor = Utils.gdk_rgba_to_clutter_color (color);
+//        this.get_style_context ().add_class ("timeline-gtk");
+//        this.hexpand = true;
+//        this.total_height = 0;
+//        
+//        this.realize.connect (() => {
+//            this.setup_ui ();
+//        });
+//        
+//       this.app.window.configure_event.connect (() => {
+//            this.adjust_ui ();
+//            return false;
+//        });
+//        
+//        this.app.window.window_state_event.connect (() => {
+//            this.adjust_ui ();
+//            return false;
+//        });
+//        
+//        app.backend.events_loaded.connect (() => {
+//            load_events ();
+//        });
+//    }
+//    
+//    private void add_circle (int y) {
+//        this.point_circle.add (y + arrow_origin - len_arrow / 2 + radius * 2 - 2); //?? why?
+//    }
+//    
+//    public override bool draw (Cairo.Context ctx) {
+//        var bg = this.get_style_context ().get_color (0);
+//        Clutter.Color backgroundColor = Utils.gdk_rgba_to_clutter_color (bg);
+//        var color = this.get_style_context ().get_border_color (0);
+//        Clutter.Color circleColor = Utils.gdk_rgba_to_clutter_color (color);
 
-        Allocation allocation;
-        get_allocation (out allocation);
-        var width = allocation.width;
-        var height = allocation.height;
-        var cr = ctx;
+//        Allocation allocation;
+//        get_allocation (out allocation);
+//        var width = allocation.width;
+//        var height = allocation.height;
+//        var cr = ctx;
 
-        ctx.save ();
-        //Draw the timeline
-        Clutter.cairo_set_source_color (cr, backgroundColor);
-        ctx.translate (width / 2 - timeline_width / 2, 0);
-        ctx.rectangle (0, 0, timeline_width, height);
-        ctx.fill ();
-        
-        //Draw circles
-        foreach (int y in point_circle) {
-            // Paint the border cirle to start with.
-            Clutter.cairo_set_source_color(cr, backgroundColor);
-            ctx.arc (timeline_width / 2, y, radius, 0, 2*Math.PI);
-            ctx.stroke ();
-            // Paint the colored cirle
-            Clutter.cairo_set_source_color(cr, circleColor);
-            ctx.arc (timeline_width / 2, y, radius - 1, 0, 2*Math.PI);
-            ctx.fill ();
-        }
+//        ctx.save ();
+//        //Draw the timeline
+//        Clutter.cairo_set_source_color (cr, backgroundColor);
+//        ctx.translate (width / 2 - timeline_width / 2, 0);
+//        ctx.rectangle (0, 0, timeline_width, height);
+//        ctx.fill ();
+//        
+//        //Draw circles
+//        foreach (int y in point_circle) {
+//            // Paint the border cirle to start with.
+//            Clutter.cairo_set_source_color(cr, backgroundColor);
+//            ctx.arc (timeline_width / 2, y, radius, 0, 2*Math.PI);
+//            ctx.stroke ();
+//            // Paint the colored cirle
+//            Clutter.cairo_set_source_color(cr, circleColor);
+//            ctx.arc (timeline_width / 2, y, radius - 1, 0, 2*Math.PI);
+//            ctx.fill ();
+//        }
 
-        ctx.restore ();
-        foreach (Widget child in this.get_children ())
-            this.propagate_draw(child, ctx);
+//        ctx.restore ();
+//        foreach (Widget child in this.get_children ())
+//            this.propagate_draw(child, ctx);
 
-        return false;
-        }
+//        return false;
+//        }
 
-    public void load_events () {
-        Gee.ArrayList<Zeitgeist.Event> all_activities= app.backend.all_activities;
-        foreach (Zeitgeist.Event e in all_activities)
-        {
-            GenericActivity activity = new GenericActivity (e);
-            model.add_activity (activity);
-        }
-    }
-    
-    private void setup_ui () {
-        int i = 50;
-        int type = 0;
-        Side side;
-        float offset = 0;
-        foreach (GenericActivity activity in model.activities)
-        {
-            if (type % 2 == 0) 
-                side = Side.RIGHT;
-            else 
-                side = Side.LEFT;
-                
-            RoundBox r = new RoundBox (side);
-            RoundBoxContent rc = new RoundBoxContent (activity, null);
-            r.add (rc);
-            
-            int r_height, r_width, width;
-            r.get_preferred_width (null, out r_width);
-            r.get_preferred_height_for_width (r_width, null, out r_height);
-            width = get_allocated_width ();
-            
-            if (type % 2 == 0)
-                offset = (int)width / 2 + timeline_width / 2 - radius - 5 - r_width;
-            else 
-                offset = (int)width / 2 + timeline_width / 2 + radius + 5;
+//    public void load_events () {
+//        Gee.ArrayList<Zeitgeist.Event> all_activities= app.backend.all_activities;
+//        foreach (Zeitgeist.Event e in all_activities)
+//        {
+//            GenericActivity activity = new GenericActivity (e);
+//            model.add_activity (activity);
+//        }
+//    }
+//    
+//    private void setup_ui () {
+//        int i = 50;
+//        int type = 0;
+//        Side side;
+//        float offset = 0;
+//        foreach (GenericActivity activity in model.activities)
+//        {
+//            if (type % 2 == 0) 
+//                side = Side.RIGHT;
+//            else 
+//                side = Side.LEFT;
+//                
+//            RoundBox r = new RoundBox (side);
+//            RoundBoxContent rc = new RoundBoxContent (activity, null);
+//            r.add (rc);
+//            
+//            int r_height, r_width, width;
+//            r.get_preferred_width (null, out r_width);
+//            r.get_preferred_height_for_width (r_width, null, out r_height);
+//            width = get_allocated_width ();
+//            
+//            if (type % 2 == 0)
+//                offset = (int)width / 2 + timeline_width / 2 - radius - 5 - r_width;
+//            else 
+//                offset = (int)width / 2 + timeline_width / 2 + radius + 5;
 
-            this.add_circle (i);
-            this.put(r, (int) offset, i);
-            //i +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
-            if (type % 2 == 1) i += 20;
-            else {
-                i += r_height;
-                total_height += r_height ;
-            }
-            type ++;
-        }
-        this.show_all ();
-        
-        adjust_ui ();
-    }
-    
-    private void adjust_ui (){
-        int width = get_allocated_width ();
-        int i = 50;
-        int offset = 0;
-        foreach (Widget child in this.get_children ()) {
-            int r_width = child.get_allocated_width ();
-            int r_height = child.get_allocated_height ();
-            Side side = ((RoundBox)child).arrow_side;
-            if (side == Side.RIGHT) 
-                offset = (int)width / 2 + timeline_width / 2 - radius - 5 - r_width;
-            else
-                offset = (int)width / 2 + timeline_width / 2 + radius + 5; 
-            this.move (child, offset, i);
-            
-            if (side == Side.RIGHT) 
-                i+= r_height;
-            else
-                i+= 20; 
-            
-            total_height += r_height;
-        }
-    }
-    
-   public override void get_preferred_height (out int minimum_height, out int natural_height) {
-       minimum_height = natural_height = this.total_height;
-   }
-}
+//            this.add_circle (i);
+//            this.put(r, (int) offset, i);
+//            //i +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
+//            if (type % 2 == 1) i += 20;
+//            else {
+//                i += r_height;
+//                total_height += r_height ;
+//            }
+//            type ++;
+//        }
+//        this.show_all ();
+//        
+//        adjust_ui ();
+//    }
+//    
+//    private void adjust_ui (){
+//        int width = get_allocated_width ();
+//        int i = 50;
+//        int offset = 0;
+//        foreach (Widget child in this.get_children ()) {
+//            int r_width = child.get_allocated_width ();
+//            int r_height = child.get_allocated_height ();
+//            Side side = ((RoundBox)child).arrow_side;
+//            if (side == Side.RIGHT) 
+//                offset = (int)width / 2 + timeline_width / 2 - radius - 5 - r_width;
+//            else
+//                offset = (int)width / 2 + timeline_width / 2 + radius + 5; 
+//            this.move (child, offset, i);
+//            
+//            if (side == Side.RIGHT) 
+//                i+= r_height;
+//            else
+//                i+= 20; 
+//            
+//            total_height += r_height;
+//        }
+//    }
+//    
+//   public override void get_preferred_height (out int minimum_height, out int natural_height) {
+//       minimum_height = natural_height = this.total_height;
+//   }
+//}
 
 private class Journal.VTimeline : Clutter.CairoTexture {
 

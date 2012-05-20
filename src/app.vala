@@ -23,7 +23,6 @@ public class Journal.App: GLib.Object {
     private DayView day_view;
     private ClutterVTL cvtl;
     private ClutterHTL chtl;
-    private GtkVTL gvtl;
     private ReminderView reminder_view;
     private Revealer revealer;
     private Gd.MainToolbar main_toolbar;
@@ -200,12 +199,6 @@ public class Journal.App: GLib.Object {
         
         loading2 = new LoadingActor (this, stage2);
         loading2.start ();
-        //GTK VTL FIXME doesn't work!
-        gvtl = new GtkVTL (this);
-        ScrolledWindow sw = new ScrolledWindow (null, null);
-        sw.set_policy (PolicyType.AUTOMATIC, PolicyType.AUTOMATIC);
-        sw.add_with_viewport (gvtl);
-        //notebook.append_page (sw, null);
 
         //THREE COLUMN VIEW
         //FIXME Make the num of days displayed a preferences??

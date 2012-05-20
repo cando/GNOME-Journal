@@ -26,16 +26,14 @@ public class Journal.ZeitgeistBackend: GLib.Object
       
       days_map = new Gee.HashMap<string, Gee.ArrayList<Zeitgeist.Event>> ();
       
-      load_events ();
-      
       //TODO Add a monitor for new events here
       //Timeout.add_seconds (60*30, refresh_popularity);
     }
     
-    private void load_events ()
+    public void load_events_on_start ()
     {
       int64 end = Zeitgeist.Timestamp.now ();
-      //FIXME only 6 days atm
+      //FIXME only 3 days atm
       int64 start = end - Zeitgeist.Timestamp.DAY * 3;
       load_events_for_timestamp_range (start, end);
     }
