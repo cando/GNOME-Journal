@@ -8,9 +8,106 @@ enum Side {
  BOTTOM
 }
 
+enum ScrollMode {
+    X,
+    Y
+}
+
+private class Journal.ScrollableViewport : Clutter.Actor {
+
+    public float scroll_to_y {
+        get; set;
+    }
+    public float scroll_to_x {
+        get; set;
+    }
+    public ScrollMode scroll_mode {
+        get; set;
+    }
+
+    public ScrollableViewport () {
+        Object ();
+        this.reactive = true;
+        scroll_to_y = 0.0f;
+        scroll_to_x = 0.0f;
+    }
+    
+    private inline void push_clip () {
+        Clutter.ActorBox allocation;
+        float width, height;
+        float x, y;
+        
+        allocation = get_allocation_box ();
+        allocation.get_size (out width, out height);
+        
+        if (scroll_mode == ScrollMode.X) {
+            x = scroll_to_x;
+            y = 0.0f;
+        }
+        else {
+            y = scroll_to_y;
+            x = 0.0f;
+        }
+        
+        Cogl.clip_push_rectangle (x, y, x + width, y + height);
+    }
+    
+    public override void paint () {
+        push_clip ();
+        base.paint ();
+        Cogl.clip_pop ();
+    }
+
+    public override void pick (Clutter.Color pick_color) {
+        Clutter.Actor child;
+        
+        push_clip ();
+        base.pick (pick_color);
+        /* FIXME - this has to go away when we remove the vfunc check inside
+         * the ClutterActor::pick default implementation
+         */
+        for (child = this.get_first_child (); child != null;
+             child = child.get_next_sibling ()) {
+                child.paint ();
+        }
+        Cogl.clip_pop ();
+    }
+
+    public override void apply_transform (ref Cogl.Matrix matrix) {
+        base.apply_transform (ref matrix);
+        float x_factor, y_factor;
+        
+        if (scroll_mode == ScrollMode.X) {
+            x_factor = -scroll_to_x;
+            y_factor = 0.0f;
+        }
+        else {
+            y_factor = -scroll_to_y;
+            x_factor = 0.0f;
+        }
+        matrix.translate (x_factor, y_factor, 0.0f);
+    }
+
+    private void set_scroll_to_internal (float x, float y) {
+        if (x == scroll_to_x && y == scroll_to_y)
+            return;
+            
+        scroll_to_y = y;
+        scroll_to_x = x;
+        queue_redraw ();
+    }
+
+    public void scroll_to_point (float x, float y) {
+        //TODO ANIMATION STUFFS here?
+        set_scroll_to_internal (x, y);
+    }
+
+}
+
 
 private class Journal.ClutterVTL : Box {
-    public Clutter.Actor viewport;
+    public ScrollableViewport viewport;
+    public Clutter.Actor container;
     
     private ActivityModel model;
     private App app;
@@ -25,6 +122,17 @@ private class Journal.ClutterVTL : Box {
     private ActivityFactory activity_factory;
     
     private Gee.HashMap<string, int> y_positions;
+    
+    //Position and type of last drawn bubble
+    private int last_y_position;
+    private int last_type;
+    //Last position visible (utilized for scrolling).
+    private float last_y_visible;
+    
+    //Date to jump when we have loaded new events
+    private DateTime? date_to_jump;
+    
+    private bool on_loading;
 
     public ClutterVTL (App app){
         Object (orientation: Orientation.HORIZONTAL, spacing : 0);
@@ -35,42 +143,51 @@ private class Journal.ClutterVTL : Box {
         this.stage.set_color (Utils.gdk_rgba_to_clutter_color (Utils.get_journal_bg_color ()));
         this.activity_factory = new ActivityFactory ();
         y_positions = new Gee.HashMap<string, int> ();
-
+        
+        last_y_position = 50;
+        last_type = 0;
+        last_y_visible = 0;
+        date_to_jump = null;
+        on_loading = false;
+        
         app.backend.events_loaded.connect ((tr) => {
             load_events (tr);
         });
         
-        viewport = new Clutter.Actor ();
-        viewport.set_clip_to_allocation (true);
-        viewport.set_reactive (true);
+        viewport = new ScrollableViewport ();
+        viewport.scroll_mode = ScrollMode.Y;
         viewport.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.WIDTH, 0));
+        viewport.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.HEIGHT, 0));
+
+        container = new Clutter.Actor ();
+        container.set_reactive (true);
+        viewport.add_actor (container);
+        container.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.WIDTH, 0));
         
         //Timeline
         timeline = new VTimeline ();
         //timeline.add_constraint (new Clutter.BindConstraint (viewport, Clutter.BindCoordinate.HEIGHT, 0));
         timeline.add_constraint (new Clutter.AlignConstraint (stage, Clutter.AlignAxis.X_AXIS, 0.5f));
         
-        viewport.add_actor (timeline);
-        viewport.scroll_event.connect ( (e) => {
+        container.add_actor (timeline);
+        container.scroll_event.connect ( (e) => {
         
-        float old_y;
-        var y = old_y = viewport.get_y ();
         var direction = e.direction;
         var offset = (float)scrollbar.adjustment.step_increment;
 
         switch (direction)
         {
             case Clutter.ScrollDirection.UP:
-                old_y -= offset;
-                y = old_y.clamp (stage.get_height () - viewport.get_height (), 0.0f);
-                if( y != stage.get_height () - viewport.get_height ())
-                    scrollbar.move_slider (ScrollType.STEP_DOWN);
+                last_y_visible -= offset;
+                last_y_visible = last_y_visible.clamp (0.0f, container.get_height () - stage.get_height ());
+                if (last_y_visible != 0.0f)
+                    scrollbar.move_slider (ScrollType.STEP_UP);
                 break;
             case Clutter.ScrollDirection.DOWN:
-                old_y += offset;
-                y = old_y.clamp (stage.get_height () - viewport.get_height (), 0.0f);
-                if( y != 0.0f)
-                    scrollbar.move_slider (ScrollType.STEP_UP);
+                last_y_visible += offset;
+                last_y_visible = last_y_visible.clamp (0.0f, container.get_height () - stage.get_height ());
+                if (last_y_visible != container.get_height () - stage.get_height ())
+                    scrollbar.move_slider (ScrollType.STEP_DOWN);
                 break;
 
             /* we're only interested in up and down */
@@ -78,21 +195,20 @@ private class Journal.ClutterVTL : Box {
             case Clutter.ScrollDirection.RIGHT:
             break;
        }
-       /* animate the change to the scrollable's y coordinate */
-       viewport.animate ( Clutter.AnimationMode.EASE_OUT_CUBIC,
-                         150,
-                         "y", y);
-       return true;
+       
+       viewport.scroll_to_point (0.0f, last_y_visible);
+       return false;
        });
        
        stage.add_actor (viewport);
        
        Adjustment adj = new Adjustment (0, 0, 0, 0, 0, stage.height);
        scrollbar = new Scrollbar (Orientation.VERTICAL, adj);
-       viewport.queue_relayout.connect (() => {
-           scrollbar.adjustment.upper = viewport.height;
-           scrollbar.adjustment.step_increment = viewport.height/500; //TODO Divide by number of bubble?
-           scrollbar.adjustment.page_increment = viewport.height/10;
+       container.queue_relayout.connect (() => {
+           scrollbar.adjustment.upper = container.height;
+           uint num_child = container.get_children ().length ();
+           scrollbar.adjustment.step_increment = container.height / (num_child*10);
+           scrollbar.adjustment.page_increment = container.height/ 10;
        });
        scrollbar.change_value.connect ((st, v) => { 
             this.on_scrollbar_scroll (); 
@@ -100,7 +216,7 @@ private class Journal.ClutterVTL : Box {
        });
         
        vnav = new TimelineNavigator (Orientation.VERTICAL);
-       vnav.go_to_date.connect ((date) => {this.jump_to_day(date);});
+       vnav.go_to_date.connect ((date) => {this.jump_to_day (date);});
 
        this.pack_start (vnav, false, false, 0);
        this.pack_start (embed, true, true, 0);
@@ -126,8 +242,6 @@ private class Journal.ClutterVTL : Box {
             next_date = next_date.add_days (-1);
             date_to_load.add (next_date.format("%Y-%m-%d"));
         }
-        int i = 50;
-        int type = 0;
         Side side;
         float offset = 0;
         int last_actor_height = 0;
@@ -139,7 +253,7 @@ private class Journal.ClutterVTL : Box {
             foreach (Zeitgeist.Event e in event_list) {
                 GenericActivity activity = activity_factory.get_activity_for_event (e);
                 model.add_activity (activity);
-                if (type % 2 == 0) 
+                if (last_type % 2 == 0) 
                     side = Side.RIGHT;
                 else 
                     side = Side.LEFT;
@@ -179,33 +293,35 @@ private class Journal.ClutterVTL : Box {
                     date_text.add_constraint (new Clutter.BindConstraint (day_line, Clutter.BindCoordinate.Y, -2));
                     date_text.set_x (10);
                     date_text.anchor_y = date_text.height;
-                    if (type % 2 == 0) 
+                    if (last_type % 2 == 0) 
                         //Means that the last bubble displayed is on the left
-                        i += last_actor_height + text_size;
-                    day_line.set_y (i);
-                    viewport.add_actor (day_line);
-                    viewport.add_actor (date_text);
-                    i += (int)(day_line.height + text_size);
+                        last_y_position += last_actor_height + text_size;
+                    else 
+                        last_y_position += 20 + text_size;
+                    day_line.set_y (last_y_position);
+                    container.add_actor (day_line);
+                    container.add_actor (date_text);
+                    last_y_position += (int)(day_line.height + text_size);
                     
-                    y_positions.set (date, (int)(day_line.y - text_size*3));
+                    y_positions.set (date, (int)(day_line.y - text_size * 3));
                 }
 
                 GtkClutter.Actor actor = new GtkClutter.Actor.with_contents (r);
                 /****TODO MOVE THIS WHOLE CODE IN A CLASS WRAPPING THE RoundBoxContent***/
                 actor.reactive = true;
-                if (type % 2 == 0) 
+                if (last_type % 2 == 0) 
                     actor.scale_center_x = actor.width;
-                actor.enter_event.connect ((e) => {
-                    double scale_x;
-                    double scale_y;
+                    actor.enter_event.connect ((e) => {
+                        double scale_x;
+                        double scale_y;
 
-                    actor.get_scale (out scale_x, out scale_y);
+                        actor.get_scale (out scale_x, out scale_y);
 
-                    actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
+                        actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
                            "scale-x", scale_x * 1.05,
                            "scale-y", scale_y * 1.05);
                 
-                    return false;
+                        return false;
                 });
                 actor.leave_event.connect ((e) => {
                     actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
@@ -227,55 +343,93 @@ private class Journal.ClutterVTL : Box {
                     return false;
                 }); 
                 /****************************************************/
-                viewport.add_actor (actor);
-                if (type % 2 == 0)
+                container.add_actor (actor);
+                if (last_type % 2 == 0)
                     offset = -(5 + actor.get_width());
                 else 
                     offset = 5 + timeline.get_width ();
                 actor.add_constraint (new Clutter.BindConstraint (timeline, Clutter.BindCoordinate.X, offset));  // timeline!
-                actor.set_y (i);
-                timeline.add_circle (i);
-                //i +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
+                actor.set_y (last_y_position);
+                timeline.add_circle (last_y_position);
+                //last_y_position +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
                 last_actor_height = (int)actor.get_height();
-                if (type % 2 == 1) i += 20;
-                else i +=  last_actor_height;
-                type ++;
+                if (last_type % 2 == 1) last_y_position += 20;
+                else last_y_position +=  last_actor_height;
+                last_type ++;
             }
        }
        
        timeline.invalidate ();
        
-       if (viewport.height <= stage.height)
+       if (container.height <= stage.height)
             scrollbar.hide ();
+       
+       
+       if(date_to_jump != null) {
+            jump_to_day (date_to_jump);
+            osd_label.hide ();
+       }
+
+       on_loading = false;
     }
     
-    public void jump_to_day (string date) {
+    public void jump_to_day (DateTime date) {
         int y = 0;
-        if (y_positions.has_key (date) == true) 
-            y = this.y_positions.get (date);
-        else {
-            //jump to TODAY (y == 0)
-            osd_label.set_message_and_show (_("Loading Activities..."));
-            //TODO load activities!
-            //app.backend.load_events_
+        string date_s = date.format("%Y-%m-%d");
+        if (y_positions.has_key (date_s) == true) {
+            y = this.y_positions.get (date_s);
+            viewport.scroll_to_point (0.0f, y);
+            scrollbar.adjustment.upper = container.height;
+            scrollbar.adjustment.value = y;
         }
-
-         viewport.animate (Clutter.AnimationMode.EASE_OUT_CUBIC,
-                          350,
-                          "y", (float)(-y));
-         scrollbar.adjustment.value = y;
+        else {
+            osd_label.set_message_and_show (_("Loading Activities..."));
+            TimeVal tv;
+            date_to_jump = date;
+            //add some days to the jump date, permitting the user to navigate more.
+            // FIXME always 7? Something better?
+            DateTime larger_date = date.add_days (-7);
+            larger_date.to_timeval (out tv);
+            Date start_date = {};
+            start_date.set_time_val (tv);
+            app.backend.last_loaded_date.to_timeval (out tv);
+            Date end_date = {};
+            end_date.set_time_val (tv);
+            app.backend.load_events_for_date_range (start_date, end_date);
+            on_loading = true;
+        }
     }
     
     public void on_scrollbar_scroll () {
-        float y = (float)(-scrollbar.adjustment.value);
-        viewport.y = y;
+        float y = (float)(scrollbar.adjustment.value);
+        y = y.clamp (0.0f, container.get_height () - stage.get_height ());
+        last_y_visible = y;
+        viewport.scroll_to_point (0.0f, y);
+        
+        //FIXME
+//        if (!on_loading && (y == (container.get_height () - stage.get_height ()))) {
+//            //We can't scroll anymmore! Let's load another day!
+//            osd_label.set_message_and_show (_("Loading Activities..."));
+//            on_loading = true;
+//            TimeVal tv;
+//            DateTime new_date = app.backend.last_loaded_date.add_days (-1);
+//            date_to_jump = new_date;
+//            new_date.to_timeval (out tv);
+//            Date start_date = {};
+//            start_date.set_time_val (tv);
+//            app.backend.last_loaded_date.to_timeval (out tv);
+//            Date end_date = {};
+//            end_date.set_time_val (tv);
+//            app.backend.load_events_for_date_range (start_date, end_date);
+//        }
         
         //We are moving so we should highligth the right TimelineNavigator's label
         string final_key = "";
+        int final_pos = 0;
         foreach (Gee.Map.Entry<string, int> entry in y_positions.entries) {
-            if (entry.value <= (int)(-y)) {
+            if (entry.value <= (int)((y) + stage.height / 2) && entry.value > final_pos) {
                 final_key = entry.key;
-                break;
+                final_pos = entry.value;
             }
         }
         vnav.highlight_date (final_key);
@@ -308,7 +462,7 @@ private class Journal.ClutterHTL : Object {
         });
 
         viewport = new Clutter.Actor ();
-        viewport.set_clip_to_allocation (true);
+        //viewport.set_clip_to_allocation (true);
         viewport.set_reactive (true);
         viewport.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.HEIGHT, 0));
         
@@ -389,10 +543,11 @@ private class Journal.ClutterHTL : Object {
         }
     }
     
-    public void jump_to_day (string date) {
+    public void jump_to_day (DateTime date) {
         int x = 0;
-        if (x_positions.has_key (date) == true) 
-            x = this.x_positions.get (date);
+        string date_s = date.format("%Y-%m-%d");
+        if (x_positions.has_key (date_s) == true) 
+            x = this.x_positions.get (date_s);
         else 
             //jump to TODAY (x == 0)
             warning ("Impossible to jump to this data...jumping to today");

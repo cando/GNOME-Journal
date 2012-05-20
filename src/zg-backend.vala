@@ -8,6 +8,10 @@ public class Journal.ZeitgeistBackend: GLib.Object
     private Gee.ArrayList<Zeitgeist.Event> new_events;
     private Gee.ArrayList<Zeitgeist.Event> all_app_events;
     private Gee.Map<string, Gee.ArrayList<Zeitgeist.Event>> days_map;
+    
+    public DateTime last_loaded_date {
+        get; private set;
+    }
 
     //Tr is the timerange containing the events loaded
     public signal void events_loaded (Zeitgeist.TimeRange tr);
@@ -144,9 +148,13 @@ public class Journal.ZeitgeistBackend: GLib.Object
         foreach (Zeitgeist.Event e1 in new_events)
         {
           if (e1.num_subjects () <= 0) continue;
-          string key = Utils.get_date_for_event (e1);
-          if (days_map.has_key(key) == false)
+          DateTime date = Utils.get_date_for_event (e1);
+          string key = date.format("%Y-%m-%d");
+          if (days_map.has_key (key) == false)
+          {
             days_map[key] = new Gee.ArrayList<Zeitgeist.Event> ();
+            last_loaded_date = date;
+          }
           days_map[key].add (e1);
         }
         

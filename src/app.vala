@@ -189,7 +189,7 @@ public class Journal.App: GLib.Object {
         stage2.set_color (Utils.gdk_rgba_to_clutter_color (Utils.get_journal_bg_color ()));
         chtl = new ClutterHTL (this, stage2);
         TimelineNavigator hnav = new TimelineNavigator (Orientation.HORIZONTAL);
-        hnav.go_to_date.connect ((date) => {chtl.jump_to_day(date);});
+        hnav.go_to_date.connect ((date) => {chtl.jump_to_day (date);});
         
         stage2.add_actor (chtl.viewport);
         var box2 = new Grid ();

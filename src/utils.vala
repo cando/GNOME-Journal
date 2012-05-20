@@ -120,12 +120,11 @@ private class Journal.Utils : Object{
     }
     
     //DATE UTILS
-    public static string get_date_for_event (Zeitgeist.Event e) {
+    public static DateTime get_date_for_event (Zeitgeist.Event e) {
         int64 timestamp = e.get_timestamp () / 1000;
         //TODO To localtime here? Zeitgeist uses UTC timestamp, right?
         DateTime date = new DateTime.from_unix_utc (timestamp).to_local ();
-        //TODO efficiency here? Use String? Int? Quark?
-        return date.format("%Y-%m-%d");
+        return date;
     }
     
     public static string get_start_of_the_day_string (int64 time) {

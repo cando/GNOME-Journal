@@ -54,11 +54,9 @@ public class Journal.OSDLabel: Object{
     
     private Clutter.Stage stage;
     private Button button;
-    private uint timeout_id;
 
     public OSDLabel (Clutter.Stage stage) {
         this.stage = stage;
-        timeout_id = 0;
         
         button = new Button ();
         button.sensitive = false;
@@ -75,22 +73,16 @@ public class Journal.OSDLabel: Object{
     
     public void set_message_and_show (string message) {
         button.label = message;
-        
-        if (timeout_id != 0)
-            Source.remove (timeout_id);
-        else {
-            actor.show ();
-            actor.animate (Clutter.AnimationMode.EASE_OUT_CUBIC,
+        actor.show ();
+        actor.animate (Clutter.AnimationMode.EASE_OUT_CUBIC,
                           500,
                           "opacity", 255);
-        }
-
-        timeout_id = Timeout.add_seconds (3, () => {
-            var animation = actor.animate (Clutter.AnimationMode.EASE_OUT_CUBIC,
+    }
+    
+    public void hide () {
+        var animation = actor.animate (Clutter.AnimationMode.EASE_OUT_CUBIC,
                           500,
                           "opacity", 0);
-            animation.completed.connect (()=> {actor.hide (); timeout_id = 0;}); 
-            return false;
-        });
+        animation.completed.connect (()=> {actor.hide ();});
     }
 }
