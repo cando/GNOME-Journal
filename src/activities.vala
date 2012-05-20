@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2012 Stefano Candori <scandori@gnome.org>
  *
- * Gnome Activity Journal is free software; you can redistribute it and/or modify
+ * GNOME Journal is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.
@@ -375,82 +375,5 @@ private class Journal.ActivityModel : Object {
         Date end_date = {};
         end_date.set_time_val (tv);
         backend.load_events_for_date_range (start_date, end_date);
-    }
-}
-
-//USED by the old three column view prototype
-private class Journal.OldActivityModel : Object {
-
-    private ListStore model;
-    private Gee.ArrayList<GenericActivity> _activities;
-    
-    public Gee.ArrayList<GenericActivity> activities {
-        get { return this._activities; }
-    }
-
-    public OldActivityModel () {
-        this._activities = new Gee.ArrayList<GenericActivity> ();
-        this.model = new ListStore (6, 
-                                   typeof (string), // URI
-                                   typeof (string), // TITLE
-                                   typeof (Pixbuf), // THUMB_ICON
-                                   typeof (string), // DISPLAY_URI
-                                   typeof (int64),  // TIME
-                                   typeof (bool)); // SELECTED
-        this.model.set_sort_column_id (Gd.MainColumns.TIME, 
-                                       SortType.DESCENDING);
-    }
-    
-    public void clear () {
-        this.model.clear ();
-    }
-    
-    public void add_activity (GenericActivity activity) {
-        TreeIter iter;
-        this.model.append (out iter);
-        this.model.set (iter,
-                        0, activity.uri,
-                        1, activity.title,
-                        2, activity.thumb_icon,
-                        3, activity.display_uri,
-                        4, activity.time,
-                        5, activity.selected);
-                        
-        activity.thumb_loaded.connect ((activity) => {
-                this.update_icon_for_activity (activity);
-        });
-        
-        activities.add (activity);
-    }
-    
-    public void remove_activity (GenericActivity activity) {
-        this.model.foreach ((model, path, iter) => {
-            Value uri;
-            this.model.get_value (iter, 0, out uri);
-            if (uri.get_string () == activity.uri) {
-                    this.model.remove (iter);
-                    return true;
-            }
-            
-            return false;
-        });
-    }
-    
-    private void update_icon_for_activity (GenericActivity activity) {
-        //TODO Animated transition for the new icon?
-        this.model.foreach ((model, path, iter) => {
-            Value uri;
-            this.model.get_value (iter, 0, out uri);
-            if (uri.get_string () == activity.uri) {
-                    this.model.set_value (iter, 2, activity.thumb_icon);
-                    return true;
-            }
-            
-            return false;
-        });
-    }
-    
-    public ListStore get_model () {
-        return this.model;
     }
 }

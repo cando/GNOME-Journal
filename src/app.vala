@@ -1,4 +1,23 @@
-// This file is part of GNOME Activity Journal.
+/*
+ * Copyright (c) 2012 Stefano Candori <scandori@gnome.org>
+ *
+ * GNOME Journal is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
+ *
+ * Gnome Documents is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with Gnome Documents; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ * Author: Stefano Candori <scandori@gnome.org>
+ *
+ */
 using Gtk;
 
 public class Journal.App: GLib.Object {
@@ -20,7 +39,6 @@ public class Journal.App: GLib.Object {
 
     private Gtk.Application application;
     private ClutterVTL cvtl;
-    private ClutterHTL chtl;
     private Gd.MainToolbar main_toolbar;
 
     private ZeitgeistBackend _backend;
@@ -145,19 +163,15 @@ public class Journal.App: GLib.Object {
         main_toolbar = new Gd.MainToolbar();
         main_toolbar.icon_size = IconSize.MENU;
         main_toolbar.set_mode (Gd.MainToolbarMode.OVERVIEW);
+        main_toolbar.set_labels (_("Timeline"), null);
         main_toolbar.selection_mode_request.connect ((mode) => {
-                this.day_view.set_selection_mode (mode);
                 if (mode) {
                     this.main_toolbar.set_mode (Gd.MainToolbarMode.SELECTION);
                     main_toolbar.set_labels (null, _("(Click on items to select them)"));
-                    revealer.reveal ();
                 }
                 else {
                     main_toolbar.set_mode (Gd.MainToolbarMode.OVERVIEW);
-                    int num_days = 3;
-                    string label = _(@"Last $num_days days");
-                    main_toolbar.set_labels (_("Timeline"), label);
-                    revealer.unreveal ();
+                    main_toolbar.set_labels (_("Timeline"), null);
                 }
         });
         notebook = new Gtk.Notebook ();
@@ -173,25 +187,6 @@ public class Journal.App: GLib.Object {
         //CLUTTER VTL
         cvtl = new ClutterVTL (this);
         notebook.append_page (cvtl, null);
-
-        //CLUTTER HTL
-        //TODO include in an unique widget
-//        var embed2 = new GtkClutter.Embed ();
-//        var stage2 = embed2.get_stage () as Clutter.Stage;
-//        stage2.set_color (Utils.gdk_rgba_to_clutter_color (Utils.get_journal_bg_color ()));
-//        chtl = new ClutterHTL (this, stage2);
-//        TimelineNavigator hnav = new TimelineNavigator (Orientation.HORIZONTAL);
-//        hnav.go_to_date.connect ((date) => {chtl.jump_to_day (date);});
-//        
-//        stage2.add_actor (chtl.viewport);
-//        var box2 = new Grid ();
-//        box2.orientation = Orientation.VERTICAL;
-//        box2.add (embed2);
-//        box2.add (hnav);
-//        notebook.append_page (box2, null);
-//        
-//        var loading2 = new LoadingActor (this, stage2);
-//        loading2.start ();
 
         window.show_all();
     }

@@ -29,12 +29,9 @@ bin_PROGRAMS = gnome-activity-journal
 gnome_activity_journal_SOURCES =\
 	activities.vala					\
 	app.vala						\
-	dayview.vala					\
 	loading.vala					\
 	journal-timeline-navigator.vala \
 	main.vala						\
-	reminderview.vala				\
-	revealer.vala					\
 	selectionbar.vala				\
 	timelineview.vala				\
 	utils.vala						\
@@ -42,3 +39,9 @@ gnome_activity_journal_SOURCES =\
 	$(NULL)
 
 gnome_activity_journal_LDADD = $(JOURNAL_LIBS) libgdprivate-1.0.la -lm
+
+MAINTAINERCLEANFILES =				\
+	$(gnome_activity_journal_SOURCES:.vala=.c)		\
+	*.stamp					\
+	$(NULL)
+

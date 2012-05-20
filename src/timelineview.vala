@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2012 Stefano Candori <scandori@gnome.org>
+ *
+ * GNOME Journal is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
+ *
+ * Gnome Documents is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with Gnome Documents; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ * Author: Stefano Candori <scandori@gnome.org>
+ *
+ */
+ 
 using Gtk;
 using Cairo;
 
@@ -410,286 +431,6 @@ private class Journal.ClutterVTL : Box {
     }
 }
 
-private class Journal.ClutterHTL : Object {
-    public Clutter.Actor viewport;
-    
-    private ActivityModel model;
-    private App app;
-    private Clutter.Stage stage;
-    private Clutter.Actor timeline;
-    private HTimeline timeline_gtk;
-    
-    private Gee.HashMap<string, int> x_positions;
-
-    public ClutterHTL (App app, Clutter.Stage stage){
-        this.model = new ActivityModel ();
-        this.app = app;
-        this.stage = stage;
-        x_positions = new Gee.HashMap<string, int> ();
-
-
-        model.activities_loaded.connect ((dates_loaded)=> {
-            load_activities ();
-        });
-
-        viewport = new Clutter.Actor ();
-        //viewport.set_clip_to_allocation (true);
-        viewport.set_reactive (true);
-        viewport.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.HEIGHT, 0));
-        
-        //Timeline
-        timeline_gtk = new HTimeline ();
-        timeline = new GtkClutter.Actor.with_contents (timeline_gtk);
-        timeline.width = 8000;
-        //timeline.add_constraint (new Clutter.BindConstraint (viewport, Clutter.BindCoordinate.WIDTH, 0));
-        timeline.add_constraint (new Clutter.AlignConstraint (stage, Clutter.AlignAxis.Y_AXIS, 0.5f));
-
-        viewport.add_actor (timeline); 
-        viewport.scroll_event.connect ( (e) => {
-            
-        var x = viewport.get_x ();
-        var direction = e.direction;
-
-        switch (direction)
-        {
-            case Clutter.ScrollDirection.RIGHT:
-                x -= (float)(viewport.width * 0.1);
-                break;
-            case Clutter.ScrollDirection.LEFT:
-                x += (float)(viewport.width * 0.1);
-                break;
-
-            /* we're only interested in right and left */
-            case Clutter.ScrollDirection.UP:
-            case Clutter.ScrollDirection.DOWN:
-            break;
-       }
-       x = x.clamp (stage.get_width () - viewport.get_width (), 0.0f);
-       /* animate the change to the scrollable's y coordinate */
-       viewport.animate ( Clutter.AnimationMode.EASE_OUT_CUBIC,
-                         150,
-                         "x", x);
-       return true;
-       });
-    }
-    
-    public void load_activities () {
-        Gee.ArrayList<Zeitgeist.Event> all_activities= app.backend.all_activities;
-        int i = 50;
-        int type = 0;
-        Side side;
-        float offset = 0;
-        GtkClutter.Actor actor = null;
-        foreach (Zeitgeist.Event e in all_activities)
-        {
-            GenericActivity activity = ActivityFactory.get_activity_for_event (e);
-            if (type % 2 == 0) 
-                side = Side.BOTTOM;
-            else 
-                side = Side.TOP;
-                
-            RoundBox r = new RoundBox (side);
-            RoundBoxContent rc = new RoundBoxContent (activity, 300);
-            r.add (rc);
-            r.show_all ();
-            
-            string date = Utils.get_start_of_the_day_string (activity.time);
-            if(x_positions.has_key (date) == false)
-                x_positions.set (date, i);
-
-            actor = new GtkClutter.Actor.with_contents (r);
-            viewport.add_actor (actor);
-            if (type % 2 == 0)
-                offset = -(5 + actor.get_height());
-            else 
-                offset = 5 + timeline.get_height ();
-            actor.add_constraint (new Clutter.BindConstraint (timeline, Clutter.BindCoordinate.Y, offset));  // timeline!
-            actor.set_x (i);
-            timeline_gtk.add_circle (i);
-            //i +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
-            if (type % 2 == 1) i += 20;
-            else i +=  (int)actor.get_width();
-            type ++;
-        }
-    }
-    
-    public void jump_to_day (DateTime date) {
-        int x = 0;
-        string date_s = date.format("%Y-%m-%d");
-        if (x_positions.has_key (date_s) == true) 
-            x = this.x_positions.get (date_s);
-        else 
-            //jump to TODAY (x == 0)
-            warning ("Impossible to jump to this data...jumping to today");
-
-         viewport.animate (Clutter.AnimationMode.EASE_OUT_CUBIC,
-                          350,
-                          "x", (float)(-x));
-    }
-}
-
-//private class Journal.GtkVTL : Layout {
-//    private ActivityModel model;
-//    private App app;
-//    private Gee.ArrayList<int> point_circle;
-//    
-//    private int total_height;
-//    
-//    //Timeline stuffs
-//    private const int len_arrow = 20; // hardcoded
-//    private const int arrow_origin = 30;
-//    private const int timeline_width = 2;
-//    private const int radius = 6;
-
-
-//    public GtkVTL (App app){
-//        this.model = new ActivityModel ();
-//        this.app = app;
-//        this.point_circle = new Gee.ArrayList<int> ();
-
-//        this.get_style_context ().add_class ("timeline-gtk");
-//        this.hexpand = true;
-//        this.total_height = 0;
-//        
-//        this.realize.connect (() => {
-//            this.setup_ui ();
-//        });
-//        
-//       this.app.window.configure_event.connect (() => {
-//            this.adjust_ui ();
-//            return false;
-//        });
-//        
-//        this.app.window.window_state_event.connect (() => {
-//            this.adjust_ui ();
-//            return false;
-//        });
-//        
-//        app.backend.events_loaded.connect (() => {
-//            load_events ();
-//        });
-//    }
-//    
-//    private void add_circle (int y) {
-//        this.point_circle.add (y + arrow_origin - len_arrow / 2 + radius * 2 - 2); //?? why?
-//    }
-//    
-//    public override bool draw (Cairo.Context ctx) {
-//        var bg = this.get_style_context ().get_color (0);
-//        Clutter.Color backgroundColor = Utils.gdk_rgba_to_clutter_color (bg);
-//        var color = this.get_style_context ().get_border_color (0);
-//        Clutter.Color circleColor = Utils.gdk_rgba_to_clutter_color (color);
-
-//        Allocation allocation;
-//        get_allocation (out allocation);
-//        var width = allocation.width;
-//        var height = allocation.height;
-//        var cr = ctx;
-
-//        ctx.save ();
-//        //Draw the timeline
-//        Clutter.cairo_set_source_color (cr, backgroundColor);
-//        ctx.translate (width / 2 - timeline_width / 2, 0);
-//        ctx.rectangle (0, 0, timeline_width, height);
-//        ctx.fill ();
-//        
-//        //Draw circles
-//        foreach (int y in point_circle) {
-//            // Paint the border cirle to start with.
-//            Clutter.cairo_set_source_color(cr, backgroundColor);
-//            ctx.arc (timeline_width / 2, y, radius, 0, 2*Math.PI);
-//            ctx.stroke ();
-//            // Paint the colored cirle
-//            Clutter.cairo_set_source_color(cr, circleColor);
-//            ctx.arc (timeline_width / 2, y, radius - 1, 0, 2*Math.PI);
-//            ctx.fill ();
-//        }
-
-//        ctx.restore ();
-//        foreach (Widget child in this.get_children ())
-//            this.propagate_draw(child, ctx);
-
-//        return false;
-//        }
-
-//    public void load_events () {
-//        Gee.ArrayList<Zeitgeist.Event> all_activities= app.backend.all_activities;
-//        foreach (Zeitgeist.Event e in all_activities)
-//        {
-//            GenericActivity activity = new GenericActivity (e);
-//            model.add_activity (activity);
-//        }
-//    }
-//    
-//    private void setup_ui () {
-//        int i = 50;
-//        int type = 0;
-//        Side side;
-//        float offset = 0;
-//        foreach (GenericActivity activity in model.activities)
-//        {
-//            if (type % 2 == 0) 
-//                side = Side.RIGHT;
-//            else 
-//                side = Side.LEFT;
-//                
-//            RoundBox r = new RoundBox (side);
-//            RoundBoxContent rc = new RoundBoxContent (activity, null);
-//            r.add (rc);
-//            
-//            int r_height, r_width, width;
-//            r.get_preferred_width (null, out r_width);
-//            r.get_preferred_height_for_width (r_width, null, out r_height);
-//            width = get_allocated_width ();
-//            
-//            if (type % 2 == 0)
-//                offset = (int)width / 2 + timeline_width / 2 - radius - 5 - r_width;
-//            else 
-//                offset = (int)width / 2 + timeline_width / 2 + radius + 5;
-
-//            this.add_circle (i);
-//            this.put(r, (int) offset, i);
-//            //i +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
-//            if (type % 2 == 1) i += 20;
-//            else {
-//                i += r_height;
-//                total_height += r_height ;
-//            }
-//            type ++;
-//        }
-//        this.show_all ();
-//        
-//        adjust_ui ();
-//    }
-//    
-//    private void adjust_ui (){
-//        int width = get_allocated_width ();
-//        int i = 50;
-//        int offset = 0;
-//        foreach (Widget child in this.get_children ()) {
-//            int r_width = child.get_allocated_width ();
-//            int r_height = child.get_allocated_height ();
-//            Side side = ((RoundBox)child).arrow_side;
-//            if (side == Side.RIGHT) 
-//                offset = (int)width / 2 + timeline_width / 2 - radius - 5 - r_width;
-//            else
-//                offset = (int)width / 2 + timeline_width / 2 + radius + 5; 
-//            this.move (child, offset, i);
-//            
-//            if (side == Side.RIGHT) 
-//                i+= r_height;
-//            else
-//                i+= 20; 
-//            
-//            total_height += r_height;
-//        }
-//    }
-//    
-//   public override void get_preferred_height (out int minimum_height, out int natural_height) {
-//       minimum_height = natural_height = this.total_height;
-//   }
-//}
-
 private class Journal.VTimeline : Clutter.CairoTexture {
 
     private Gee.ArrayList<int> point_circle;
@@ -745,66 +486,6 @@ private class Journal.VTimeline : Clutter.CairoTexture {
    
    public override void get_preferred_height (float for_width,out float min_height, out float nat_height) {
        nat_height = min_height = 8000;
-   }
-
-}
-
-private class Journal.HTimeline : DrawingArea {
-
-    private Gee.ArrayList<int> point_circle;
-    private const int len_arrow = 20; // hardcoded
-    private const int arrow_origin = 30;
-    private const int timeline_height = 2;
-    private const int radius = 6;
-    
-    public HTimeline () {
-        this.point_circle = new Gee.ArrayList<int> ();
-    }
-    
-    public void add_circle (int x) {
-        this.point_circle.add (x + arrow_origin + len_arrow / 2); //?? why?
-    }
-    
-    public override bool draw(Cairo.Context ctx) {
-        var bg = Utils.get_timeline_bg_color ();
-        Clutter.Color backgroundColor = Utils.gdk_rgba_to_clutter_color (bg);
-        var color = Utils.get_timeline_circle_color ();
-        Clutter.Color circleColor = Utils.gdk_rgba_to_clutter_color (color);
-
-        Allocation allocation;
-        get_allocation (out allocation);
-        var width = allocation.width;
-        var cr = ctx;
-        ctx.set_source_rgba (1.0, 1.0, 1.0, 0.0);
-        // Paint the entire window transparent to start with.
-        ctx.set_operator (Cairo.Operator.SOURCE);
-        ctx.paint ();
-        //Draw the timeline
-        Clutter.cairo_set_source_color(cr, backgroundColor);
-        ctx.rectangle (0, radius, width, timeline_height);
-        ctx.fill ();
-
-        //Draw circles
-        foreach (int x in point_circle) {
-            // Paint the border cirle to start with.
-            Clutter.cairo_set_source_color(cr, backgroundColor);
-            ctx.arc (x, radius + timeline_height / 2, radius, 0, 2*Math.PI);
-            ctx.stroke ();
-            // Paint the colored cirle to start with.
-            Clutter.cairo_set_source_color(cr, circleColor);
-            ctx.arc (x, radius + timeline_height / 2, radius - 1, 0, 2*Math.PI);
-            ctx.fill ();
-        }
-
-        return false;
-    }
-    
-    public override Gtk.SizeRequestMode get_request_mode () {
-       return SizeRequestMode.WIDTH_FOR_HEIGHT;
-   }
-
-   public override void get_preferred_height (out int min_height, out int nat_height) {
-       nat_height = min_height = 2 * radius + timeline_height;
    }
 
 }
