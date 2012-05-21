@@ -320,12 +320,13 @@ private class Journal.ClutterVTL : Box {
             //Add the timeline
             int limit = last_y_texture + timeline.MAXIMUM_TEXTURE_LENGHT;
             if (last_y_position >= limit) {
-                timeline_texture = timeline.get_texture (limit);
-                timeline_texture.y = limit;
+                int position;
+                timeline_texture = timeline.get_next_texture (out position);
+                timeline_texture.y = position;
                 timeline_texture.add_constraint (new Clutter.AlignConstraint (
                                         stage, Clutter.AlignAxis.X_AXIS, 0.5f));
                 container.add_actor (timeline_texture);
-                last_y_texture = limit;
+                last_y_texture = position;
             }
             GtkClutter.Actor actor = new GtkClutter.Actor.with_contents (r);
             /****TODO MOVE THIS WHOLE CODE IN A CLASS WRAPPING THE RoundBoxContent***/
@@ -457,20 +458,23 @@ private class Journal.TimelineTexture: Clutter.CairoTexture {
         private const int timeline_width = 2;
         private const int radius = 6;
         
+        private int exceed = 0;
         public TimelineTexture () {
             this.point_circle = new Gee.ArrayList<int> ();
             this.auto_resize = true;
             invalidate ();
         }
         
-        public bool add_circle (int y) {
+        public int add_circle (int y) {
             int real_y = y + arrow_origin + len_arrow /2 ;
             this.point_circle.add (real_y);
-            if (real_y >= VTimeline.MAXIMUM_TEXTURE_LENGHT)
-                //We need another texture for this circle
-                return false;
+            if (real_y >= VTimeline.MAXIMUM_TEXTURE_LENGHT) {
+                //We enlarge the texture to fit the circle
+                exceed = real_y - VTimeline.MAXIMUM_TEXTURE_LENGHT + radius + 2;
+                return exceed;
+            }
 
-            return true;
+            return 0;
         }
         
         public override bool draw (Cairo.Context ctx) {
@@ -508,7 +512,7 @@ private class Journal.TimelineTexture: Clutter.CairoTexture {
     }
    
     public override void get_preferred_height (float for_width,out float min_height, out float nat_height) {
-        nat_height = min_height = VTimeline.MAXIMUM_TEXTURE_LENGHT;
+        nat_height = min_height = VTimeline.MAXIMUM_TEXTURE_LENGHT + exceed;
     }
 }
 
@@ -522,6 +526,7 @@ private class Journal.VTimeline : Object {
     }
     
     private int current_key;
+    private int next_texture;
     
     public VTimeline () {
         this.point_circle = new Gee.ArrayList<int> ();
@@ -529,6 +534,7 @@ private class Journal.VTimeline : Object {
         //Add a first texture
         this.texture_buffer.set (0, new TimelineTexture ());
         current_key = 0;
+        next_texture = -1;
     }
     
     public void add_circle (int y) {
@@ -538,11 +544,11 @@ private class Journal.VTimeline : Object {
             current_key = limit;
         }
         var texture = texture_buffer.get (current_key);
-        if (!texture.add_circle (y - current_key)) {
-            var new_texture = new TimelineTexture (); 
-            this.texture_buffer.set (limit, new_texture);
-            current_key = limit;
-            texture.add_circle (y - current_key);
+        int exceed;
+        if ((exceed = texture.add_circle (y - current_key)) > 0) {
+            var new_texture = new TimelineTexture ();
+            next_texture = current_key = limit + exceed; 
+            this.texture_buffer.set (current_key, new_texture);
         }
     }
     
@@ -551,6 +557,23 @@ private class Journal.VTimeline : Object {
             texture_buffer.set (key, new TimelineTexture ());
             current_key = key;
         }
+        return texture_buffer.get (key);
+    }
+    
+    public TimelineTexture get_next_texture (out int position) {
+        if (next_texture != -1) {
+            position = next_texture;
+            next_texture = -1;
+            return texture_buffer.get (position);
+        }
+            
+        int key = current_key + MAXIMUM_TEXTURE_LENGHT;
+        if (!texture_buffer.has_key (key)) {
+            texture_buffer.set (key, new TimelineTexture ());
+            current_key = key;
+        }
+        
+        position = current_key;
         return texture_buffer.get (key);
     }
 }
