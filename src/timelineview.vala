@@ -134,6 +134,7 @@ private class Journal.ClutterVTL : Box {
     private App app;
     private Clutter.Stage stage;
     private VTimeline timeline;
+    private TimelineTexture timeline_texture;
     private Scrollbar scrollbar;
     private TimelineNavigator vnav;
     
@@ -147,6 +148,7 @@ private class Journal.ClutterVTL : Box {
     private int last_type;
     //Last position visible (utilized for scrolling).
     private float last_y_visible;
+    private int last_y_texture;
     
     //Date to jump when we have loaded new events
     private DateTime? date_to_jump;
@@ -165,6 +167,7 @@ private class Journal.ClutterVTL : Box {
         last_y_position = 50;
         last_type = 0;
         last_y_visible = 0;
+        last_y_texture = 0;
         date_to_jump = null;
         on_loading = false;
         
@@ -180,10 +183,12 @@ private class Journal.ClutterVTL : Box {
         
         //Timeline
         timeline = new VTimeline ();
-        //timeline.add_constraint (new Clutter.BindConstraint (viewport, Clutter.BindCoordinate.HEIGHT, 0));
-        timeline.add_constraint (new Clutter.AlignConstraint (stage, Clutter.AlignAxis.X_AXIS, 0.5f));
-        
-        container.add_actor (timeline);
+        timeline_texture = timeline.get_texture (0);
+        timeline_texture.y = 0;
+        timeline_texture.add_constraint (new Clutter.AlignConstraint (
+                                        stage, Clutter.AlignAxis.X_AXIS, 0.5f));
+        container.add_actor (timeline_texture);
+
         container.scroll_event.connect ( (e) => {
         
         var direction = e.direction;
@@ -252,6 +257,8 @@ private class Journal.ClutterVTL : Box {
         Side side;
         float offset = 0;
         int last_actor_height = 0;
+        //first texture
+        var timeline_texture = timeline.get_texture (last_y_texture);
         foreach (string date in dates_loaded)
         {
           var list = model.activities.get (date);
@@ -310,7 +317,16 @@ private class Journal.ClutterVTL : Box {
                 
                 y_positions.set (date, (int)(day_line.y - text_size * 3));
             }
-
+            //Add the timeline
+            int limit = last_y_texture + timeline.MAXIMUM_TEXTURE_LENGHT;
+            if (last_y_position >= limit) {
+                timeline_texture = timeline.get_texture (limit);
+                timeline_texture.y = limit;
+                timeline_texture.add_constraint (new Clutter.AlignConstraint (
+                                        stage, Clutter.AlignAxis.X_AXIS, 0.5f));
+                container.add_actor (timeline_texture);
+                last_y_texture = limit;
+            }
             GtkClutter.Actor actor = new GtkClutter.Actor.with_contents (r);
             /****TODO MOVE THIS WHOLE CODE IN A CLASS WRAPPING THE RoundBoxContent***/
             actor.reactive = true;
@@ -352,8 +368,9 @@ private class Journal.ClutterVTL : Box {
             if (last_type % 2 == 0)
                 offset = -(5 + actor.get_width());
             else 
-                offset = 5 + timeline.get_width ();
-            actor.add_constraint (new Clutter.BindConstraint (timeline, Clutter.BindCoordinate.X, offset));  // timeline!
+                offset = 5 + timeline_texture.get_width ();
+            actor.add_constraint (new Clutter.BindConstraint (timeline_texture, 
+                                      Clutter.BindCoordinate.X, offset));  // timeline!
             actor.set_y (last_y_position);
             timeline.add_circle (last_y_position);
             //last_y_position +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
@@ -364,8 +381,10 @@ private class Journal.ClutterVTL : Box {
         }
        }
        }
-       timeline.invalidate ();
        
+       foreach (TimelineTexture tex in timeline.texture_buffer.values) 
+            tex.invalidate ();
+
        if (container.height <= stage.height)
             scrollbar.hide ();
 
@@ -431,63 +450,109 @@ private class Journal.ClutterVTL : Box {
     }
 }
 
-private class Journal.VTimeline : Clutter.CairoTexture {
+private class Journal.TimelineTexture: Clutter.CairoTexture {
+        private Gee.ArrayList<int> point_circle;
+        private const int len_arrow = 20; // hardcoded
+        private const int arrow_origin = 30;
+        private const int timeline_width = 2;
+        private const int radius = 6;
+        
+        public TimelineTexture () {
+            this.point_circle = new Gee.ArrayList<int> ();
+            this.auto_resize = true;
+            invalidate ();
+        }
+        
+        public bool add_circle (int y) {
+            int real_y = y + arrow_origin + len_arrow /2 ;
+            this.point_circle.add (real_y);
+            if (real_y >= VTimeline.MAXIMUM_TEXTURE_LENGHT)
+                //We need another texture for this circle
+                return false;
 
+            return true;
+        }
+        
+        public override bool draw (Cairo.Context ctx) {
+            var bg =  Utils.get_timeline_bg_color ();
+            Clutter.Color backgroundColor = Utils.gdk_rgba_to_clutter_color (bg);
+            var color = Utils.get_timeline_circle_color ();
+            Clutter.Color circleColor = Utils.gdk_rgba_to_clutter_color (color);
+
+            var cr = ctx;
+            this.clear ();
+            uint height, width;
+            get_surface_size (out width, out height);
+            //Draw the timeline
+            Clutter.cairo_set_source_color(cr, backgroundColor);
+            ctx.rectangle (radius, 0, timeline_width , height);
+            ctx.fill ();
+        
+            //Draw circles
+            foreach (int y in point_circle) {
+                // Paint the border cirle to start with.
+                Clutter.cairo_set_source_color(cr, backgroundColor);
+                ctx.arc (radius + timeline_width / 2 , y, radius, 0, 2*Math.PI);
+                ctx.stroke ();
+                // Paint the colored cirle to start with.
+                Clutter.cairo_set_source_color(cr, circleColor);
+                ctx.arc (radius + timeline_width / 2, y, radius - 1, 0, 2*Math.PI);
+                ctx.fill ();
+            }
+            
+            return true;
+        }
+
+    public override void get_preferred_width (float for_height,out float min_width, out float nat_width) {
+        nat_width = min_width = 2 * radius + timeline_width;
+    }
+   
+    public override void get_preferred_height (float for_width,out float min_height, out float nat_height) {
+        nat_height = min_height = VTimeline.MAXIMUM_TEXTURE_LENGHT;
+    }
+}
+
+private class Journal.VTimeline : Object {
+    public const int MAXIMUM_TEXTURE_LENGHT = 512;
+    
     private Gee.ArrayList<int> point_circle;
-    private const int len_arrow = 20; // hardcoded
-    private const int arrow_origin = 30;
-    private const int timeline_width = 2;
-    private const int radius = 6;
+    //Key: Y position, Value: TimelineTexture
+    public Gee.HashMap<int, TimelineTexture> texture_buffer{
+        get; private set;
+    }
+    
+    private int current_key;
     
     public VTimeline () {
         this.point_circle = new Gee.ArrayList<int> ();
-        this.auto_resize = true;
-        invalidate ();
+        this.texture_buffer = new Gee.HashMap<int, TimelineTexture> ();
+        //Add a first texture
+        this.texture_buffer.set (0, new TimelineTexture ());
+        current_key = 0;
     }
     
     public void add_circle (int y) {
-        this.point_circle.add (y + arrow_origin + len_arrow /2 );
+        var limit = MAXIMUM_TEXTURE_LENGHT + current_key;
+        if (y >= limit) {
+            this.texture_buffer.set (limit, new TimelineTexture ());
+            current_key = limit;
+        }
+        var texture = texture_buffer.get (current_key);
+        if (!texture.add_circle (y - current_key)) {
+            var new_texture = new TimelineTexture (); 
+            this.texture_buffer.set (limit, new_texture);
+            current_key = limit;
+            texture.add_circle (y - current_key);
+        }
     }
     
-    public override bool draw (Cairo.Context ctx) {
-        var bg =  Utils.get_timeline_bg_color ();
-        Clutter.Color backgroundColor = Utils.gdk_rgba_to_clutter_color (bg);
-        var color = Utils.get_timeline_circle_color ();
-        Clutter.Color circleColor = Utils.gdk_rgba_to_clutter_color (color);
-
-        var cr = ctx;
-        this.clear ();
-        uint height, width;
-        get_surface_size (out width, out height);
-        //Draw the timeline
-        Clutter.cairo_set_source_color(cr, backgroundColor);
-        ctx.rectangle (radius, 0, timeline_width , height);
-        ctx.fill ();
-        
-        //Draw circles
-        foreach (int y in point_circle) {
-            // Paint the border cirle to start with.
-            Clutter.cairo_set_source_color(cr, backgroundColor);
-            ctx.arc (radius + timeline_width / 2 , y, radius, 0, 2*Math.PI);
-            ctx.stroke ();
-            // Paint the colored cirle to start with.
-            Clutter.cairo_set_source_color(cr, circleColor);
-            ctx.arc (radius + timeline_width / 2, y, radius - 1, 0, 2*Math.PI);
-            ctx.fill ();
+    public TimelineTexture get_texture (int key) {
+        if (!texture_buffer.has_key (key)) {
+            texture_buffer.set (key, new TimelineTexture ());
+            current_key = key;
         }
-
-        return true;
-        }
-        
-  
-   public override void get_preferred_width (float for_height,out float min_width, out float nat_width) {
-       nat_width = min_width = 2 * radius + timeline_width;
-   }
-   
-   public override void get_preferred_height (float for_width,out float min_height, out float nat_height) {
-       nat_height = min_height = 8000;
-   }
-
+        return texture_buffer.get (key);
+    }
 }
 
 private class Journal.RoundBox : Button {
@@ -496,8 +561,7 @@ private class Journal.RoundBox : Button {
     private bool highlight;
     
     public static int BORDER_WIDTH = 10;
-    
-    
+
     public Side arrow_side {
         get { return _arrowSide; }
     }
