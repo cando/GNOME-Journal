@@ -44,7 +44,7 @@ GOBJECT_INTROSPECTION_REQUIRE([0.9.6])
 # GSettings support
 GLIB_GSETTINGS
 
-pkg_modules="gtk+-3.0
+pkg_modules="gtk+-3.0 >= 3.4.0
 	     glib-2.0
 	     clutter-1.0 >= 1.10
 	     clutter-gtk-1.0 >= 1.0.1
