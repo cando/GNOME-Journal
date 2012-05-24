@@ -24,6 +24,10 @@ using Gtk;
 
 private class Journal.GenericActivity : Object {
 
+    public Clutter.Actor actor {
+        get; protected set;
+    }
+
     public Zeitgeist.Event event {
         get; construct set;
     }
@@ -64,8 +68,6 @@ private class Journal.GenericActivity : Object {
         get; private set;
     }
     
-    public signal void thumb_loaded (GenericActivity activity);
-    
     private Zeitgeist.Subject subject;
     private string thumb_path;
 
@@ -86,6 +88,8 @@ private class Journal.GenericActivity : Object {
         this.interpretation = subject.get_interpretation ();
 
         updateActivityIcon ();
+        
+        create_actor ();
     }
     
     private string create_display_uri () {
@@ -205,16 +209,33 @@ private class Journal.GenericActivity : Object {
                                                        Utils.getIconSize(),
                                                        Utils.getIconSize(),
                                                        true, null);
-            thumb_loaded (this);
+            update_icon ();
         } catch (Error e) {
             warning ("Unable to load pixbuf of"+ this.uri+" : " + e.message);
        }
+    }
+    
+    public virtual Clutter.Actor create_actor () {
+        DateTime d = new DateTime.from_unix_utc (this.time / 1000).to_local ();
+        string date = d.format ("%H:%M");
+        actor = new DocumentActor (this.title, this.type_icon, date);
+        return actor;
+    }
+    
+    public virtual void update_icon () {
+        ((DocumentActor)actor).update_image (this.thumb_icon);
     }
 }
 
 /**Single Activity**/
 private class Journal.DocumentActivity : GenericActivity {
     public DocumentActivity (Zeitgeist.Event event) {
+        Object (event:event);
+    }
+}
+
+private class Journal.DevelopmentActivity : GenericActivity {
+    public DevelopmentActivity (Zeitgeist.Event event) {
         Object (event:event);
     }
 }
@@ -229,11 +250,29 @@ private class Journal.ImageActivity : GenericActivity {
     public ImageActivity (Zeitgeist.Event event) {
         Object (event:event);
     }
+    
+    public override Clutter.Actor create_actor () {
+        actor = new ImageActor.from_uri (this.uri);
+        return actor;
+    }
+    
+    public override void update_icon () {
+        ((ImageActor)actor).set_pixbuf (this.thumb_icon);
+    }
 }
 
 private class Journal.VideoActivity : GenericActivity {
     public VideoActivity (Zeitgeist.Event event) {
         Object (event:event);
+    }
+    
+    public override Clutter.Actor create_actor () {
+        actor = new VideoActor (this.uri);
+        return actor;
+    }
+    
+    public override void update_icon () {
+        //do none
     }
 }
 
@@ -248,10 +287,30 @@ private class Journal.ActivityFactory : Object {
     private static void init () {
         interpretation_types = new Gee.HashMap<string, Type> ();
         //Fill in all interpretations
+        /****DOCUMENTS****/
         interpretation_types.set (Zeitgeist.NFO_DOCUMENT, typeof (DocumentActivity));
+        interpretation_types.set (Zeitgeist.NFO_PAGINATED_TEXT_DOCUMENT, typeof (DocumentActivity));
+        interpretation_types.set (Zeitgeist.NFO_PLAIN_TEXT_DOCUMENT, typeof (DocumentActivity));
+        interpretation_types.set (Zeitgeist.NFO_HTML_DOCUMENT, typeof (DocumentActivity));
+        interpretation_types.set (Zeitgeist.NFO_TEXT_DOCUMENT, typeof (DocumentActivity));
+        interpretation_types.set (Zeitgeist.NFO_SPREADSHEET, typeof (DocumentActivity));
+        interpretation_types.set (Zeitgeist.NFO_PRESENTATION, typeof (DocumentActivity));
+        interpretation_types.set (Zeitgeist.NFO_PRESENTATION, typeof (DocumentActivity));
+        /****PROGRAMMING****/
+        interpretation_types.set (Zeitgeist.NFO_SOURCE_CODE, typeof (DevelopmentActivity));
+        /****IMAGES****/
         interpretation_types.set (Zeitgeist.NFO_IMAGE, typeof (ImageActivity));
+        interpretation_types.set (Zeitgeist.NFO_VECTOR_IMAGE, typeof (ImageActivity));
+        /****AUDIO****/
         interpretation_types.set (Zeitgeist.NFO_AUDIO, typeof (AudioActivity));
+        interpretation_types.set (Zeitgeist.NMM_MUSIC_ALBUM, typeof (AudioActivity));
+        interpretation_types.set (Zeitgeist.NMM_MUSIC_PIECE, typeof (AudioActivity));
+        /****VIDEOS****/
         interpretation_types.set (Zeitgeist.NFO_VIDEO, typeof (VideoActivity));
+        interpretation_types.set (Zeitgeist.NMM_MOVIE, typeof (VideoActivity));
+        interpretation_types.set (Zeitgeist.NMM_MUSIC_ALBUM, typeof (VideoActivity));
+        interpretation_types.set (Zeitgeist.NMM_TVSERIES, typeof (VideoActivity));
+        interpretation_types.set (Zeitgeist.NMM_TVSHOW ,typeof (VideoActivity));
     }
     
     /****PUBLIC METHODS****/
@@ -346,6 +405,20 @@ private class Journal.ActivityModel : Object {
             if (add_day (day))
                 dates_loaded.add (day);
         }
+        
+        //Sort for timestamp order
+        foreach (DayActivityModel day_model in activities.values) 
+            foreach (Gee.List<GenericActivity> list in day_model.activities.values)
+                list.sort ( (a,b) =>{
+                    GenericActivity first = (GenericActivity)a;
+                    GenericActivity second = (GenericActivity)b;
+                    if (first.time > second.time)
+                        return -1;
+                    else if (first.time == second.time)
+                        return 0;
+                    else
+                        return 1;
+                });
         
         activities_loaded (dates_loaded);
     }

@@ -122,13 +122,59 @@ private class Journal.ScrollableViewport : Clutter.Actor {
         //TODO ANIMATION STUFFS here?
         set_scroll_to_internal (x, y);
     }
+}
 
+private class Journal.CustomContainer : Clutter.Actor {
+    public CustomContainer () {
+        Object ();
+        this.reactive = true;
+    }
+    
+    public override void allocate (Clutter.ActorBox box, Clutter.AllocationFlags flags) {
+        base.allocate (box, flags);
+        float width, height;
+        float x, y;
+        var child_box = Clutter.ActorBox ();
+        foreach (Clutter.Actor child in get_children ()) {
+            RoundBox r = child as RoundBox;
+            if (r == null) {
+                //Timelines and dates
+                child.get_preferred_size (null, null, out width, out height);
+                x = child.get_x ();
+                y = child.get_y ();
+                child_box.x1 = x;
+                child_box.x2 = x + width;
+                child_box.y1 = y;
+                child_box.y2 = y + height;
+            }
+            else {
+
+            r.get_preferred_size (null, null, out width, out height);
+            y = r.get_y ();
+
+            if (width > (box.get_width () / 3)) {
+                width = box.get_width () / 3;
+            }
+            if (r.arrow_side == Side.RIGHT) 
+                x = box.get_width () / 2  - 10 - width;
+            else 
+                x = box.get_width () / 2  + 10;
+
+            child_box.x1 = x;
+            child_box.x2 = x + width;
+            child_box.y1 = y;
+            child_box.y2 = y + height;
+            }
+            
+            child.allocate (child_box, flags);
+        }
+    }
 }
 
 
 private class Journal.ClutterVTL : Box {
     public ScrollableViewport viewport;
-    public Clutter.Actor container;
+    public CustomContainer container;
     
     private ActivityModel model;
     private App app;
@@ -161,7 +207,8 @@ private class Journal.ClutterVTL : Box {
         this.app = app;
         var embed = new GtkClutter.Embed ();
         this.stage = embed.get_stage () as Clutter.Stage;
-        this.stage.set_color (Utils.gdk_rgba_to_clutter_color (Utils.get_journal_bg_color ()));
+        this.stage.set_background_color (Utils.gdk_rgba_to_clutter_color (
+                                         Utils.get_journal_bg_color ()));
         y_positions = new Gee.HashMap<string, int> ();
         
         last_y_position = 50;
@@ -176,9 +223,9 @@ private class Journal.ClutterVTL : Box {
         viewport.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.WIDTH, 0));
         viewport.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.HEIGHT, 0));
 
-        container = new Clutter.Actor ();
-        container.set_reactive (true);
+        container = new CustomContainer ();
         viewport.add_actor (container);
+        container.set_reactive (true);
         container.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.WIDTH, 0));
         
         //Timeline
@@ -187,7 +234,7 @@ private class Journal.ClutterVTL : Box {
         timeline_texture.y = 0;
         timeline_texture.add_constraint (new Clutter.AlignConstraint (
                                         stage, Clutter.AlignAxis.X_AXIS, 0.5f));
-        container.add_actor (timeline_texture);
+        container.add_child (timeline_texture);
 
         container.scroll_event.connect ( (e) => {
         
@@ -223,12 +270,6 @@ private class Journal.ClutterVTL : Box {
        
        Adjustment adj = new Adjustment (0, 0, 0, 0, 0, stage.height);
        scrollbar = new Scrollbar (Orientation.VERTICAL, adj);
-       container.queue_relayout.connect (() => { 
-           scrollbar.adjustment.upper = container.height;
-           uint num_child = container.get_children ().length ();
-           scrollbar.adjustment.step_increment = container.height / (num_child*10);
-           scrollbar.adjustment.page_increment = container.height/ 10;
-       });
        scrollbar.change_value.connect ((st, v) => { 
             this.on_scrollbar_scroll (); 
             return false;
@@ -255,7 +296,6 @@ private class Journal.ClutterVTL : Box {
     
     public void load_activities (Gee.ArrayList<string> dates_loaded) {
         Side side;
-        float offset = 0;
         int last_actor_height = 0;
         //first texture
         var timeline_texture = timeline.get_texture (last_y_texture);
@@ -270,11 +310,6 @@ private class Journal.ClutterVTL : Box {
                 side = Side.RIGHT;
             else 
                 side = Side.LEFT;
-            
-            RoundBox r = new RoundBox (side);
-            RoundBoxContent rc = new RoundBoxContent (activity, null);
-            r.add (rc);
-            r.show_all ();
             
             if(y_positions.has_key (date) == false) {
                 //Add a visual representation of the change of the day
@@ -325,18 +360,20 @@ private class Journal.ClutterVTL : Box {
                 timeline_texture.y = position;
                 timeline_texture.add_constraint (new Clutter.AlignConstraint (
                                         stage, Clutter.AlignAxis.X_AXIS, 0.5f));
-                container.add_actor (timeline_texture);
+                container.add_child (timeline_texture);
                 last_y_texture = position;
             }
-            GtkClutter.Actor actor = new GtkClutter.Actor.with_contents (r);
+            Clutter.Actor content = activity.actor;
+            RoundBox actor = new RoundBox (side, content.width, content.height);
+            actor.add_content (content);
+
             /****TODO MOVE THIS WHOLE CODE IN A CLASS WRAPPING THE RoundBoxContent***/
-            actor.reactive = true;
             if (last_type % 2 == 0) 
                 actor.scale_center_x = actor.width;
                 actor.enter_event.connect ((e) => {
                     double scale_x;
                     double scale_y;
-
+                    
                     actor.get_scale (out scale_x, out scale_y);
 
                     actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
@@ -365,14 +402,8 @@ private class Journal.ClutterVTL : Box {
                 return false;
             }); 
             /****************************************************/
-            container.add_actor (actor);
-            if (last_type % 2 == 0)
-                offset = -(5 + actor.get_width());
-            else 
-                offset = 5 + timeline_texture.get_width ();
-            actor.add_constraint (new Clutter.BindConstraint (timeline_texture, 
-                                      Clutter.BindCoordinate.X, offset));  // timeline!
             actor.set_y (last_y_position);
+            container.add_child (actor);
             timeline.add_circle (last_y_position);
             //last_y_position +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
             last_actor_height = (int)actor.get_height();
@@ -393,6 +424,12 @@ private class Journal.ClutterVTL : Box {
             jump_to_day (date_to_jump);
             osd_label.hide ();
        }
+       
+       //FIXME
+       scrollbar.adjustment.upper = last_y_position + last_actor_height;
+       uint num_child = container.get_children ().length ();
+       scrollbar.adjustment.step_increment = scrollbar.adjustment.upper / (num_child*10);
+       scrollbar.adjustment.page_increment = scrollbar.adjustment.upper / 10;
     }
     
     public void jump_to_day (DateTime date) {
@@ -466,7 +503,7 @@ private class Journal.TimelineTexture: Clutter.CairoTexture {
         }
         
         public int add_circle (int y) {
-            int real_y = y + arrow_origin + len_arrow /2 ;
+            int real_y = y + arrow_origin;
             this.point_circle.add (real_y);
             if (real_y >= VTimeline.MAXIMUM_TEXTURE_LENGHT) {
                 //We enlarge the texture to fit the circle
@@ -578,53 +615,58 @@ private class Journal.VTimeline : Object {
     }
 }
 
-private class Journal.RoundBox : Button {
+private class Journal.RoundBox : Clutter.Actor {
     private Side _arrowSide;
     private int _arrowOrigin = 30; 
-    private bool highlight;
+    private int border_width;
     
     public static int BORDER_WIDTH = 10;
+    
+    private Clutter.Canvas canvas;
+    private Clutter.Actor content_actor;
 
     public Side arrow_side {
         get { return _arrowSide; }
     }
 
-    public RoundBox (Side side) {
+    private Clutter.BinLayout box;
+    public RoundBox (Side side, float width, float height) {
        this._arrowSide = side;
        this.border_width = BORDER_WIDTH;
-       this.highlight = false;
-       this.get_style_context ().add_class ("roundbox");
-
-       add_events (Gdk.EventMask.ENTER_NOTIFY_MASK|
-                   Gdk.EventMask.LEAVE_NOTIFY_MASK);
-                   
+       this.reactive = true;
+       box = new Clutter.BinLayout (Clutter.BinAlignment.CENTER, 
+                                    Clutter.BinAlignment.CENTER);
+       set_layout_manager (box);
+       
+       this.canvas = new Clutter.Canvas ();
+       canvas.draw.connect ((cr, w, h) => { return paint_canvas (cr, w, h); });
+       canvas.set_size ((int)width + BORDER_WIDTH * 2, 
+                        (int)height + BORDER_WIDTH * 2);
+       var canvas_box = new Clutter.Actor ();
+       canvas_box.set_size ((int)width + BORDER_WIDTH * 2,
+                            (int)height + BORDER_WIDTH * 2);
+       canvas_box.set_content (canvas);
+       this.allocation_changed.connect ((box, f) => {
+            canvas.set_size ((int)box.get_width (), (int) box.get_height ());
+       });
+       this.add_child (canvas_box);
     }
 
-    public override bool draw (Cairo.Context ctx) {
+    private bool paint_canvas (Cairo.Context ctx, int width, int height) {
         //Code ported from GNOME shell's box pointer
         var borderWidth = 2;
         var baseL = 20; //lunghezza base freccia
         var rise = 10;  //altezza base freccia
-        var borderRadius = 10;
+        var borderRadius = 5;
 
         var halfBorder = borderWidth / 2;
         var halfBase = Math.floor(baseL/2);
         
-        Clutter.Color borderColor;
-        if (!highlight) {
-            var bc = this.get_style_context ().get_border_color (0);
-            borderColor = Utils.gdk_rgba_to_clutter_color (bc);
-        }
-        else {
-            borderColor = {150, 220, 0, 255};
-        }
-        var bg = this.get_style_context ().get_background_color (0);
-        Clutter.Color backgroundColor = Utils.gdk_rgba_to_clutter_color(bg);
+        var bg =  Utils.get_roundbox_bg_color ();
+        Clutter.Color backgroundColor = Utils.gdk_rgba_to_clutter_color (bg);
+        var color = Utils.get_roundbox_border_color ();
+        Clutter.Color borderColor = Utils.gdk_rgba_to_clutter_color (color);
 
-        Allocation allocation;
-        get_allocation (out allocation);
-        var width = allocation.width;
-        var height = allocation.height;
         var boxWidth = width;
         var boxHeight = height;
 
@@ -741,40 +783,22 @@ private class Journal.RoundBox : Button {
         cr.set_line_width(borderWidth);
         cr.stroke();
 
-        this.propagate_draw (this.get_child (), cr);
-
-        return false;
-    }
-    
-    public override bool enter_notify_event (Gdk.EventCrossing  event) {
-        highlight = true;
-        queue_draw ();
         return true;
     }
     
-    public override bool leave_notify_event (Gdk.EventCrossing  event) {
-        highlight = false;
-        queue_draw ();
-        return true;
+    public void add_content (Clutter.Actor content) {
+        this.content_actor = content;
+        this.add_child (content);
     }
-
-   public override Gtk.SizeRequestMode get_request_mode () {
-       return SizeRequestMode.HEIGHT_FOR_WIDTH;
-   }
-  
-   public override void get_preferred_width (out int min_width, out int nat_width) {
-       get_child ().get_preferred_width(out min_width, out nat_width);
-       min_width += BORDER_WIDTH * 2 ;
-       nat_width += BORDER_WIDTH * 2 ;
-   }
-
-   public override void get_preferred_height_for_width (int  width,
-                                                       out int min_height,
-                                                       out int nat_height) {
-       get_child ().get_preferred_height_for_width (width, out min_height, out nat_height);
-       min_height += BORDER_WIDTH * 2 ;
-       nat_height += BORDER_WIDTH * 2;
-   }
+    public override void get_preferred_width (float for_height,out float min_width, out float nat_width) {
+        float min_width_t, nat_width_t;
+        nat_width = min_width = 0;
+        if (content_actor != null) {
+            content_actor.get_preferred_width (-1, out min_width_t, out nat_width_t);
+            nat_width = nat_width_t + 2 * BORDER_WIDTH;
+            min_width = min_width_t + 2 * BORDER_WIDTH;
+        }
+    }
 }
 
 private class Journal.RoundBoxContent : DrawingArea {
@@ -802,15 +826,7 @@ private class Journal.RoundBoxContent : DrawingArea {
 
         // Enable the events you wish to get notified about.
         add_events (Gdk.EventMask.BUTTON_RELEASE_MASK);
-        
-        activity.thumb_loaded.connect (() => {
-                  if (activity.thumb_icon != null) {
-                    thumb = activity.thumb_icon;
-                    is_thumb = true;
-                    //resize and redraw but now let's use the thumb
-                    queue_resize (); 
-                   }
-        });
+
     }
 
     /* Widget is asked to draw itself */

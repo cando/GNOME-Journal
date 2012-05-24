@@ -60,6 +60,7 @@ public int main (string[] args) {
 //    parse_args (ref args);
 
     GtkClutter.init (ref args);
+    Gst.init (ref args);
 
     Gtk.Window.set_default_icon_name ("Activity Journal");
     var provider = new Gtk.CssProvider ();

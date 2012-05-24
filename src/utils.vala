@@ -54,6 +54,17 @@ private class Journal.Utils : Object{
 
         return color;
     }
+    
+    public static Cogl.Color gdk_rgba_to_cogl_color (Gdk.RGBA gdk_rgba) {
+        Cogl.Color color = Cogl.Color.from_4ub (
+            (uint8) (gdk_rgba.red * 255).clamp (0, 255),
+            (uint8) (gdk_rgba.green * 255).clamp (0, 255),
+            (uint8) (gdk_rgba.blue * 255).clamp (0, 255),
+            (uint8) (gdk_rgba.alpha * 255).clamp (0, 255)
+        );
+
+        return color;
+    }
 
     public static Gdk.RGBA get_journal_bg_color () {
         var style = new Gtk.StyleContext ();
@@ -80,6 +91,24 @@ private class Journal.Utils : Object{
         style.set_path (path);
         style.add_class ("timeline-clutter");
         return style.get_color (0);
+    }
+    
+    public static Gdk.RGBA get_roundbox_bg_color () {
+        var style = new Gtk.StyleContext ();
+        var path = new Gtk.WidgetPath ();
+        path.append_type (typeof (Gtk.Window));
+        style.set_path (path);
+        style.add_class ("roundbox");
+        return style.get_background_color (0);
+    }
+    
+    public static Gdk.RGBA get_roundbox_border_color () {
+        var style = new Gtk.StyleContext ();
+        var path = new Gtk.WidgetPath ();
+        path.append_type (typeof (Gtk.Window));
+        style.set_path (path);
+        style.add_class ("roundbox");
+        return style.get_border_color (0);
     }
     
     public static Pango.FontDescription get_default_font_description () {
