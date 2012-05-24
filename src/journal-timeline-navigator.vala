@@ -55,7 +55,7 @@ private class Journal.TimelineNavigator : ButtonBox {
     private Histogram histogram_proxy;
     private Gee.HashMap<DateTime, uint> count_map;
     
-    private Gee.HashMap<string, DateTime> jump_date;
+    public static Gee.HashMap<string, DateTime> jump_date;
     
     private Pango.AttrList attr_list;
     
