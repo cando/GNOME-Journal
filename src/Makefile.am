@@ -22,6 +22,7 @@ AM_VALAFLAGS =						\
 	--pkg Gd-1.0					\
 	--pkg custom					\
 	@JOURNAL_PACKAGES@				\
+	-g\
 	$(NULL)
 
 bin_PROGRAMS = gnome-activity-journal

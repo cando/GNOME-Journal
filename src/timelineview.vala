@@ -332,7 +332,7 @@ private class Journal.ClutterVTL : Box {
                 date_text.add_constraint (new Clutter.BindConstraint (day_line, Clutter.BindCoordinate.Y, -2));
                 date_text.set_x (10);
                 date_text.anchor_y = date_text.height;
-                var text_size = date_text.get_layout ().get_height ();
+                var text_size = 10;
                 if (last_type % 2 == 0) 
                     //Means that the last bubble displayed is on the left
                     last_y_position += last_actor_height + text_size;
