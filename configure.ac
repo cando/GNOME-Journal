@@ -18,7 +18,7 @@ AM_SILENT_RULES([yes])
 
 # Check for programs
 AC_PROG_CC
-AM_PROG_VALAC([0.14.0])
+AM_PROG_VALAC([0.16.0])
 AC_PROG_INSTALL
 
 # Initialize libtool

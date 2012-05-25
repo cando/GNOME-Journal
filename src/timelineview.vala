@@ -187,7 +187,7 @@ private class Journal.ClutterVTL : Box {
     private OSDLabel osd_label;
     private LoadingActor loading;
     
-    private Gee.HashMap<string, int> y_positions;
+    private Gee.Map<string, int> y_positions;
     
     //Position and type of last drawn bubble
     private int last_y_position;
@@ -323,23 +323,16 @@ private class Journal.ClutterVTL : Box {
                 day_line.opacity = 150;
                 
                 //Text's date
-                Pango.FontDescription fd = Utils.get_default_font_description ();
                 string text = Utils.get_start_of_the_day (activity.time).format (_("%A, %x"));
-                Clutter.Text date_text = new Clutter.Text.with_text(null, text);
-                date_text.font_description = fd;
+                Clutter.Text date_text = new Clutter.Text.with_text (null, text);
                 var attr_list = new Pango.AttrList ();
-                int text_size = 11;
-                var attr_s = new Pango.AttrSize (text_size * Pango.SCALE);
-                attr_s.absolute = 1;
-                attr_list.insert ((owned) attr_s);
-                var desc = new Pango.FontDescription ();
-                desc.set_weight (Pango.Weight.BOLD);
-                var attr_f = new Pango.AttrFontDesc (desc);
-                attr_list.insert ((owned) attr_f);
+                attr_list.insert (Pango.attr_scale_new (Pango.Scale.MEDIUM));
+                attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
                 date_text.attributes = attr_list;
                 date_text.add_constraint (new Clutter.BindConstraint (day_line, Clutter.BindCoordinate.Y, -2));
                 date_text.set_x (10);
                 date_text.anchor_y = date_text.height;
+                var text_size = date_text.get_layout ().get_height ();
                 if (last_type % 2 == 0) 
                     //Means that the last bubble displayed is on the left
                     last_y_position += last_actor_height + text_size;
@@ -479,9 +472,10 @@ private class Journal.ClutterVTL : Box {
         string final_key = "";
         int final_pos = 0;
         foreach (Gee.Map.Entry<string, int> entry in y_positions.entries) {
-            if (entry.value <= (int)((y) + stage.height / 2) && entry.value > final_pos) {
+            int current_value = entry.value;
+            if (current_value <= (int)((y) + stage.height / 2) && current_value > final_pos) {
                 final_key = entry.key;
-                final_pos = entry.value;
+                final_pos = current_value;
             }
         }
         vnav.highlight_date (final_key);
@@ -489,7 +483,7 @@ private class Journal.ClutterVTL : Box {
 }
 
 private class Journal.TimelineTexture: Clutter.CairoTexture {
-        private Gee.ArrayList<int> point_circle;
+        private Gee.List<int> point_circle;
         private const int len_arrow = 20; // hardcoded
         private const int arrow_origin = 30;
         private const int timeline_width = 2;
@@ -556,9 +550,9 @@ private class Journal.TimelineTexture: Clutter.CairoTexture {
 private class Journal.VTimeline : Object {
     public const int MAXIMUM_TEXTURE_LENGHT = 512;
     
-    private Gee.ArrayList<int> point_circle;
+    private Gee.List<int> point_circle;
     //Key: Y position, Value: TimelineTexture
-    public Gee.HashMap<int, TimelineTexture> texture_buffer{
+    public Gee.Map<int, TimelineTexture> texture_buffer{
         get; private set;
     }
     
@@ -801,168 +795,168 @@ private class Journal.RoundBox : Clutter.Actor {
     }
 }
 
-private class Journal.RoundBoxContent : DrawingArea {
+//private class Journal.RoundBoxContent : DrawingArea {
 
-    private GenericActivity activity;
-    private Gdk.Pixbuf thumb;
-    
-    private int width;
-    private const int DEFAULT_WIDTH = 400;
-    private const int xy_padding = 5;
-    
-    private bool is_thumb;
-    
-    private Pango.Layout title_layout;
-    private Pango.Layout time_layout;
+//    private GenericActivity activity;
+//    private Gdk.Pixbuf thumb;
+//    
+//    private int width;
+//    private const int DEFAULT_WIDTH = 400;
+//    private const int xy_padding = 5;
+//    
+//    private bool is_thumb;
+//    
+//    private Pango.Layout title_layout;
+//    private Pango.Layout time_layout;
 
-    public RoundBoxContent (GenericActivity activity, int? width) {
-        this.activity = activity;
-        this.thumb = activity.type_icon;
-        this.is_thumb = false;
-        this.width = DEFAULT_WIDTH;
-        
-        if (width != null)
-            this.width = width;
+//    public RoundBoxContent (GenericActivity activity, int? width) {
+//        this.activity = activity;
+//        this.thumb = activity.type_icon;
+//        this.is_thumb = false;
+//        this.width = DEFAULT_WIDTH;
+//        
+//        if (width != null)
+//            this.width = width;
 
-        // Enable the events you wish to get notified about.
-        add_events (Gdk.EventMask.BUTTON_RELEASE_MASK);
+//        // Enable the events you wish to get notified about.
+//        add_events (Gdk.EventMask.BUTTON_RELEASE_MASK);
 
-    }
+//    }
 
-    /* Widget is asked to draw itself */
-    public override bool draw (Cairo.Context cr) { 
-        int width = get_allocated_width ();
-        int height = get_allocated_height ();
+//    /* Widget is asked to draw itself */
+//    public override bool draw (Cairo.Context cr) { 
+//        int width = get_allocated_width ();
+//        int height = get_allocated_height ();
 
-        // Draw pixbuf
-        var x_pix = 0;
-        var y_pix = 0;
-        var pad = 0;
-        if (is_thumb == true) {
-            x_pix = RoundBox.BORDER_WIDTH;
-            pad = xy_padding + x_pix;
-            y_pix = RoundBox.BORDER_WIDTH;
-        }
-        cr.set_operator (Cairo.Operator.OVER);
-        if (thumb != null)  {
-            y_pix = (height - thumb.height) / 2;
-            Gdk.cairo_set_source_pixbuf(cr, thumb, x_pix, y_pix);
-            cr.rectangle (x_pix, y_pix, thumb.width, thumb.height);
-            cr.fill();
-        }
-        
-        //Draw title
-        Pango.Rectangle rect;
-        title_layout.get_extents (null, out rect);
-        this.get_style_context ().render_layout (cr,
-               x_pix + thumb.width + pad,
-               (height - rect.height/ Pango.SCALE) / 2,
-               title_layout);
-        
-        //Draw timestamp
-        title_layout.get_extents (null, out rect);
-        this.get_style_context ().render_layout (cr,
-               x_pix + thumb.width + pad , //width - rect.width / Pango.SCALE do not work..why?
-               height - rect.height / Pango.SCALE ,
-               time_layout);
+//        // Draw pixbuf
+//        var x_pix = 0;
+//        var y_pix = 0;
+//        var pad = 0;
+//        if (is_thumb == true) {
+//            x_pix = RoundBox.BORDER_WIDTH;
+//            pad = xy_padding + x_pix;
+//            y_pix = RoundBox.BORDER_WIDTH;
+//        }
+//        cr.set_operator (Cairo.Operator.OVER);
+//        if (thumb != null)  {
+//            y_pix = (height - thumb.height) / 2;
+//            Gdk.cairo_set_source_pixbuf(cr, thumb, x_pix, y_pix);
+//            cr.rectangle (x_pix, y_pix, thumb.width, thumb.height);
+//            cr.fill();
+//        }
+//        
+//        //Draw title
+//        Pango.Rectangle rect;
+//        title_layout.get_extents (null, out rect);
+//        this.get_style_context ().render_layout (cr,
+//               x_pix + thumb.width + pad,
+//               (height - rect.height/ Pango.SCALE) / 2,
+//               title_layout);
+//        
+//        //Draw timestamp
+//        title_layout.get_extents (null, out rect);
+//        this.get_style_context ().render_layout (cr,
+//               x_pix + thumb.width + pad , //width - rect.width / Pango.SCALE do not work..why?
+//               height - rect.height / Pango.SCALE ,
+//               time_layout);
 
-        return false;
-    }
-    
-    private void create_title_layout (int width) {
-        Pango.Rectangle rect;
-        int f_width, text_width;
-        var layout = this.create_pango_layout ("");
-        layout.set_text(activity.title , -1);
+//        return false;
+//    }
+//    
+//    private void create_title_layout (int width) {
+//        Pango.Rectangle rect;
+//        int f_width, text_width;
+//        var layout = this.create_pango_layout ("");
+//        layout.set_text(activity.title , -1);
 
-        var attr_list = new Pango.AttrList ();
+//        var attr_list = new Pango.AttrList ();
 
-        var attr_s = new Pango.AttrSize (12 * Pango.SCALE);
-		attr_s.absolute = 1;
-		attr_s.start_index = 0;
-		attr_s.end_index = attr_s.start_index + activity.title.length;
-		attr_list.insert ((owned) attr_s);
+//        var attr_s = new Pango.AttrSize (12 * Pango.SCALE);
+//		attr_s.absolute = 1;
+//		attr_s.start_index = 0;
+//		attr_s.end_index = attr_s.start_index + activity.title.length;
+//		attr_list.insert ((owned) attr_s);
 
-		var desc = new Pango.FontDescription ();
-		desc.set_weight (Pango.Weight.BOLD);
-		var attr_f = new Pango.AttrFontDesc (desc);
-		attr_list.insert ((owned) attr_f);
-		
-		layout.set_ellipsize (Pango.EllipsizeMode.END);
-        //layout.set_wrap (Pango.WrapMode.WORD_CHAR);
-		
-		layout.set_attributes (attr_list);
-        layout.get_extents (null, out rect);
-        
-        var pad = xy_padding;
-        if (is_thumb == true)
-            pad += RoundBox.BORDER_WIDTH;
-        text_width = rect.width;
-        var p_width = (width - pad - thumb.width) * Pango.SCALE;
-        f_width = int.min (p_width, text_width);
-        layout.set_width (f_width);
-        
-        this.title_layout = layout;
-   }
-   
-   private void create_time_layout (int width) {
-        var layout = this.create_pango_layout ("");
-        DateTime date = new DateTime.from_unix_utc (activity.time / 1000).to_local ();
-        string date_s = date.format ("%Y-%m-%d %H:%M");
-        layout.set_text (date_s, -1);
+//		var desc = new Pango.FontDescription ();
+//		desc.set_weight (Pango.Weight.BOLD);
+//		var attr_f = new Pango.AttrFontDesc (desc);
+//		attr_list.insert ((owned) attr_f);
+//		
+//		layout.set_ellipsize (Pango.EllipsizeMode.END);
+//        //layout.set_wrap (Pango.WrapMode.WORD_CHAR);
+//		
+//		layout.set_attributes (attr_list);
+//        layout.get_extents (null, out rect);
+//        
+//        var pad = xy_padding;
+//        if (is_thumb == true)
+//            pad += RoundBox.BORDER_WIDTH;
+//        text_width = rect.width;
+//        var p_width = (width - pad - thumb.width) * Pango.SCALE;
+//        f_width = int.min (p_width, text_width);
+//        layout.set_width (f_width);
+//        
+//        this.title_layout = layout;
+//   }
+//   
+//   private void create_time_layout (int width) {
+//        var layout = this.create_pango_layout ("");
+//        DateTime date = new DateTime.from_unix_utc (activity.time / 1000).to_local ();
+//        string date_s = date.format ("%Y-%m-%d %H:%M");
+//        layout.set_text (date_s, -1);
 
-        var attr_list = new Pango.AttrList ();
+//        var attr_list = new Pango.AttrList ();
 
-        var attr_s = new Pango.AttrSize (8 * Pango.SCALE);
-		attr_s.absolute = 1;
-		attr_s.start_index = 0;
-		attr_s.end_index = attr_s.start_index + date_s.length;
-		attr_list.insert ((owned) attr_s);
+//        var attr_s = new Pango.AttrSize (8 * Pango.SCALE);
+//		attr_s.absolute = 1;
+//		attr_s.start_index = 0;
+//		attr_s.end_index = attr_s.start_index + date_s.length;
+//		attr_list.insert ((owned) attr_s);
 
-		var desc = new Pango.FontDescription ();
-		desc.set_style (Pango.Style.ITALIC);
-		var attr_f = new Pango.AttrFontDesc (desc);
-		attr_list.insert ((owned) attr_f);
-		
-		//layout.set_ellipsize (Pango.EllipsizeMode.END);
-        layout.set_wrap (Pango.WrapMode.WORD_CHAR);
-        layout.set_attributes (attr_list);
+//		var desc = new Pango.FontDescription ();
+//		desc.set_style (Pango.Style.ITALIC);
+//		var attr_f = new Pango.AttrFontDesc (desc);
+//		attr_list.insert ((owned) attr_f);
+//		
+//		//layout.set_ellipsize (Pango.EllipsizeMode.END);
+//        layout.set_wrap (Pango.WrapMode.WORD_CHAR);
+//        layout.set_attributes (attr_list);
 
-        this.time_layout = layout;
-   }
-   
-    public override bool button_release_event (Gdk.EventButton event) {
-        //TODO Improve here?
-        try {
-            AppInfo.launch_default_for_uri (this.activity.uri, null);
-        } catch (Error e) {
-            warning ("Error in launching: "+ this.activity.uri);
-        }
-        return false;
-    }
-    
-   public override Gtk.SizeRequestMode get_request_mode () {
-       return SizeRequestMode.HEIGHT_FOR_WIDTH;
-   }
-  
-   public override void get_preferred_width (out int minimum_width, out int natural_width) {
-      minimum_width = natural_width = this.width;
-   }
+//        this.time_layout = layout;
+//   }
+//   
+//    public override bool button_release_event (Gdk.EventButton event) {
+//        //TODO Improve here?
+//        try {
+//            AppInfo.launch_default_for_uri (this.activity.uri, null);
+//        } catch (Error e) {
+//            warning ("Error in launching: "+ this.activity.uri);
+//        }
+//        return false;
+//    }
+//    
+//   public override Gtk.SizeRequestMode get_request_mode () {
+//       return SizeRequestMode.HEIGHT_FOR_WIDTH;
+//   }
+//  
+//   public override void get_preferred_width (out int minimum_width, out int natural_width) {
+//      minimum_width = natural_width = this.width;
+//   }
 
-   public override void get_preferred_height_for_width (int  width,
-                                                       out int minimum_height,
-                                                       out int natural_height) {
-       var x_pix = 0;
-       if (is_thumb == true)
-           x_pix = RoundBox.BORDER_WIDTH * 2;
-           
-       create_title_layout (width - x_pix);
-       create_time_layout (width - x_pix);
-       Pango.Rectangle r, r2;
-       time_layout.get_extents (null, out r);
-       title_layout.get_extents (null, out r2);
+//   public override void get_preferred_height_for_width (int  width,
+//                                                       out int minimum_height,
+//                                                       out int natural_height) {
+//       var x_pix = 0;
+//       if (is_thumb == true)
+//           x_pix = RoundBox.BORDER_WIDTH * 2;
+//           
+//       create_title_layout (width - x_pix);
+//       create_time_layout (width - x_pix);
+//       Pango.Rectangle r, r2;
+//       time_layout.get_extents (null, out r);
+//       title_layout.get_extents (null, out r2);
 
-       minimum_height = natural_height = int.max (thumb.height, 
-                                     (int)(r.height + r2.height) / Pango.SCALE);
-   }
-}
+//       minimum_height = natural_height = int.max (thumb.height, 
+//                                     (int)(r.height + r2.height) / Pango.SCALE);
+//   }
+//}

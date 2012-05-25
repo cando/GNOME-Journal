@@ -110,14 +110,6 @@ private class Journal.Utils : Object{
         style.add_class ("roundbox");
         return style.get_border_color (0);
     }
-    
-    public static Pango.FontDescription get_default_font_description () {
-        var style = new Gtk.StyleContext ();
-        var path = new Gtk.WidgetPath ();
-        path.append_type (typeof (Gtk.Window));
-        style.set_path (path);
-        return style.get_font (StateFlags.NORMAL);
-    }
 
     public static int getIconSize() {
 //        int view_type = settings.get_int ("mainview-type");
@@ -174,11 +166,6 @@ private class Journal.Utils : Object{
         //TODO To localtime here? Zeitgeist uses UTC timestamp, right?
         DateTime date = new DateTime.from_unix_utc (timestamp).to_local ();
         return date;
-    }
-    
-    public static string get_start_of_the_day_string (int64 time) {
-        var start_of_day = get_start_of_the_day (time);
-        return start_of_day.format("%Y-%m-%d");
     }
     
     public static DateTime get_start_of_the_day (int64 time) {

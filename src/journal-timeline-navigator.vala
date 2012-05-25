@@ -53,9 +53,9 @@ private class Journal.TimelineNavigator : ButtonBox {
     };
     
     private Histogram histogram_proxy;
-    private Gee.HashMap<DateTime, uint> count_map;
+    private Gee.Map<DateTime?, uint> count_map;
     
-    public static Gee.HashMap<string, DateTime> jump_date;
+    public static Gee.Map<string, DateTime?> jump_date;
     
     private Pango.AttrList attr_list;
     
@@ -98,7 +98,7 @@ private class Journal.TimelineNavigator : ButtonBox {
             size_t n = data. n_children ();
             int64 time = 0;
             uint count = 0;
-            this.count_map = new Gee.HashMap<DateTime, uint> ();
+            this.count_map = new Gee.HashMap<DateTime?, uint> ();
             
             for (size_t j =0; j <n; j++) {
                 data.get_child (j, "(xu)", &time, &count);
@@ -118,14 +118,11 @@ private class Journal.TimelineNavigator : ButtonBox {
     
     private void load_attributes () {
         attr_list = new Pango.AttrList ();
-        var desc = new Pango.FontDescription ();
-        desc.set_weight (Pango.Weight.BOLD);
-        var attr_f = new Pango.AttrFontDesc (desc);
-        attr_list.insert ((owned) attr_f);
+        attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
     }
     
-    private Gee.ArrayList<string> select_time_labels () {
-        Gee.ArrayList<string> result = new Gee.ArrayList<string> ();
+    private Gee.List<string> select_time_labels () {
+        Gee.List<string> result = new Gee.ArrayList<string> ();
         var today = Utils.get_start_of_today ();
         foreach (DateTime key in count_map.keys) {
             //TODO use count for a better selection of label basing on importance

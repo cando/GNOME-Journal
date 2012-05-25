@@ -59,7 +59,9 @@ public int main (string[] args) {
 
 //    parse_args (ref args);
 
-    GtkClutter.init (ref args);
+    var res = GtkClutter.init (ref args);
+    if (res != Clutter.InitError.SUCCESS) 
+        error ("Can't init clutter-gtk");
     Gst.init (ref args);
 
     Gtk.Window.set_default_icon_name ("Activity Journal");
@@ -78,7 +80,7 @@ public int main (string[] args) {
         warning (error.message);
     }
 
-    var utils = new Journal.Utils ();
+    new Journal.Utils ();
     var app = new Journal.App ();
     return app.run ();
 }

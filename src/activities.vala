@@ -85,7 +85,11 @@ private class Journal.GenericActivity : Object {
         this.time = event.get_timestamp ();
         this.selected = false;
         this.mimetype = subject.get_mimetype ();
-        this.interpretation = subject.get_interpretation ();
+        string intpr = subject.get_interpretation ();
+        if (intpr == null) 
+            //Better way for handling this?
+            intpr = Zeitgeist.NFO_DOCUMENT;
+        this.interpretation = intpr;
 
         updateActivityIcon ();
         
@@ -318,7 +322,12 @@ private class Journal.ActivityFactory : Object {
     public static GenericActivity get_activity_for_event (Zeitgeist.Event event) {
         if (interpretation_types == null)
             init ();
+            
         string intpr = event.get_subject (0).get_interpretation ();
+        if (intpr == null) 
+            //Better way for handling this?
+            intpr = Zeitgeist.NFO_DOCUMENT;
+        
         if (interpretation_types.has_key (intpr)){
             Type activity_class = interpretation_types.get (intpr);
             GenericActivity activity = (GenericActivity) 
@@ -332,7 +341,7 @@ private class Journal.ActivityFactory : Object {
 private class Journal.DayActivityModel : Object {
 
     //Key: Zeitgeist.Interpretation
-    public Gee.HashMap<string, Gee.List<GenericActivity>> activities {
+    public Gee.Map<string, Gee.List<GenericActivity>> activities {
         get; private set;
     }
 
@@ -355,16 +364,17 @@ private class Journal.DayActivityModel : Object {
             list.add (activity);
     }
     
-    public void remove_activity (GenericActivity activity) {
-        string interpretation = activity.interpretation;
-        if (!activities.has_key (interpretation))
-            return;
+/****One day will be useful...but not now!*********/
+//    public void remove_activity (GenericActivity activity) {
+//        string interpretation = activity.interpretation;
+//        if (!activities.has_key (interpretation))
+//            return;
 
-        var list = activities.get (interpretation);
-        list.remove (activity);
-        if (list.size == 0)
-            activities.unset (interpretation);
-    }
+//        var list = activities.get (interpretation);
+//        list.remove (activity);
+//        if (list.size == 0)
+//            activities.unset (interpretation);
+//    }
 }
 
 private class Journal.ActivityModel : Object {
@@ -372,7 +382,7 @@ private class Journal.ActivityModel : Object {
     private ZeitgeistBackend backend;
     
     //Key: Date format YYYY-MM-DD
-    public Gee.HashMap<string, DayActivityModel> activities {
+    public Gee.Map<string, DayActivityModel> activities {
         get; private set;
     }
     
@@ -425,7 +435,7 @@ private class Journal.ActivityModel : Object {
     
     private bool add_day (string day) {
         var model = new DayActivityModel ();
-        var event_list = backend.get_events_for_date (day);
+        Gee.List<Zeitgeist.Event> event_list = backend.get_events_for_date (day);
         if (event_list == null)
                 return false;
         foreach (Zeitgeist.Event e in event_list) {

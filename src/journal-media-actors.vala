@@ -123,25 +123,15 @@ private class Journal.DocumentActor : Clutter.Actor {
         GLib.Object ();
 
         var attr_list = new Pango.AttrList ();
-        var attr_s = new Pango.AttrSize (16 * Pango.SCALE);
-        attr_s.absolute = 1;
-        attr_list.insert ((owned) attr_s);
-        var desc = new Pango.FontDescription ();
-        desc.set_weight (Pango.Weight.BOLD);
-        var attr_f = new Pango.AttrFontDesc (desc);
-        attr_list.insert ((owned) attr_f);
+        attr_list.insert (Pango.attr_scale_new (Pango.Scale.LARGE));
+        attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
 
         title = new TextActor.full_text (title_s, attr_list);
         title.margin_bottom = 10;
 
         attr_list = new Pango.AttrList ();
-        attr_s = new Pango.AttrSize (8 * Pango.SCALE);
-        attr_s.absolute = 1;
-        attr_list.insert ((owned) attr_s);
-        desc = new Pango.FontDescription ();
-        desc.set_style (Pango.Style.ITALIC);
-        attr_f = new Pango.AttrFontDesc (desc);
-        attr_list.insert ((owned) attr_f);
+        attr_list.insert (Pango.attr_scale_new (Pango.Scale.SMALL));
+        attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
 
         time = new TextActor.full_text (date, attr_list);
         time.margin_top = 10;
