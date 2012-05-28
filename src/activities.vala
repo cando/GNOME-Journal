@@ -82,7 +82,7 @@ private class Journal.GenericActivity : Object {
         this.thumb_icon = null;
         this.display_uri = create_display_uri ();
         this.title = subject.get_text () == null ? 
-                     this.display_uri () : subject.get_text ();
+                     this.display_uri : subject.get_text ();
         this.time = event.get_timestamp ();
         this.selected = false;
         this.mimetype = subject.get_mimetype ();
