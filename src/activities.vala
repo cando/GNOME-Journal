@@ -78,10 +78,11 @@ private class Journal.GenericActivity : Object {
     construct {
         this.subject = event.get_subject (0);
         this.uri = subject.get_uri ();
-        this.title = subject.get_text ();
         this.type_icon = null;
         this.thumb_icon = null;
         this.display_uri = create_display_uri ();
+        this.title = subject.get_text () == null ? 
+                     this.display_uri () : subject.get_text ();
         this.time = event.get_timestamp ();
         this.selected = false;
         this.mimetype = subject.get_mimetype ();
