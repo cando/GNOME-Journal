@@ -207,7 +207,7 @@ private class Journal.GenericActivity : Object {
     private async void get_thumb () {
         var file = File.new_for_path (this.thumb_path);
         try {
-            FileInputStream stream = yield file.read_async (Priority.DEFAULT, null);
+            FileInputStream stream = yield file.read_async (Priority.LOW, null);
             this.thumb_icon = yield Pixbuf.new_from_stream_at_scale_async (
                                                        stream, 
                                                        Utils.getIconSize(),

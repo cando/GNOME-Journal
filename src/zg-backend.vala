@@ -60,9 +60,6 @@ public class Journal.ZeitgeistBackend: GLib.Object
 
     private async void load_application_events (Zeitgeist.TimeRange tr)
     {
-      Idle.add (load_application_events.callback, Priority.LOW);
-      yield;
-
       var event = new Zeitgeist.Event ();
       event.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
       var subject = new Zeitgeist.Subject ();
@@ -103,9 +100,6 @@ public class Journal.ZeitgeistBackend: GLib.Object
 
     private async void load_uri_events (Zeitgeist.TimeRange tr)
     {
-      Idle.add (load_uri_events.callback);
-      yield;
-
       var event = new Zeitgeist.Event ();
       event.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
       var subject = new Zeitgeist.Subject ();
@@ -117,7 +111,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
       ptr_arr.add (event);
 
       Zeitgeist.ResultSet rs;
-
+      
       try
       {
         /* Get popularity for file uris */
@@ -133,25 +127,6 @@ public class Journal.ZeitgeistBackend: GLib.Object
           all_events.add(e1);
           new_events.add(e1);
         }
-        
-        /* Get popularity for web uris */
-        subject.set_interpretation (Zeitgeist.NFO_WEBSITE);
-        subject.set_uri ("");
-        ptr_arr = new PtrArray ();
-        ptr_arr.add (event);
-
-        rs = yield zg_log.find_events (tr, (owned) ptr_arr,
-                                       Zeitgeist.StorageState.ANY,
-                                       -1,
-                                       Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
-                                       null);
-
-        foreach (Zeitgeist.Event e2 in rs)
-        {
-          if (e2.num_subjects () <= 0) continue;
-          all_events.add(e2);
-          new_events.add(e2);
-        }
       }
       catch (Error err)
       {
@@ -160,9 +135,6 @@ public class Journal.ZeitgeistBackend: GLib.Object
     }
     
     private async void fill_days_map () {
-        Idle.add (fill_days_map.callback);
-        yield;
-        
         foreach (Zeitgeist.Event e1 in new_events)
         {
           if (e1.num_subjects () <= 0) continue;

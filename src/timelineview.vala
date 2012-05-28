@@ -284,6 +284,7 @@ private class Journal.ClutterVTL : Box {
        
        osd_label = new OSDLabel (stage);
        stage.add_actor (osd_label.actor);
+       osd_label.actor.depth = 1;
         
        loading = new LoadingActor (this.app, stage);
        loading.start ();
