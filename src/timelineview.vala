@@ -360,42 +360,16 @@ private class Journal.ClutterVTL : Box {
             Clutter.Actor content = activity.actor;
             RoundBox actor = new RoundBox (side, content.width, content.height);
             actor.add_content (content);
-
-            /****TODO MOVE THIS WHOLE CODE IN A CLASS WRAPPING THE RoundBoxContent***/
-            if (last_type % 2 == 0) 
-                actor.scale_center_x = actor.width;
-                actor.enter_event.connect ((e) => {
-                    double scale_x;
-                    double scale_y;
-                    
-                    actor.get_scale (out scale_x, out scale_y);
-
-                    actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
-                       "scale-x", scale_x * 1.05,
-                       "scale-y", scale_y * 1.05);
-            
-                    return false;
-            });
-            actor.leave_event.connect ((e) => {
-                actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
-                       "scale-x", 1.0,
-                       "scale-y", 1.0);
-                return false;
-            });
             
             actor.button_release_event.connect ((e) => {
-                //TODO Improve here?
-                actor.animate (Clutter.AnimationMode.EASE_OUT_QUAD, 200,
-                       "scale-x", 1.0,
-                       "scale-y", 1.0);
                 try {
                     AppInfo.launch_default_for_uri (activity.uri, null);
                 } catch (Error e) {
                     warning ("Error in launching: "+ activity.uri);
                 }
                 return false;
-            }); 
-            /****************************************************/
+            });
+
             actor.set_y (last_y_position);
             container.add_child (actor);
             timeline.add_circle (last_y_position);
@@ -619,6 +593,8 @@ private class Journal.RoundBox : Clutter.Actor {
     
     private Clutter.Canvas canvas;
     private Clutter.Actor content_actor;
+    
+    private Clutter.BrightnessContrastEffect effect_b;
 
     public Side arrow_side {
         get { return _arrowSide; }
@@ -629,6 +605,10 @@ private class Journal.RoundBox : Clutter.Actor {
        this._arrowSide = side;
        this.border_width = BORDER_WIDTH;
        this.reactive = true;
+       
+       this.effect_b = new Clutter.BrightnessContrastEffect ();
+       this.add_effect_with_name("brightness", this.effect_b);
+       
        box = new Clutter.BinLayout (Clutter.BinAlignment.CENTER, 
                                     Clutter.BinAlignment.CENTER);
        set_layout_manager (box);
@@ -780,6 +760,16 @@ private class Journal.RoundBox : Clutter.Actor {
         cr.stroke();
 
         return true;
+    }
+    
+    public override  bool enter_event (Clutter.CrossingEvent event) {
+        this.effect_b.set_brightness (0.4f);
+        return false;
+    }
+    
+    public override  bool leave_event (Clutter.CrossingEvent event) {
+        this.effect_b.set_brightness (0.0f);
+        return false;
     }
     
     public void add_content (Clutter.Actor content) {

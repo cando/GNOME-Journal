@@ -26,11 +26,11 @@ const int MEDIA_SIZE_NORMAL = 84;
 const int MEDIA_SIZE_LARGE = 128;
 
 private class Journal.TextActor : Clutter.Text {
-    
+
     public TextActor () {
         GLib.Object ();
         this.set_ellipsize (Pango.EllipsizeMode.END);
-        //this.set_line_alignment (Pango.Alignment.CENTER);
+        this.reactive = true;
         this.paint.connect (() => {
             this.text_paint_cb ();
         });
@@ -57,7 +57,7 @@ private class Journal.TextActor : Clutter.Text {
     }
     
     private void text_paint_cb () {
-        Clutter.Text text = (Clutter.Text) this;
+        Clutter.Text text = (Clutter.Text)this;
         var layout = text.get_layout ();
         var text_color = text.get_color ();
         var real_opacity = this.get_paint_opacity () * text_color.alpha * 255;
