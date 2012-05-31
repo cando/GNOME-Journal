@@ -645,6 +645,7 @@ private class Journal.RoundBox : Clutter.Actor {
             canvas.set_size ((int)box.get_width (), (int) box.get_height ());
        });
        this.add_child (canvas_box);
+       this.add_child (new Clutter.Text.with_text(null, "ciao"));
     }
 
     private bool paint_canvas (Cairo.Context ctx, int width, int height) {

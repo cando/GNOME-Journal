@@ -30,7 +30,10 @@ private class Journal.TextActor : Clutter.Text {
     public TextActor () {
         GLib.Object ();
         this.set_ellipsize (Pango.EllipsizeMode.END);
-        this.set_line_alignment (Pango.Alignment.CENTER);
+        //this.set_line_alignment (Pango.Alignment.CENTER);
+        this.paint.connect (() => {
+            this.text_paint_cb ();
+        });
     }
     
     public TextActor.with_text (string text){
@@ -51,6 +54,19 @@ private class Journal.TextActor : Clutter.Text {
     public TextActor.full_text (string text, Pango.AttrList attributes){
         this.with_text (text);
         this.attributes = attributes;
+    }
+    
+    private void text_paint_cb () {
+        Clutter.Text text = (Clutter.Text) this;
+        var layout = text.get_layout ();
+        var text_color = text.get_color ();
+        var real_opacity = this.get_paint_opacity () * text_color.alpha * 255;
+        
+        Cogl.Color color = {};
+        color.init_from_4ub (0xcc, 0xcc, 0xcc, real_opacity);
+        color.premultiply ();
+        
+        Cogl.pango_render_layout (layout, 1, 1, color, 0);
     }
 }
 
