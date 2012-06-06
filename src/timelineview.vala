@@ -128,7 +128,6 @@ private class Journal.CustomContainer : Clutter.Actor {
     public CustomContainer () {
         Object ();
         this.reactive = true;
-        background_color = {1,200,100,255};
     }
     
     public override void allocate (Clutter.ActorBox box, Clutter.AllocationFlags flags) {
@@ -137,6 +136,8 @@ private class Journal.CustomContainer : Clutter.Actor {
         float x, y;
         var child_box = Clutter.ActorBox ();
         foreach (Clutter.Actor child in get_children ()) {
+            if (!child.visible)
+                continue;
             RoundBox r = child as RoundBox;
             if (r == null) {
                 //Timelines and dates
@@ -149,7 +150,6 @@ private class Journal.CustomContainer : Clutter.Actor {
                 child_box.y2 = y + height;
             }
             else {
-
             r.get_preferred_size (null, null, out width, out height);
             y = r.get_y ();
 
@@ -308,10 +308,8 @@ private class Journal.ClutterVTL : Box {
         foreach (string date in dates_loaded)
         {
           var list = model.activities.get (date);
-          foreach (Gee.Map.Entry<string, Gee.List<GenericActivity>> day_entry in list.activities.entries)
+          foreach (CompositeActivity activity in list.composite_activities)
           {
-            foreach (GenericActivity activity in day_entry.value)
-            {
             if (last_type % 2 == 0) 
                 side = Side.RIGHT;
             else 
@@ -335,7 +333,7 @@ private class Journal.ClutterVTL : Box {
                 var manager = new Clutter.BinLayout (Clutter.BinAlignment.CENTER,
                                                      Clutter.BinAlignment.CENTER);
                 hole.set_layout_manager (manager);
-                Clutter.Text hole_text = new Clutter.Text.with_text (null, _("Load more..."));
+                Clutter.Text hole_text = new Clutter.Text.with_text (null, _("Click to load more..."));
                 var attr_list = new Pango.AttrList ();
                 attr_list.insert (Pango.attr_scale_new (Pango.Scale.X_LARGE));
                 attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
@@ -345,10 +343,14 @@ private class Journal.ClutterVTL : Box {
                 container.add_child (hole);
                 hole.add_constraint (new Clutter.BindConstraint (container, Clutter.BindCoordinate.WIDTH, 0));
                 hole.height = 100;
+                hole.depth = 1;
                 hole.background_color = {125, 125, 125, 255};
-                hole.set_y (last_y_position + last_actor_height + 10);
+                if (last_type % 2 == 0) 
+                    hole.set_y (last_y_position  + last_actor_height + 10);
+                else
+                    hole.set_y (last_y_position  + 10);
                 add_empty_range = false;
-                last_y_position += (int)hole.height + 10;
+                last_y_position += (int)hole.height + 20;
             }
             
             if(y_positions.has_key (date) == false) {
@@ -398,14 +400,15 @@ private class Journal.ClutterVTL : Box {
                 last_y_texture = position;
             }
             Clutter.Actor content = activity.actor;
-            var actor = content;//new RoundBox (side, content.width, content.height);
-            //actor.add_content (content);
+            var actor = new RoundBox (side, content.width, content.height);
+            actor.add_content (content);
             
             actor.button_release_event.connect ((e) => {
                 try {
-                    AppInfo.launch_default_for_uri (activity.uri, null);
+                    //FIXME launch the first uris. we should instead show another view
+                    AppInfo.launch_default_for_uri (activity.uris[0], null);
                 } catch (Error e) {
-                    warning ("Error in launching: "+ activity.uri);
+                    warning ("Error in launching: "+ activity.uris[0]);
                 }
                 return false;
             });
@@ -415,12 +418,11 @@ private class Journal.ClutterVTL : Box {
             timeline.add_circle (last_y_position);
             //last_y_position +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
             last_actor_height = (int)actor.get_height();
-            if (last_type % 2 == 1) last_y_position += 20;
+            if (last_type % 2 == 1) last_y_position += 40;
             else last_y_position +=  last_actor_height;
             last_type ++;
         }
 
-       }
        }
        
        foreach (TimelineTexture tex in timeline.texture_buffer.values) 
@@ -649,8 +651,6 @@ private class Journal.RoundBox : Clutter.Actor {
     
     private Clutter.Canvas canvas;
     private Clutter.Actor content_actor;
-    
-    private Clutter.BrightnessContrastEffect effect_b;
 
     public Side arrow_side {
         get { return _arrowSide; }
@@ -661,23 +661,23 @@ private class Journal.RoundBox : Clutter.Actor {
        this._arrowSide = side;
        this.border_width = BORDER_WIDTH;
        this.reactive = true;
-       
-       this.effect_b = new Clutter.BrightnessContrastEffect ();
-       this.add_effect_with_name("brightness", this.effect_b);
-       
+
        box = new Clutter.BinLayout (Clutter.BinAlignment.CENTER, 
                                     Clutter.BinAlignment.CENTER);
        set_layout_manager (box);
        
-//       this.canvas = new Clutter.Canvas ();
-//       canvas.draw.connect ((cr, w, h) => { return paint_canvas (cr, w, h); });
-//       canvas.set_size ((int)width + BORDER_WIDTH * 2, 
-//                        (int)height + BORDER_WIDTH * 2);
-//       var canvas_box = new Clutter.Actor ();
-//       canvas_box.set_size ((int)width + BORDER_WIDTH * 2,
-//                            (int)height + BORDER_WIDTH * 2);
-//       canvas_box.set_content (canvas);
-//       this.add_child (canvas_box);
+       this.canvas = new Clutter.Canvas ();
+       canvas.draw.connect ((cr, w, h) => { return paint_canvas (cr, w, h); });
+       canvas.set_size ((int)width + BORDER_WIDTH * 2, 
+                        (int)height + BORDER_WIDTH * 2);
+       var canvas_box = new Clutter.Actor ();
+       canvas_box.set_size ((int)width + BORDER_WIDTH * 2,
+                            (int)height + BORDER_WIDTH * 2);
+       canvas_box.set_content (canvas);
+       this.allocation_changed.connect ((box, f) => {
+            canvas.set_size ((int)box.get_width (), (int) box.get_height ());
+       });
+       this.add_child (canvas_box);
     }
 
     private bool paint_canvas (Cairo.Context ctx, int width, int height) {
@@ -815,12 +815,12 @@ private class Journal.RoundBox : Clutter.Actor {
     }
     
     public override  bool enter_event (Clutter.CrossingEvent event) {
-        this.effect_b.set_brightness (0.4f);
+        //FIXME do something
         return false;
     }
     
     public override  bool leave_event (Clutter.CrossingEvent event) {
-        this.effect_b.set_brightness (0.0f);
+        //FIXME do something
         return false;
     }
     

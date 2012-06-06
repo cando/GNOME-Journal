@@ -321,17 +321,37 @@ private class Journal.CompositeActivity : Object {
         int i = 0;
         foreach (Zeitgeist.Event event in events) {
             var subject = event.get_subject (0);
-            this.uris[i] = subject.get_uri ();
+            string home = Environment.get_home_dir ();
+            string origin = subject.get_origin ();
+            string uri, display_uri;
+            if (origin != null) {
+                uri = origin.split ("://")[1];
+                display_uri = uri.replace (home, "~");
+            }
+            else {
+                uri = subject.get_uri ().split ("://")[1];
+                display_uri = uri;
+            }
+            this.uris[i] = display_uri;
             i++;
         }
-        this.icon = null;
+        this.icon = create_icon ();
         //Subclasses will modify this.
-        this.title = _("Various activities");
+        this.title = create_title ();
         //Firt event's timestamp? FIXME
         this.time = events.get (0).get_timestamp ();
         this.selected = false;
 
         create_actor ();
+    }
+    
+    public virtual string create_title () {
+        return _("Various activities");
+    }
+    
+    public virtual Gdk.Pixbuf? create_icon () {
+        //Find icon names in http://developer.gnome.org/icon-naming-spec/
+        return Utils.load_fallback_icon ();
     }
     
     public virtual Clutter.Actor create_actor () {
@@ -342,10 +362,120 @@ private class Journal.CompositeActivity : Object {
     }
 }
 
+private class Journal.CompositeDocumentActivity : CompositeActivity {
+    public CompositeDocumentActivity (Gee.List<Zeitgeist.Event> events) {
+        Object (events:events);
+    }
+    
+    public override string create_title () {
+        return _("Worked with Documents");
+    }
+    
+    public override Gdk.Pixbuf? create_icon () {
+        try {
+            return Gtk.IconTheme.get_default().load_icon ("applications-office", Utils.getIconSize (),
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
+        } catch (Error e) {
+            warning ("Unable to load pixbuf: " + e.message);
+        }
+        
+        return null;
+    }
+}
+
+private class Journal.CompositeAudioActivity : CompositeActivity {
+    public CompositeAudioActivity (Gee.List<Zeitgeist.Event> events) {
+        Object (events:events);
+    }
+    
+    public override string create_title () {
+        return _("Listened to Music");
+    }
+    
+    public override Gdk.Pixbuf? create_icon () {
+        try {
+        return Gtk.IconTheme.get_default().load_icon ("applications-multimedia", Utils.getIconSize (),
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
+        } catch (Error e) {
+            warning ("Unable to load pixbuf: " + e.message);
+        }
+        
+        return null;
+    }
+}
+
+private class Journal.CompositeDevelopmentActivity : CompositeActivity {
+    public CompositeDevelopmentActivity (Gee.List<Zeitgeist.Event> events) {
+        Object (events:events);
+    }
+    
+    public override string create_title () {
+        return _("Hacked on some code");
+    }
+    
+    public override Gdk.Pixbuf? create_icon () {
+        try {
+        return Gtk.IconTheme.get_default().load_icon ("applications-development", Utils.getIconSize (),
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
+        } catch (Error e) {
+            warning ("Unable to load pixbuf: " + e.message);
+        }
+        
+        return null;
+    }
+}
+
+private class Journal.CompositeImageActivity : CompositeActivity {
+    public CompositeImageActivity (Gee.List<Zeitgeist.Event> events) {
+        Object (events:events);
+    }
+    
+    public override string create_title () {
+        return _("Watched some Images");
+    }
+    
+    public override Gdk.Pixbuf? create_icon () {
+        try {
+        return Gtk.IconTheme.get_default().load_icon ("applications-graphics", Utils.getIconSize (),
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
+        } catch (Error e) {
+            warning ("Unable to load pixbuf: " + e.message);
+        }
+        
+        return null;
+    }
+}
+
+private class Journal.CompositeVideoActivity : CompositeActivity {
+    public CompositeVideoActivity (Gee.List<Zeitgeist.Event> events) {
+        Object (events:events);
+    }
+    
+    public override string create_title () {
+        return _("Watched some Videos");
+    }
+    
+    public override Gdk.Pixbuf? create_icon () {
+        try {
+        return Gtk.IconTheme.get_default().load_icon ("camera-video", Utils.getIconSize (),
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
+        } catch (Error e) {
+            warning ("Unable to load pixbuf: " + e.message);
+        }
+        
+        return null;
+    }
+}
 
 private class Journal.ActivityFactory : Object {
     
     private static Gee.Map<string, Type> interpretation_types;
+    private static Gee.Map<string, Type> interpretation_types_comp;
     
     private static void init () {
         interpretation_types = new Gee.HashMap<string, Type> ();
@@ -374,6 +504,34 @@ private class Journal.ActivityFactory : Object {
         interpretation_types.set (Zeitgeist.NMM_MUSIC_ALBUM, typeof (VideoActivity));
         interpretation_types.set (Zeitgeist.NMM_TVSERIES, typeof (VideoActivity));
         interpretation_types.set (Zeitgeist.NMM_TVSHOW ,typeof (VideoActivity));
+        
+        /**************COMPOSITE ACTIVITIES*********/
+        interpretation_types_comp = new Gee.HashMap<string, Type> ();
+        //Fill in all interpretations
+        /****DOCUMENTS****/
+        interpretation_types_comp.set (Zeitgeist.NFO_DOCUMENT, typeof (CompositeDocumentActivity));
+        interpretation_types_comp.set (Zeitgeist.NFO_PAGINATED_TEXT_DOCUMENT, typeof (CompositeDocumentActivity));
+        interpretation_types_comp.set (Zeitgeist.NFO_PLAIN_TEXT_DOCUMENT, typeof (CompositeDocumentActivity));
+        interpretation_types_comp.set (Zeitgeist.NFO_HTML_DOCUMENT, typeof (CompositeDocumentActivity));
+        interpretation_types_comp.set (Zeitgeist.NFO_TEXT_DOCUMENT, typeof (CompositeDocumentActivity));
+        interpretation_types_comp.set (Zeitgeist.NFO_SPREADSHEET, typeof (CompositeDocumentActivity));
+        interpretation_types_comp.set (Zeitgeist.NFO_PRESENTATION, typeof (CompositeDocumentActivity));
+        interpretation_types_comp.set (Zeitgeist.NFO_PRESENTATION, typeof (CompositeDocumentActivity));
+        /****PROGRAMMING****/
+        interpretation_types_comp.set (Zeitgeist.NFO_SOURCE_CODE, typeof (CompositeDevelopmentActivity));
+        /****IMAGES****/
+        interpretation_types_comp.set (Zeitgeist.NFO_IMAGE, typeof (CompositeImageActivity));
+        interpretation_types_comp.set (Zeitgeist.NFO_VECTOR_IMAGE, typeof (CompositeImageActivity));
+        /****AUDIO****/
+        interpretation_types_comp.set (Zeitgeist.NFO_AUDIO, typeof (CompositeAudioActivity));
+        interpretation_types_comp.set (Zeitgeist.NMM_MUSIC_ALBUM, typeof (CompositeAudioActivity));
+        interpretation_types_comp.set (Zeitgeist.NMM_MUSIC_PIECE, typeof (CompositeAudioActivity));
+        /****VIDEOS****/
+        interpretation_types_comp.set (Zeitgeist.NFO_VIDEO, typeof (CompositeVideoActivity));
+        interpretation_types_comp.set (Zeitgeist.NMM_MOVIE, typeof (CompositeVideoActivity));
+        interpretation_types_comp.set (Zeitgeist.NMM_MUSIC_ALBUM, typeof (CompositeVideoActivity));
+        interpretation_types_comp.set (Zeitgeist.NMM_TVSERIES, typeof (CompositeVideoActivity));
+        interpretation_types_comp.set (Zeitgeist.NMM_TVSHOW ,typeof (CompositeVideoActivity));
     }
     
     /****PUBLIC METHODS****/
@@ -399,15 +557,15 @@ private class Journal.ActivityFactory : Object {
     public static CompositeActivity get_composite_activity_for_interpretation (
                                      string intpr,
                                      Gee.List<Zeitgeist.Event> events) {
-        if (interpretation_types == null)
+        if (interpretation_types_comp == null)
             init ();
             
         if (intpr == null) 
             //Better way for handling this?
             intpr = Zeitgeist.NFO_DOCUMENT;
         
-        if (interpretation_types.has_key (intpr)){
-            Type activity_class = interpretation_types.get (intpr);
+        if (interpretation_types_comp.has_key (intpr)){
+            Type activity_class = interpretation_types_comp.get (intpr);
             CompositeActivity activity = (CompositeActivity) 
                                         Object.new (activity_class, events:events);
             return activity;
@@ -422,9 +580,19 @@ private class Journal.DayActivityModel : Object {
     public Gee.Map<string, Gee.List<GenericActivity>> activities {
         get; private set;
     }
+    
+    public Gee.List<CompositeActivity> composite_activities {
+        get; private set;
+    }
+    
+    public string day {
+        get; private set;
+    }
 
-    public DayActivityModel () {
+    public DayActivityModel (string day) {
         activities = new Gee.HashMap<string, Gee.List<GenericActivity>> ();
+        composite_activities = new Gee.ArrayList<CompositeActivity> ();
+        this.day = day;
     }
     
     public void add_activity (GenericActivity activity) {
@@ -440,6 +608,17 @@ private class Journal.DayActivityModel : Object {
         var list = activities.get (interpretation);
         if (!list.contains (activity))
             list.add (activity);
+    }
+    
+    public void create_composite_activities () {
+            foreach (string intr in this.activities.keys) {
+                //Performance!!
+                var list = new Gee.ArrayList<Zeitgeist.Event> ();
+                foreach (GenericActivity a in this.activities.get (intr))
+                    list.add (a.event);
+                CompositeActivity c_activity = ActivityFactory.get_composite_activity_for_interpretation (intr, list);
+                composite_activities.add (c_activity);
+            }
     }
     
 /****One day will be useful...but not now!*********/
@@ -507,12 +686,11 @@ private class Journal.ActivityModel : Object {
                     else
                         return 1;
                 });
-        
         activities_loaded (dates_loaded);
     }
     
     private bool add_day (string day) {
-        var model = new DayActivityModel ();
+        var model = new DayActivityModel (day);
         Gee.List<Zeitgeist.Event> event_list = backend.get_events_for_date (day);
         if (event_list == null)
                 return false;
@@ -520,6 +698,7 @@ private class Journal.ActivityModel : Object {
             GenericActivity activity = ActivityFactory.get_activity_for_event (e);
             model.add_activity (activity);
         }
+        model.create_composite_activities ();
         activities.set (day, model);
         return true;
     }

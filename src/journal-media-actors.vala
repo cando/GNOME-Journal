@@ -204,8 +204,8 @@ private class Journal.DocumentActor : Clutter.Actor {
     
     private TextActor time;
     
-    private Clutter.BinLayout box;
-    public CompositeDocumentActor (string title_s, Gdk.Pixbuf pixbuf, string[] uris, string date) {
+    private Clutter.BoxLayout box;
+    public CompositeDocumentActor (string title_s, Gdk.Pixbuf? pixbuf, string[] uris, string date) {
         GLib.Object ();
 
         var attr_list = new Pango.AttrList ();
@@ -224,16 +224,40 @@ private class Journal.DocumentActor : Clutter.Actor {
         image = new ImageActor.from_pixbuf (pixbuf);
         image.margin_top = 10;
         image.margin_bottom = 10;
-        box = new Clutter.BinLayout (Clutter.BinAlignment.CENTER, 
-                                         Clutter.BinAlignment.CENTER);
+        image.margin_right = 5;
+        box = new Clutter.BoxLayout ();
+        box.vertical = true;
         set_layout_manager (box);
 
-        //TODO add all the uris!
-        box.add (image, Clutter.BinAlignment.CENTER, Clutter.BinAlignment.CENTER);
-        box.add (title, Clutter.BinAlignment.CENTER, Clutter.BinAlignment.START);
-        box.add (time, Clutter.BinAlignment.CENTER, Clutter.BinAlignment.END);
+        var t_box = new Clutter.Actor ();
+        var manager = new Clutter.BoxLayout ();
+        manager.vertical = true;
+        t_box.set_layout_manager (manager);
+        float max_w = 0;
+        foreach (string uri in uris) {
+            attr_list = new Pango.AttrList ();
+            attr_list.insert (Pango.attr_scale_new (Pango.Scale.MEDIUM));
+            attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
+            var uri_text = new TextActor.full_text (uri, attr_list);
+            if (uri_text.width > max_w) max_w = uri_text.width;
+            t_box.add_child (uri_text);
+            manager.set_alignment (uri_text, Clutter.BoxAlignment.START, 
+                                           Clutter.BoxAlignment.START);
+        }
+        t_box.set_width (max_w);
         
-        this.set_height (image.height + time.height);
+        var tmp_box = new Clutter.Actor ();
+        var manager2 = new Clutter.BoxLayout ();
+        manager2.vertical = false;
+        tmp_box.set_layout_manager (manager2);
+        tmp_box.add_child (image);
+        manager2.set_alignment(image, Clutter.BoxAlignment.START, 
+                                           Clutter.BoxAlignment.START);
+        tmp_box.add_child (t_box);
+        
+        this.add_child (title);
+        this.add_child(tmp_box);
+        this.add_child (time);
         
         this.margin_left = this.margin_right = 10;
 
@@ -241,6 +265,10 @@ private class Journal.DocumentActor : Clutter.Actor {
     
     public void update_image (Gdk.Pixbuf pixbuf) {
         this.image.set_pixbuf (pixbuf);
+    }
+    
+    public override void get_preferred_width (float for_height,out float min_width, out float nat_width) {
+        nat_width = min_width = image.width + title.width + 1000;
     }
 }
 
