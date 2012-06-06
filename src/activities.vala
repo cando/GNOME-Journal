@@ -322,17 +322,8 @@ private class Journal.CompositeActivity : Object {
         foreach (Zeitgeist.Event event in events) {
             var subject = event.get_subject (0);
             string home = Environment.get_home_dir ();
-            string origin = subject.get_origin ();
-            string uri, display_uri;
-            if (origin != null) {
-                uri = origin.split ("://")[1];
-                display_uri = uri.replace (home, "~");
-            }
-            else {
-                uri = subject.get_uri ().split ("://")[1];
-                display_uri = uri;
-            }
-            this.uris[i] = display_uri;
+            string display_uri = subject.get_uri ().replace (home, "~");
+            this.uris[i] = display_uri.split ("://")[1];
             i++;
         }
         this.icon = create_icon ();
@@ -472,6 +463,28 @@ private class Journal.CompositeVideoActivity : CompositeActivity {
     }
 }
 
+private class Journal.CompositeApplicationsActivity : CompositeActivity {
+    public CompositeApplicationsActivity (Gee.List<Zeitgeist.Event> events) {
+        Object (events:events);
+    }
+    
+    public override string create_title () {
+        return _("Used some applications");
+    }
+    
+    public override Gdk.Pixbuf? create_icon () {
+        try {
+        return Gtk.IconTheme.get_default().load_icon ("applications-other", Utils.getIconSize (),
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
+        } catch (Error e) {
+            warning ("Unable to load pixbuf: " + e.message);
+        }
+        
+        return null;
+    }
+}
+
 private class Journal.ActivityFactory : Object {
     
     private static Gee.Map<string, Type> interpretation_types;
@@ -532,6 +545,9 @@ private class Journal.ActivityFactory : Object {
         interpretation_types_comp.set (Zeitgeist.NMM_MUSIC_ALBUM, typeof (CompositeVideoActivity));
         interpretation_types_comp.set (Zeitgeist.NMM_TVSERIES, typeof (CompositeVideoActivity));
         interpretation_types_comp.set (Zeitgeist.NMM_TVSHOW ,typeof (CompositeVideoActivity));
+        /****APPLICATIONS****/
+        interpretation_types_comp.set (Zeitgeist.NFO_APPLICATION ,typeof (CompositeApplicationsActivity));
+        interpretation_types_comp.set (Zeitgeist.NFO_SOFTWARE ,typeof (CompositeApplicationsActivity));
     }
     
     /****PUBLIC METHODS****/
