@@ -82,12 +82,15 @@ private class Journal.ImageActor : Clutter.Actor {
     }
     
     public ImageActor.from_uri (string uri) {
+        Gdk.Pixbuf pixbuf = null;
         try {
-            Gdk.Pixbuf pixbuf =  new Gdk.Pixbuf.from_file (uri);
-            this.from_pixbuf (pixbuf);
+            pixbuf =  new Gdk.Pixbuf.from_file (uri);
         } catch (Error e) {
             warning("Can't load " + uri);
+            pixbuf = Utils.load_fallback_icon ();
         }
+        if (pixbuf != null)
+            this.from_pixbuf (pixbuf);
     }
     
      public ImageActor.from_pixbuf (Gdk.Pixbuf pixbuf) {
@@ -161,7 +164,7 @@ private class Journal.DocumentActor : Clutter.Actor {
 
         var attr_list = new Pango.AttrList ();
         attr_list.insert (Pango.attr_scale_new (Pango.Scale.LARGE));
-        attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
+        attr_list.insert (Pango.attr_weight_new (Pango.Weight.SEMIBOLD));
 
         title = new TextActor.full_text (title_s, attr_list);
         title.margin_bottom = 10;
@@ -179,6 +182,53 @@ private class Journal.DocumentActor : Clutter.Actor {
                                          Clutter.BinAlignment.CENTER);
         set_layout_manager (box);
 
+        box.add (image, Clutter.BinAlignment.CENTER, Clutter.BinAlignment.CENTER);
+        box.add (title, Clutter.BinAlignment.CENTER, Clutter.BinAlignment.START);
+        box.add (time, Clutter.BinAlignment.CENTER, Clutter.BinAlignment.END);
+        
+        this.set_height (image.height + time.height);
+        
+        this.margin_left = this.margin_right = 10;
+
+    }
+    
+    public void update_image (Gdk.Pixbuf pixbuf) {
+        this.image.set_pixbuf (pixbuf);
+    }
+}
+    
+    private class Journal.CompositeDocumentActor : Clutter.Actor {
+    
+    private TextActor title;
+    private ImageActor image;
+    
+    private TextActor time;
+    
+    private Clutter.BinLayout box;
+    public CompositeDocumentActor (string title_s, Gdk.Pixbuf pixbuf, string[] uris, string date) {
+        GLib.Object ();
+
+        var attr_list = new Pango.AttrList ();
+        attr_list.insert (Pango.attr_scale_new (Pango.Scale.LARGE));
+        attr_list.insert (Pango.attr_weight_new (Pango.Weight.SEMIBOLD));
+
+        title = new TextActor.full_text (title_s, attr_list);
+        title.margin_bottom = 10;
+
+        attr_list = new Pango.AttrList ();
+        attr_list.insert (Pango.attr_scale_new (Pango.Scale.SMALL));
+        attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
+
+        time = new TextActor.full_text (date, attr_list);
+        time.margin_top = 10;
+        image = new ImageActor.from_pixbuf (pixbuf);
+        image.margin_top = 10;
+        image.margin_bottom = 10;
+        box = new Clutter.BinLayout (Clutter.BinAlignment.CENTER, 
+                                         Clutter.BinAlignment.CENTER);
+        set_layout_manager (box);
+
+        //TODO add all the uris!
         box.add (image, Clutter.BinAlignment.CENTER, Clutter.BinAlignment.CENTER);
         box.add (title, Clutter.BinAlignment.CENTER, Clutter.BinAlignment.START);
         box.add (time, Clutter.BinAlignment.CENTER, Clutter.BinAlignment.END);

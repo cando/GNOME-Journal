@@ -183,7 +183,6 @@ public class Journal.ZeitgeistBackend: GLib.Object
             end = Zeitgeist.Timestamp.from_date (end_date);
             tr = new Zeitgeist.TimeRange (start, end);
         }
-        
         load_events_for_timerange (tr);
     }
     

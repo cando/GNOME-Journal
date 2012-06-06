@@ -277,12 +277,70 @@ private class Journal.VideoActivity : GenericActivity {
     }
     
     public override void update_icon () {
-        //do none
+        //do nothing
     }
 }
 
-/**Collection of Activity**/
-//TODO
+/**Collection of Activity TODO documention here!**/
+private class Journal.CompositeActivity : Object {
+
+    public Clutter.Actor actor {
+        get; protected set;
+    }
+
+    public Gee.List<Zeitgeist.Event> events {
+        get; construct set;
+    }
+    
+    public string[] uris {
+        get; private set;
+    }
+    
+    public string title {
+        get; private set;
+    }
+    
+    public Pixbuf? icon {
+        get; private set;
+    }
+    
+    public int64 time {
+        get; private set;
+    }
+    
+    public bool selected {
+        get; set;
+    }
+
+    public CompositeActivity (Gee.List<Zeitgeist.Event> events) {
+        Object (events: events);
+    }
+    
+    construct {
+        this.uris = new string[events.size];
+        int i = 0;
+        foreach (Zeitgeist.Event event in events) {
+            var subject = event.get_subject (0);
+            this.uris[i] = subject.get_uri ();
+            i++;
+        }
+        this.icon = null;
+        //Subclasses will modify this.
+        this.title = _("Various activities");
+        //Firt event's timestamp? FIXME
+        this.time = events.get (0).get_timestamp ();
+        this.selected = false;
+
+        create_actor ();
+    }
+    
+    public virtual Clutter.Actor create_actor () {
+        DateTime d = new DateTime.from_unix_utc (this.time / 1000).to_local ();
+        string date = d.format (_("from %H:%M"));
+        actor = new CompositeDocumentActor (this.title, this.icon, this.uris, date);
+        return actor;
+    }
+}
 
 
 private class Journal.ActivityFactory : Object {
@@ -336,6 +394,25 @@ private class Journal.ActivityFactory : Object {
             return activity;
         }
         return new GenericActivity (event);
+    }
+    
+    public static CompositeActivity get_composite_activity_for_interpretation (
+                                     string intpr,
+                                     Gee.List<Zeitgeist.Event> events) {
+        if (interpretation_types == null)
+            init ();
+            
+        if (intpr == null) 
+            //Better way for handling this?
+            intpr = Zeitgeist.NFO_DOCUMENT;
+        
+        if (interpretation_types.has_key (intpr)){
+            Type activity_class = interpretation_types.get (intpr);
+            CompositeActivity activity = (CompositeActivity) 
+                                        Object.new (activity_class, events:events);
+            return activity;
+        }
+        return new CompositeActivity (events);
     }
 }
 
@@ -455,8 +532,10 @@ private class Journal.ActivityModel : Object {
         larger_date.to_timeval (out tv);
         Date start_date = {};
         start_date.set_time_val (tv);
-        backend.last_loaded_date.to_timeval (out tv);
+        //FIXME how many days we should load? Same as above
         Date end_date = {};
+        var tmp_date = start.add_days (3);
+        tmp_date.to_timeval (out tv);
         end_date.set_time_val (tv);
         backend.load_events_for_date_range (start_date, end_date);
     }

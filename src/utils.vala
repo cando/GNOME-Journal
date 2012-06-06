@@ -118,6 +118,24 @@ private class Journal.Utils : Object{
 //        else
            return ICON_VIEW_SIZE;
     }
+    
+    public static Gdk.Pixbuf? load_fallback_icon () {
+            IconInfo icon_info = null;
+            var _icon = ContentType.get_icon ("text/plain");
+            if (_icon != null)
+                icon_info = 
+                    Gtk.IconTheme.get_default().lookup_by_gicon (_icon, Utils.getIconSize (),
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
+            if (icon_info != null) {
+                try {
+                    return icon_info.load_icon();
+                } catch (Error e) {
+                    warning ("Unable to load pixbuf: " + e.message);
+                }
+            }
+            return null;
+    }
 
     public async static bool queue_thumbnail_job_for_file_async (File file) {
         SourceFunc callback = queue_thumbnail_job_for_file_async.callback;
@@ -184,6 +202,14 @@ private class Journal.Utils : Object{
         today.get_ymd (out year, out month, out day);
         today = new DateTime.local (year, month, day, 0, 0, 0);
         return today;
+    }
+    
+    public static DateTime datetime_from_string (string date) {
+        string[] tmp = date.split ("-");
+        int year = int.parse (tmp[0]);
+        int month = int.parse (tmp[1]);
+        int day = int.parse (tmp [2]);
+        return new DateTime.local(year, month, day, 0, 0, 0);
     }
 
 }

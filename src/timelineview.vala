@@ -128,6 +128,7 @@ private class Journal.CustomContainer : Clutter.Actor {
     public CustomContainer () {
         Object ();
         this.reactive = true;
+        background_color = {1,200,100,255};
     }
     
     public override void allocate (Clutter.ActorBox box, Clutter.AllocationFlags flags) {
@@ -188,6 +189,7 @@ private class Journal.ClutterVTL : Box {
     private LoadingActor loading;
     
     private Gee.Map<string, int> y_positions;
+    private Gee.List<string> dates_added;
     
     //Position and type of last drawn bubble
     private int last_y_position;
@@ -195,11 +197,14 @@ private class Journal.ClutterVTL : Box {
     //Last position visible (utilized for scrolling).
     private float last_y_visible;
     private int last_y_texture;
+    private int last_actor_height;
     
     //Date to jump when we have loaded new events
     private DateTime? date_to_jump;
     
     private bool on_loading;
+    //FIXME better name
+    private bool add_empty_range;
 
     public ClutterVTL (App app){
         Object (orientation: Orientation.HORIZONTAL, spacing : 0);
@@ -210,13 +215,16 @@ private class Journal.ClutterVTL : Box {
         this.stage.set_background_color (Utils.gdk_rgba_to_clutter_color (
                                          Utils.get_journal_bg_color ()));
         y_positions = new Gee.HashMap<string, int> ();
+        dates_added = new Gee.ArrayList<string> ();
         
         last_y_position = 50;
         last_type = 0;
         last_y_visible = 0;
         last_y_texture = 0;
+        last_actor_height = 0;
         date_to_jump = null;
         on_loading = false;
+        add_empty_range = false;
         
         viewport = new ScrollableViewport ();
         viewport.scroll_mode = ScrollMode.Y;
@@ -225,7 +233,6 @@ private class Journal.ClutterVTL : Box {
 
         container = new CustomContainer ();
         viewport.add_actor (container);
-        container.set_reactive (true);
         container.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.WIDTH, 0));
         
         //Timeline
@@ -284,7 +291,6 @@ private class Journal.ClutterVTL : Box {
        
        osd_label = new OSDLabel (stage);
        stage.add_actor (osd_label.actor);
-       osd_label.actor.depth = 1;
         
        loading = new LoadingActor (this.app, stage);
        loading.start ();
@@ -297,7 +303,6 @@ private class Journal.ClutterVTL : Box {
     
     public void load_activities (Gee.ArrayList<string> dates_loaded) {
         Side side;
-        int last_actor_height = 0;
         //first texture
         var timeline_texture = timeline.get_texture (last_y_texture);
         foreach (string date in dates_loaded)
@@ -311,6 +316,40 @@ private class Journal.ClutterVTL : Box {
                 side = Side.RIGHT;
             else 
                 side = Side.LEFT;
+
+            if (dates_added.size > 0) {
+                DateTime dt = Utils.datetime_from_string (date);
+                DateTime last_dt = Utils.datetime_from_string (dates_added.get (dates_added.size - 1));
+                if ((last_dt.difference(dt) / TimeSpan.DAY) > 1)
+                    //FIXME better name
+                    add_empty_range = true;
+            }
+            
+            if (add_empty_range) {
+                //Let's add a clickable actor that permit to load a range between two
+                // distance dates. Fx if the user load the "1 week ago" period and then
+                // "Two month ago" period, there is a time hole of more than 1 month.
+                // So we do something like the Twitter Android app does.
+                //FIXME atm it's only a text with different background
+                var hole = new Clutter.Actor ();
+                var manager = new Clutter.BinLayout (Clutter.BinAlignment.CENTER,
+                                                     Clutter.BinAlignment.CENTER);
+                hole.set_layout_manager (manager);
+                Clutter.Text hole_text = new Clutter.Text.with_text (null, _("Load more..."));
+                var attr_list = new Pango.AttrList ();
+                attr_list.insert (Pango.attr_scale_new (Pango.Scale.X_LARGE));
+                attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
+                hole_text.attributes = attr_list;
+                hole.add_child (hole_text);
+                hole.set_content_gravity (Clutter.ContentGravity.CENTER);
+                container.add_child (hole);
+                hole.add_constraint (new Clutter.BindConstraint (container, Clutter.BindCoordinate.WIDTH, 0));
+                hole.height = 100;
+                hole.background_color = {125, 125, 125, 255};
+                hole.set_y (last_y_position + last_actor_height + 10);
+                add_empty_range = false;
+                last_y_position += (int)hole.height + 10;
+            }
             
             if(y_positions.has_key (date) == false) {
                 //Add a visual representation of the change of the day
@@ -345,6 +384,7 @@ private class Journal.ClutterVTL : Box {
                 last_y_position += (int)(day_line.height + text_size);
                 
                 y_positions.set (date, (int)(day_line.y - text_size * 3));
+                dates_added.add (date);
             }
             //Add the timeline
             int limit = last_y_texture + timeline.MAXIMUM_TEXTURE_LENGHT;
@@ -358,8 +398,8 @@ private class Journal.ClutterVTL : Box {
                 last_y_texture = position;
             }
             Clutter.Actor content = activity.actor;
-            RoundBox actor = new RoundBox (side, content.width, content.height);
-            actor.add_content (content);
+            var actor = content;//new RoundBox (side, content.width, content.height);
+            //actor.add_content (content);
             
             actor.button_release_event.connect ((e) => {
                 try {
@@ -379,6 +419,7 @@ private class Journal.ClutterVTL : Box {
             else last_y_position +=  last_actor_height;
             last_type ++;
         }
+
        }
        }
        
@@ -409,10 +450,25 @@ private class Journal.ClutterVTL : Box {
             scrollbar.adjustment.upper = container.height;
             scrollbar.adjustment.value = y;
             on_loading = false;
+            date_to_jump = null;
         }
         else {
             osd_label.set_message_and_show (_("Loading Activities..."));
             loading.start ();
+            if (date == date_to_jump) {
+                //Break the infinite loop that happens when the user ask for an
+                //event period too far and not present in the db.
+                date_s = dates_added.get (dates_added.size - 1);
+                if (y_positions.has_key (date_s) == true) {
+                    y = this.y_positions.get (date_s);
+                    viewport.scroll_to_point (0.0f, y);
+                    scrollbar.adjustment.upper = container.height;
+                    scrollbar.adjustment.value = y;
+                    on_loading = false;
+                    date_to_jump = null;
+                }
+                return;
+            }
             date_to_jump = date;
             model.load_activities (date);
             on_loading = true;
@@ -613,19 +669,15 @@ private class Journal.RoundBox : Clutter.Actor {
                                     Clutter.BinAlignment.CENTER);
        set_layout_manager (box);
        
-       this.canvas = new Clutter.Canvas ();
-       canvas.draw.connect ((cr, w, h) => { return paint_canvas (cr, w, h); });
-       canvas.set_size ((int)width + BORDER_WIDTH * 2, 
-                        (int)height + BORDER_WIDTH * 2);
-       var canvas_box = new Clutter.Actor ();
-       canvas_box.set_size ((int)width + BORDER_WIDTH * 2,
-                            (int)height + BORDER_WIDTH * 2);
-       canvas_box.set_content (canvas);
-       this.allocation_changed.connect ((box, f) => {
-            canvas.set_size ((int)box.get_width (), (int) box.get_height ());
-       });
-       this.add_child (canvas_box);
-       this.add_child (new Clutter.Text.with_text(null, "ciao"));
+//       this.canvas = new Clutter.Canvas ();
+//       canvas.draw.connect ((cr, w, h) => { return paint_canvas (cr, w, h); });
+//       canvas.set_size ((int)width + BORDER_WIDTH * 2, 
+//                        (int)height + BORDER_WIDTH * 2);
+//       var canvas_box = new Clutter.Actor ();
+//       canvas_box.set_size ((int)width + BORDER_WIDTH * 2,
+//                            (int)height + BORDER_WIDTH * 2);
+//       canvas_box.set_content (canvas);
+//       this.add_child (canvas_box);
     }
 
     private bool paint_canvas (Cairo.Context ctx, int width, int height) {
