@@ -70,6 +70,8 @@ private class Journal.GenericActivity : Object {
     
     private Zeitgeist.Subject subject;
     private string thumb_path;
+    
+    public signal void thumb_loaded ();
 
     public GenericActivity (Zeitgeist.Event event) {
         Object (event: event);
@@ -215,6 +217,7 @@ private class Journal.GenericActivity : Object {
                                                        Utils.getIconSize(),
                                                        true, null);
             update_icon ();
+            thumb_loaded ();
         } catch (Error e) {
             warning ("Unable to load pixbuf of"+ this.uri+" : " + e.message);
        }
@@ -288,7 +291,7 @@ private class Journal.CompositeActivity : Object {
         get; protected set;
     }
 
-    public Gee.List<Zeitgeist.Event> events {
+    public Gee.List<GenericActivity> activities {
         get; construct set;
     }
     
@@ -312,25 +315,26 @@ private class Journal.CompositeActivity : Object {
         get; set;
     }
 
-    public CompositeActivity (Gee.List<Zeitgeist.Event> events) {
-        Object (events: events);
+    public CompositeActivity (Gee.List<GenericActivity> activities) {
+        Object (activities: activities);
     }
     
+    public signal void launch_activity (CompositeActivity activity);
+    
     construct {
-        this.uris = new string[events.size];
+        this.uris = new string[activities.size];
         int i = 0;
-        foreach (Zeitgeist.Event event in events) {
-            var subject = event.get_subject (0);
+        foreach (GenericActivity activity in activities) {
             string home = Environment.get_home_dir ();
-            string display_uri = subject.get_uri ().replace (home, "~");
+            string display_uri = activity.uri.replace (home, "~");
             this.uris[i] = display_uri.split ("://")[1];
             i++;
         }
         this.icon = create_icon ();
         //Subclasses will modify this.
         this.title = create_title ();
-        //Firt event's timestamp? FIXME
-        this.time = events.get (0).get_timestamp ();
+        //First activity timestamp? FIXME
+        this.time = activities.get (0).time;
         this.selected = false;
 
         create_actor ();
@@ -351,11 +355,15 @@ private class Journal.CompositeActivity : Object {
         actor = new CompositeDocumentActor (this.title, this.icon, this.uris, date);
         return actor;
     }
+    
+    public void launch (){
+        this.launch_activity (this);
+    }
 }
 
 private class Journal.CompositeDocumentActivity : CompositeActivity {
-    public CompositeDocumentActivity (Gee.List<Zeitgeist.Event> events) {
-        Object (events:events);
+    public CompositeDocumentActivity (Gee.List<GenericActivity> activities) {
+        Object (activities:activities);
     }
     
     public override string create_title () {
@@ -376,8 +384,8 @@ private class Journal.CompositeDocumentActivity : CompositeActivity {
 }
 
 private class Journal.CompositeAudioActivity : CompositeActivity {
-    public CompositeAudioActivity (Gee.List<Zeitgeist.Event> events) {
-        Object (events:events);
+    public CompositeAudioActivity (Gee.List<GenericActivity> activities) {
+        Object (activities:activities);
     }
     
     public override string create_title () {
@@ -398,8 +406,8 @@ private class Journal.CompositeAudioActivity : CompositeActivity {
 }
 
 private class Journal.CompositeDevelopmentActivity : CompositeActivity {
-    public CompositeDevelopmentActivity (Gee.List<Zeitgeist.Event> events) {
-        Object (events:events);
+    public CompositeDevelopmentActivity (Gee.List<GenericActivity> activities) {
+        Object (activities:activities);
     }
     
     public override string create_title () {
@@ -420,8 +428,8 @@ private class Journal.CompositeDevelopmentActivity : CompositeActivity {
 }
 
 private class Journal.CompositeImageActivity : CompositeActivity {
-    public CompositeImageActivity (Gee.List<Zeitgeist.Event> events) {
-        Object (events:events);
+    public CompositeImageActivity (Gee.List<GenericActivity> activities) {
+        Object (activities:activities);
     }
     
     public override string create_title () {
@@ -442,8 +450,8 @@ private class Journal.CompositeImageActivity : CompositeActivity {
 }
 
 private class Journal.CompositeVideoActivity : CompositeActivity {
-    public CompositeVideoActivity (Gee.List<Zeitgeist.Event> events) {
-        Object (events:events);
+    public CompositeVideoActivity (Gee.List<GenericActivity> activities) {
+        Object (activities:activities);
     }
     
     public override string create_title () {
@@ -464,8 +472,8 @@ private class Journal.CompositeVideoActivity : CompositeActivity {
 }
 
 private class Journal.CompositeApplicationsActivity : CompositeActivity {
-    public CompositeApplicationsActivity (Gee.List<Zeitgeist.Event> events) {
-        Object (events:events);
+    public CompositeApplicationsActivity (Gee.List<GenericActivity> activities) {
+        Object (activities:activities);
     }
     
     public override string create_title () {
@@ -572,7 +580,7 @@ private class Journal.ActivityFactory : Object {
     
     public static CompositeActivity get_composite_activity_for_interpretation (
                                      string intpr,
-                                     Gee.List<Zeitgeist.Event> events) {
+                                     Gee.List<GenericActivity> activities) {
         if (interpretation_types_comp == null)
             init ();
             
@@ -583,10 +591,10 @@ private class Journal.ActivityFactory : Object {
         if (interpretation_types_comp.has_key (intpr)){
             Type activity_class = interpretation_types_comp.get (intpr);
             CompositeActivity activity = (CompositeActivity) 
-                                        Object.new (activity_class, events:events);
+                                        Object.new (activity_class, activities:activities);
             return activity;
         }
-        return new CompositeActivity (events);
+        return new CompositeActivity (activities);
     }
 }
 
@@ -604,6 +612,8 @@ private class Journal.DayActivityModel : Object {
     public string day {
         get; private set;
     }
+    
+    public signal void launch_activity (CompositeActivity activity);
 
     public DayActivityModel (string day) {
         activities = new Gee.HashMap<string, Gee.List<GenericActivity>> ();
@@ -628,11 +638,12 @@ private class Journal.DayActivityModel : Object {
     
     public void create_composite_activities () {
             foreach (string intr in this.activities.keys) {
-                //Performance!!
-                var list = new Gee.ArrayList<Zeitgeist.Event> ();
-                foreach (GenericActivity a in this.activities.get (intr))
-                    list.add (a.event);
-                CompositeActivity c_activity = ActivityFactory.get_composite_activity_for_interpretation (intr, list);
+                CompositeActivity c_activity = 
+                ActivityFactory.get_composite_activity_for_interpretation (intr, 
+                                                    this.activities.get (intr));
+                c_activity.launch_activity.connect ((activity) => {
+                    this.launch_activity (activity);
+                });
                 composite_activities.add (c_activity);
             }
     }
@@ -660,6 +671,7 @@ private class Journal.ActivityModel : Object {
     }
     
     public signal void activities_loaded (Gee.ArrayList<string> dates_loaded);
+    public signal void launch_activity (CompositeActivity activity);
 
     public ActivityModel () {
         activities = new Gee.HashMap<string, DayActivityModel> ();
@@ -687,6 +699,8 @@ private class Journal.ActivityModel : Object {
             day = next_date.format("%Y-%m-%d");
             if (add_day (day))
                 dates_loaded.add (day);
+            else 
+                dates_loaded.add ("*"+day); //means day with 0 events.FIXME hack!
         }
         
         //Sort for timestamp order
@@ -716,6 +730,9 @@ private class Journal.ActivityModel : Object {
         }
         model.create_composite_activities ();
         activities.set (day, model);
+        model.launch_activity.connect ((activity) => {
+                    this.launch_activity (activity);
+        });
         return true;
     }
     
@@ -732,6 +749,7 @@ private class Journal.ActivityModel : Object {
         var tmp_date = start.add_days (3);
         tmp_date.to_timeval (out tv);
         end_date.set_time_val (tv);
+        
         backend.load_events_for_date_range (start_date, end_date);
     }
 }

@@ -38,19 +38,15 @@ public class Journal.App: GLib.Object {
     public uint duration;
 
     private Gtk.Application application;
+    private ActivityModel model;
     private ClutterVTL cvtl;
     private Gd.MainToolbar main_toolbar;
-
-    private ZeitgeistBackend _backend;
-    
-    public ZeitgeistBackend backend {
-        get { return _backend; }
-    }
+    private ActivityInfoPage activity_page;
 
     public App () {
         application = new Gtk.Application ("org.gnome.activity-journal", 0);
         
-        _backend = new ZeitgeistBackend ();
+        model = new ActivityModel ();
 
         var action = new GLib.SimpleAction ("quit", null);
         action.activate.connect (() => { quit (); });
@@ -164,6 +160,11 @@ public class Journal.App: GLib.Object {
         main_toolbar.icon_size = IconSize.MENU;
         main_toolbar.set_mode (Gd.MainToolbarMode.OVERVIEW);
         main_toolbar.set_labels (_("Timeline"), null);
+        main_toolbar.go_back_request.connect (() => {
+            notebook.prev_page ();
+            main_toolbar.set_back_visible (false);
+            main_toolbar.set_labels (_("Timeline"), null);
+        });
         main_toolbar.selection_mode_request.connect ((mode) => {
                 if (mode) {
                     this.main_toolbar.set_mode (Gd.MainToolbarMode.SELECTION);
@@ -185,8 +186,21 @@ public class Journal.App: GLib.Object {
         window.key_press_event.connect (on_key_pressed);
         
         //CLUTTER VTL
-        cvtl = new ClutterVTL (this);
+        cvtl = new ClutterVTL (this, model);
         notebook.append_page (cvtl, null);
+        
+        //ACTIVITY PAGE
+        activity_page = new ActivityInfoPage ();
+        notebook.append_page (activity_page, null);
+        
+        model.launch_activity.connect ((activity) => {
+            activity_page.set_activity (activity);
+            notebook.next_page ();
+            main_toolbar.set_back_visible (true);
+            main_toolbar.set_labels (activity.title, 
+                                     activity.uris.length.to_string ()
+                                     + _(" items"));
+        });
 
         window.show_all();
     }

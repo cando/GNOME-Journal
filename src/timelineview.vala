@@ -207,12 +207,10 @@ private class Journal.ClutterVTL : Box {
     private DateTime? date_to_jump;
     
     private bool on_loading;
-    //FIXME better name
-    private bool add_empty_range;
 
-    public ClutterVTL (App app){
+    public ClutterVTL (App app, ActivityModel model){
         Object (orientation: Orientation.HORIZONTAL, spacing : 0);
-        this.model = new ActivityModel ();
+        this.model = model;
         this.app = app;
         var embed = new GtkClutter.Embed ();
         this.stage = embed.get_stage () as Clutter.Stage;
@@ -230,7 +228,6 @@ private class Journal.ClutterVTL : Box {
         last_actor_height = 0;
         date_to_jump = null;
         on_loading = false;
-        add_empty_range = false;
         
         viewport = new ScrollableViewport ();
         viewport.scroll_mode = ScrollMode.Y;
@@ -311,85 +308,109 @@ private class Journal.ClutterVTL : Box {
         Side side;
         //first texture
         var timeline_texture = timeline.get_texture (last_y_texture);
+        //FIXME better name
+        //Variable used by the "time-hole" to discriminate when there are 0events days
+        //or if there is an hole between two loaded period.
+        var hole_added = false;
+        var add_empty_range = false;
+        var no_events_hole = false;
+        var skip_date = false;
         foreach (string date in dates_loaded)
         {
+            //FIXME this no event's day stuff. How to display it?
+          if (date.has_prefix ("*")){
+              no_events_hole = true;
+              date = date.split ("*")[1];
+              skip_date = true;
+          }
+          
+          if (dates_added.size > 0) {
+                DateTime dt = Utils.datetime_from_string (date);
+                DateTime last_dt = Utils.datetime_from_string (dates_added.get (dates_added.size - 1));
+                if ((last_dt.difference(dt) / TimeSpan.DAY) > 1)
+                    //FIXME better name
+                    add_empty_range = true;
+          }
+          if ((add_empty_range || no_events_hole)) {
+              //Let's add a clickable actor that permit to load a range between two
+              // distance dates. Fx if the user load the "1 week ago" period and then
+              // "Two month ago" period, there is a time hole of more than 1 month.
+              // So we do something like the Twitter Android app does.
+              //FIXME atm it's only a text with different background
+              hole_added = true;
+              var hole = new Clutter.Actor ();
+              var manager = new Clutter.BinLayout (Clutter.BinAlignment.CENTER,
+                                                   Clutter.BinAlignment.CENTER);
+              hole.set_layout_manager (manager);
+              var text = "";
+              if (no_events_hole) {
+                  text = _("No Activities in this period");
+              }
+              else if (add_empty_range) {
+                  text = _("Click to load more...");
+              }
+              add_empty_range = no_events_hole = false;
+              Clutter.Text hole_text = new Clutter.Text.with_text (null, text);
+              var attr_list = new Pango.AttrList ();
+              attr_list.insert (Pango.attr_scale_new (Pango.Scale.X_LARGE));
+              attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
+              hole_text.attributes = attr_list;
+              hole.add_child (hole_text);
+              hole.set_content_gravity (Clutter.ContentGravity.CENTER);
+              container.add_child (hole);
+              hole.add_constraint (new Clutter.BindConstraint (container, Clutter.BindCoordinate.WIDTH, 0));
+              hole.height = 100;
+              hole.depth = 1;
+              hole.background_color = {125, 125, 125, 255};
+              hole.set_y (int.max (last_left_actor_y, last_right_actor_y) + 20);
+              last_y_position = (int)hole.y;
+              last_left_actor_y = last_right_actor_y = last_y_position + 
+                                                       (int)hole.height;
+          }
+          
+          if(y_positions.has_key (date) == false) {
+              skip_date = false;
+              //Add a visual representation of the change of the day
+              //Add a line
+              Clutter.Actor day_line = new Clutter.Actor ();
+              var color = Utils.get_timeline_bg_color ();
+              Clutter.Color bgColor = Utils.gdk_rgba_to_clutter_color (color);
+              day_line.background_color = bgColor.shade (1);
+              day_line.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.WIDTH, 0));
+              day_line.set_height (2);
+              day_line.opacity = 150;
+              
+              //Text's date
+              string text = Utils.datetime_from_string (date).format (_("%A, %x"));
+              Clutter.Text date_text = new Clutter.Text.with_text (null, text);
+              var attr_list = new Pango.AttrList ();
+              attr_list.insert (Pango.attr_scale_new (Pango.Scale.MEDIUM));
+              attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
+              date_text.attributes = attr_list;
+              date_text.add_constraint (new Clutter.BindConstraint (day_line, Clutter.BindCoordinate.Y, -2));
+              date_text.set_x (10);
+              date_text.anchor_y = date_text.height;
+              var text_size = 10;
+              last_y_position = int.max (last_left_actor_y, last_right_actor_y) + 
+                                text_size + 30;
+              day_line.set_y (last_y_position);
+              container.add_actor (day_line);
+              container.add_actor (date_text);
+              last_y_position += (int)(day_line.height + text_size);
+              
+              y_positions.set (date, (int)(day_line.y - text_size * 3));
+              dates_added.add (date);
+          }
+          
           var list = model.activities.get (date);
+          if (list == null)
+            continue;
           foreach (CompositeActivity activity in list.composite_activities)
           {
             if (last_type % 2 == 0) 
                 side = Side.RIGHT;
             else 
                 side = Side.LEFT;
-
-            if (dates_added.size > 0) {
-                DateTime dt = Utils.datetime_from_string (date);
-                DateTime last_dt = Utils.datetime_from_string (dates_added.get (dates_added.size - 1));
-                if ((last_dt.difference(dt) / TimeSpan.DAY) > 1)
-                    //FIXME better name
-                    add_empty_range = true;
-            }
-            
-            if (add_empty_range) {
-                //Let's add a clickable actor that permit to load a range between two
-                // distance dates. Fx if the user load the "1 week ago" period and then
-                // "Two month ago" period, there is a time hole of more than 1 month.
-                // So we do something like the Twitter Android app does.
-                //FIXME atm it's only a text with different background
-                var hole = new Clutter.Actor ();
-                var manager = new Clutter.BinLayout (Clutter.BinAlignment.CENTER,
-                                                     Clutter.BinAlignment.CENTER);
-                hole.set_layout_manager (manager);
-                Clutter.Text hole_text = new Clutter.Text.with_text (null, _("Click to load more..."));
-                var attr_list = new Pango.AttrList ();
-                attr_list.insert (Pango.attr_scale_new (Pango.Scale.X_LARGE));
-                attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
-                hole_text.attributes = attr_list;
-                hole.add_child (hole_text);
-                hole.set_content_gravity (Clutter.ContentGravity.CENTER);
-                container.add_child (hole);
-                hole.add_constraint (new Clutter.BindConstraint (container, Clutter.BindCoordinate.WIDTH, 0));
-                hole.height = 100;
-                hole.depth = 1;
-                hole.background_color = {125, 125, 125, 255};
-                hole.set_y (int.max (last_left_actor_y, last_right_actor_y) + 20);
-                add_empty_range = false;
-                last_y_position = (int)hole.y;
-                last_left_actor_y = last_right_actor_y = last_y_position + 
-                                                         (int)hole.height;
-            }
-            
-            if(y_positions.has_key (date) == false) {
-                //Add a visual representation of the change of the day
-                //Add a line
-                Clutter.Actor day_line = new Clutter.Actor ();
-                var color = Utils.get_timeline_bg_color ();
-                Clutter.Color bgColor = Utils.gdk_rgba_to_clutter_color (color);
-                day_line.background_color = bgColor.shade (1);
-                day_line.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.WIDTH, 0));
-                day_line.set_height (2);
-                day_line.opacity = 150;
-                
-                //Text's date
-                string text = Utils.get_start_of_the_day (activity.time).format (_("%A, %x"));
-                Clutter.Text date_text = new Clutter.Text.with_text (null, text);
-                var attr_list = new Pango.AttrList ();
-                attr_list.insert (Pango.attr_scale_new (Pango.Scale.MEDIUM));
-                attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
-                date_text.attributes = attr_list;
-                date_text.add_constraint (new Clutter.BindConstraint (day_line, Clutter.BindCoordinate.Y, -2));
-                date_text.set_x (10);
-                date_text.anchor_y = date_text.height;
-                var text_size = 10;
-                last_y_position = int.max (last_left_actor_y, last_right_actor_y) + 
-                                  text_size + 30;
-                day_line.set_y (last_y_position);
-                container.add_actor (day_line);
-                container.add_actor (date_text);
-                last_y_position += (int)(day_line.height + text_size);
-                
-                y_positions.set (date, (int)(day_line.y - text_size * 3));
-                dates_added.add (date);
-            }
             //Add the timeline
             int limit = last_y_texture + timeline.MAXIMUM_TEXTURE_LENGHT;
             if (last_y_position >= limit) {
@@ -405,12 +426,7 @@ private class Journal.ClutterVTL : Box {
             actor.add_content (activity.actor);
             
             actor.button_release_event.connect ((e) => {
-                try {
-                    //FIXME launch the first uris. we should instead show another view
-                    AppInfo.launch_default_for_uri (activity.uris[0], null);
-                } catch (Error e) {
-                    warning ("Error in launching: "+ activity.uris[0]);
-                }
+                activity.launch ();
                 return false;
             });
 

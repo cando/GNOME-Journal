@@ -31,6 +31,7 @@ gnome_activity_journal_SOURCES =\
 	activities.vala					\
 	app.vala						\
 	loading.vala					\
+	journal-activity-info-page.vala	\
 	journal-timeline-navigator.vala \
 	journal-media-actors.vala		\
 	main.vala						\

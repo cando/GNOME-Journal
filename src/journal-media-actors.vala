@@ -30,7 +30,6 @@ private class Journal.TextActor : Clutter.Text {
     public TextActor () {
         GLib.Object ();
         this.set_ellipsize (Pango.EllipsizeMode.END);
-        this.reactive = true;
         this.paint.connect (() => {
             this.text_paint_cb ();
         });
@@ -189,15 +188,14 @@ private class Journal.DocumentActor : Clutter.Actor {
         this.set_height (image.height + time.height);
         
         this.margin_left = this.margin_right = 10;
-
     }
     
     public void update_image (Gdk.Pixbuf pixbuf) {
         this.image.set_pixbuf (pixbuf);
     }
 }
-    
-    private class Journal.CompositeDocumentActor : Clutter.Actor {
+
+private class Journal.CompositeDocumentActor : Clutter.Actor {
     
     private TextActor title;
     private ImageActor image;
@@ -207,7 +205,8 @@ private class Journal.DocumentActor : Clutter.Actor {
     private Clutter.BoxLayout box;
     public CompositeDocumentActor (string title_s, Gdk.Pixbuf? pixbuf, string[] uris, string date) {
         GLib.Object ();
-
+        this.reactive = true;
+        
         var attr_list = new Pango.AttrList ();
         attr_list.insert (Pango.attr_scale_new (Pango.Scale.LARGE));
         attr_list.insert (Pango.attr_weight_new (Pango.Weight.SEMIBOLD));
