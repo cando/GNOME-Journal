@@ -244,7 +244,6 @@ private class Journal.DocumentActor : Clutter.Actor {
             manager.set_alignment (uri_text, Clutter.BoxAlignment.START, 
                                            Clutter.BoxAlignment.START);
         }
-        t_box.set_width (max_w);
         
         var tmp_box = new Clutter.Actor ();
         var manager2 = new Clutter.BoxLayout ();

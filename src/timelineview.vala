@@ -197,6 +197,10 @@ private class Journal.ClutterVTL : Box {
     //Last position visible (utilized for scrolling).
     private float last_y_visible;
     private int last_y_texture;
+    //Used for proper placing of bubbles
+    private int last_left_actor_y;
+    private int last_right_actor_y;
+    
     private int last_actor_height;
     
     //Date to jump when we have loaded new events
@@ -221,6 +225,8 @@ private class Journal.ClutterVTL : Box {
         last_type = 0;
         last_y_visible = 0;
         last_y_texture = 0;
+        last_right_actor_y = 50;
+        last_left_actor_y = 50;
         last_actor_height = 0;
         date_to_jump = null;
         on_loading = false;
@@ -345,12 +351,11 @@ private class Journal.ClutterVTL : Box {
                 hole.height = 100;
                 hole.depth = 1;
                 hole.background_color = {125, 125, 125, 255};
-                if (last_type % 2 == 0) 
-                    hole.set_y (last_y_position  + last_actor_height + 10);
-                else
-                    hole.set_y (last_y_position  + 10);
+                hole.set_y (int.max (last_left_actor_y, last_right_actor_y) + 20);
                 add_empty_range = false;
-                last_y_position += (int)hole.height + 20;
+                last_y_position = (int)hole.y;
+                last_left_actor_y = last_right_actor_y = last_y_position + 
+                                                         (int)hole.height;
             }
             
             if(y_positions.has_key (date) == false) {
@@ -375,11 +380,8 @@ private class Journal.ClutterVTL : Box {
                 date_text.set_x (10);
                 date_text.anchor_y = date_text.height;
                 var text_size = 10;
-                if (last_type % 2 == 0) 
-                    //Means that the last bubble displayed is on the left
-                    last_y_position += last_actor_height + text_size;
-                else 
-                    last_y_position += 20 + text_size;
+                last_y_position = int.max (last_left_actor_y, last_right_actor_y) + 
+                                  text_size + 30;
                 day_line.set_y (last_y_position);
                 container.add_actor (day_line);
                 container.add_actor (date_text);
@@ -399,9 +401,8 @@ private class Journal.ClutterVTL : Box {
                 container.add_child (timeline_texture);
                 last_y_texture = position;
             }
-            Clutter.Actor content = activity.actor;
-            var actor = new RoundBox (side, content.width, content.height);
-            actor.add_content (content);
+            var actor = new RoundBox (side);
+            actor.add_content (activity.actor);
             
             actor.button_release_event.connect ((e) => {
                 try {
@@ -414,12 +415,21 @@ private class Journal.ClutterVTL : Box {
             });
 
             actor.set_y (last_y_position);
-            container.add_child (actor);
             timeline.add_circle (last_y_position);
-            //last_y_position +=  (int)actor.get_height() + 20; // padding TODO FIXME better algorithm here
+            container.add_child (actor);
             last_actor_height = (int)actor.get_height();
-            if (last_type % 2 == 1) last_y_position += 40;
-            else last_y_position +=  last_actor_height;
+            if (last_type % 2 == 1){ 
+                    last_y_position += 40;
+                    if (last_left_actor_y > last_y_position)
+                        last_y_position = last_left_actor_y + 40;
+                    last_right_actor_y = (int)(last_actor_height + actor.y);
+            }
+            else {
+                last_y_position += 40;
+                if (last_right_actor_y > last_y_position)
+                    last_y_position = last_right_actor_y + 40;
+                last_left_actor_y = (int)(last_actor_height + actor.y);
+            }
             last_type ++;
         }
 
@@ -657,7 +667,7 @@ private class Journal.RoundBox : Clutter.Actor {
     }
 
     private Clutter.BinLayout box;
-    public RoundBox (Side side, float width, float height) {
+    public RoundBox (Side side) {
        this._arrowSide = side;
        this.border_width = BORDER_WIDTH;
        this.reactive = true;
@@ -668,14 +678,15 @@ private class Journal.RoundBox : Clutter.Actor {
        
        this.canvas = new Clutter.Canvas ();
        canvas.draw.connect ((cr, w, h) => { return paint_canvas (cr, w, h); });
-       canvas.set_size ((int)width + BORDER_WIDTH * 2, 
-                        (int)height + BORDER_WIDTH * 2);
        var canvas_box = new Clutter.Actor ();
-       canvas_box.set_size ((int)width + BORDER_WIDTH * 2,
-                            (int)height + BORDER_WIDTH * 2);
        canvas_box.set_content (canvas);
        this.allocation_changed.connect ((box, f) => {
-            canvas.set_size ((int)box.get_width (), (int) box.get_height ());
+            Idle.add (()=>{
+                //see this http://www.mail-archive.com/clutter-app-devel-list@clutter-project.org/msg00116.html
+                canvas_box.set_size ((int)box.get_width (), (int) box.get_height ());
+                canvas.set_size ((int)box.get_width (), (int) box.get_height ());
+                return false;
+            });
        });
        this.add_child (canvas_box);
     }
@@ -833,8 +844,8 @@ private class Journal.RoundBox : Clutter.Actor {
         nat_width = min_width = 0;
         if (content_actor != null) {
             content_actor.get_preferred_width (-1, out min_width_t, out nat_width_t);
-            nat_width = nat_width_t + 2 * BORDER_WIDTH;
-            min_width = min_width_t + 2 * BORDER_WIDTH;
+            nat_width = nat_width_t + 4 * BORDER_WIDTH;
+            min_width = min_width_t + 4 * BORDER_WIDTH;
         }
     }
 }
