@@ -25,9 +25,9 @@ AM_VALAFLAGS =						\
 	-g\
 	$(NULL)
 
-bin_PROGRAMS = gnome-activity-journal
+bin_PROGRAMS = gnome-journal
 
-gnome_activity_journal_SOURCES =\
+gnome_journal_SOURCES =\
 	activities.vala					\
 	app.vala						\
 	loading.vala					\
@@ -41,10 +41,10 @@ gnome_activity_journal_SOURCES =\
 	zg-backend.vala					\
 	$(NULL)
 
-gnome_activity_journal_LDADD = $(JOURNAL_LIBS) libgdprivate-1.0.la -lm
+gnome_journal_LDADD = $(JOURNAL_LIBS) libgdprivate-1.0.la -lm
 
 MAINTAINERCLEANFILES =				\
-	$(gnome_activity_journal_SOURCES:.vala=.c)		\
+	$(gnome_journal_SOURCES:.vala=.c)		\
 	*.stamp					\
 	$(NULL)
 

@@ -1,9 +1,9 @@
 [Desktop Entry]
-_Name=Activity Journal
+_Name=Journal
 _GenericName=Simple journal application
 _Comment=View your activities
-Exec=gnome-activity-journal
-Icon=gnome-activity-journal
+Exec=gnome-journal
+Icon=gnome-journal
 Terminal=false
 Type=Application
 StartupNotify=true

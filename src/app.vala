@@ -44,7 +44,7 @@ public class Journal.App: GLib.Object {
     private ActivityInfoPage activity_page;
 
     public App () {
-        application = new Gtk.Application ("org.gnome.activity-journal", 0);
+        application = new Gtk.Application ("org.gnome.journal", 0);
         
         model = new ActivityModel ();
 
@@ -72,9 +72,9 @@ public class Journal.App: GLib.Object {
                                    "comments", _("A simple GNOME 3 journal application "),
                                    "copyright", "Copyright 2012 Stefano Candori",
                                    "license-type", Gtk.License.LGPL_2_1,
-                                   "logo-icon-name", "gnome-activity-journal",
+                                   "logo-icon-name", "gnome-journal",
                                    "version", Config.PACKAGE_VERSION,
-                                   "website", "http://live.gnome.org/GnomeActivityJournal",
+                                   "website", "https://live.gnome.org/SummerOfCode2012/Projects/Stefano_Candori_GNOME_Journal",
                                    "wrap-license", true);
         });
         application.add_action (action);
@@ -87,7 +87,7 @@ public class Journal.App: GLib.Object {
             display_section.append (_("Fullscreen"), "app.display.fullscreen");
             menu.append_section (null, display_section);
 
-            menu.append (_("About Activity Journal"), "app.about");
+            menu.append (_("About Journal"), "app.about");
             menu.append (_("Quit"), "app.quit");
 
             application.set_app_menu (menu);

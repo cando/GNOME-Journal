@@ -1,0 +1,11 @@
+[Desktop Entry]
+_Name=Journal
+_GenericName=Simple journal application
+_Comment=View your activities
+Exec=gnome-journal
+Icon=gnome-journal
+Terminal=false
+Type=Application
+StartupNotify=true
+OnlyShowIn=GNOME;
+Categories=GNOME;GTK;

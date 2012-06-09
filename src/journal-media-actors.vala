@@ -50,7 +50,9 @@ private class Journal.TextActor : Clutter.Text {
         this.attributes = attributes;
     }
     
-    public TextActor.full_text (string text, Pango.AttrList attributes){
+    public TextActor.full_text (string? text, Pango.AttrList attributes){
+        if (text == null)
+            text = "";
         this.with_text (text);
         this.attributes = attributes;
     }

@@ -5,15 +5,15 @@ public_icons_themes =				\
 	$(NULL)
 
 public_icons =					\
-	hicolor_apps_16x16_gnome-activity-journal.png	\
-	hicolor_apps_24x24_gnome-activity-journal.png	\
-	hicolor_apps_32x32_gnome-activity-journal.png	\
-	hicolor_apps_48x48_gnome-activity-journal.png	\
-	hicolor_apps_256x256_gnome-activity-journal.png	\
+	hicolor_apps_16x16_gnome-journal.png	\
+	hicolor_apps_24x24_gnome-journal.png	\
+	hicolor_apps_32x32_gnome-journal.png	\
+	hicolor_apps_48x48_gnome-journal.png	\
+	hicolor_apps_256x256_gnome-journal.png	\
 	$(NULL)
 
 noinst_DATA =					\
-	gnome-activity-journal.svg				\
+	gnome-journal.svg				\
 	$(NULL)
 
 

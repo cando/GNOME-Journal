@@ -2,7 +2,7 @@
 # Run this to generate all the initial makefiles, etc.
 
 #name of package
-PKG_NAME="gnome-activity-journal"
+PKG_NAME="gnome-journal"
 srcdir=${srcdir:-.}
 
 # default version requirements ...

@@ -1,10 +1,10 @@
 AC_PREREQ([2.67])
 
-AC_INIT([gnome-activity-journal],
+AC_INIT([gnome-journal],
         [0.1],
         [https://bugzilla.gnome.org/enter_bug.cgi?product=gnome-activity-journal],
-        [gnome-activity-journal],
-        [http://live.gnome.org/GnomeActivityJournal])
+        [gnome-journal],
+        [https://live.gnome.org/SummerOfCode2012/Projects/Stefano_Candori_GNOME_Journal])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
@@ -31,7 +31,7 @@ PKG_PROG_PKG_CONFIG([0.22])
 # i18 support
 IT_PROG_INTLTOOL(0.40.0)
 
-GETTEXT_PACKAGE=gnome-activity-journal
+GETTEXT_PACKAGE=gnome-journal
 AC_SUBST(GETTEXT_PACKAGE)
 AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE,"$GETTEXT_PACKAGE",[The name of the gettext domain])
 
@@ -66,7 +66,7 @@ AC_CONFIG_FILES([
   po/Makefile.in
   data/Makefile
   data/icons/Makefile
-  data/gnome-activity-journal.desktop.in
+  data/gnome-journal.desktop.in
 ])
 
 AC_OUTPUT

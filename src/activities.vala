@@ -287,6 +287,8 @@ private class Journal.VideoActivity : GenericActivity {
 /**Collection of Activity TODO documention here!**/
 private class Journal.CompositeActivity : Object {
 
+    private const int MAXIMUM_ITEMS = 5;
+
     public Clutter.Actor actor {
         get; protected set;
     }
@@ -322,12 +324,17 @@ private class Journal.CompositeActivity : Object {
     public signal void launch_activity (CompositeActivity activity);
     
     construct {
-        this.uris = new string[activities.size];
+        this.uris = new string[int.min (MAXIMUM_ITEMS + 1, activities.size)];
         int i = 0;
         foreach (GenericActivity activity in activities) {
-            string home = Environment.get_home_dir ();
-            string display_uri = activity.uri.replace (home, "~");
-            this.uris[i] = display_uri.split ("://")[1];
+            if (i >= MAXIMUM_ITEMS) {
+                this.uris[i] = "...";
+                break;
+            }
+            var uri = Path.get_basename (activity.uri);
+            if (uri == null)
+                continue;
+            this.uris[i] = uri;
             i++;
         }
         this.icon = create_icon ();
@@ -411,7 +418,7 @@ private class Journal.CompositeDevelopmentActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Hacked on some code");
+        return _("Hacked on some Code");
     }
     
     public override Gdk.Pixbuf? create_icon () {
@@ -433,7 +440,7 @@ private class Journal.CompositeImageActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Watched some Images");
+        return _("Worked with Images");
     }
     
     public override Gdk.Pixbuf? create_icon () {
@@ -455,7 +462,7 @@ private class Journal.CompositeVideoActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Watched some Videos");
+        return _("Videos watched");
     }
     
     public override Gdk.Pixbuf? create_icon () {
@@ -477,12 +484,34 @@ private class Journal.CompositeApplicationsActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Used some applications");
+        return _("Applications Used");
     }
     
     public override Gdk.Pixbuf? create_icon () {
         try {
         return Gtk.IconTheme.get_default().load_icon ("applications-other", Utils.getIconSize (),
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
+        } catch (Error e) {
+            warning ("Unable to load pixbuf: " + e.message);
+        }
+        
+        return null;
+    }
+}
+
+private class Journal.CompositeDownloadActivity : CompositeActivity {
+    public CompositeDownloadActivity (Gee.List<GenericActivity> activities) {
+        Object (activities:activities);
+    }
+    
+    public override string create_title () {
+        return _("Downloads");
+    }
+    
+    public override Gdk.Pixbuf? create_icon () {
+        try {
+        return Gtk.IconTheme.get_default().load_icon ("emblem-downloads", Utils.getIconSize (),
                                             IconLookupFlags.FORCE_SVG | 
                                             IconLookupFlags.GENERIC_FALLBACK);
         } catch (Error e) {

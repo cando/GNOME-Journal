@@ -55,7 +55,7 @@ public int main (string[] args) {
     Intl.bindtextdomain (Config.GETTEXT_PACKAGE, Config.LOCALEDIR);
     Intl.bind_textdomain_codeset (Config.GETTEXT_PACKAGE, "UTF-8");
     Intl.textdomain (Config.GETTEXT_PACKAGE);
-    GLib.Environment.set_application_name (_("Activity Journal"));
+    GLib.Environment.set_application_name (_("Journal"));
 
 //    parse_args (ref args);
 
@@ -64,7 +64,7 @@ public int main (string[] args) {
         error ("Can't init clutter-gtk");
     Gst.init (ref args);
 
-    Gtk.Window.set_default_icon_name ("Activity Journal");
+    Gtk.Window.set_default_icon_name ("Journal");
     var provider = new Gtk.CssProvider ();
     try {
         var sheet = Journal.Utils.get_style ("gtk-style.css");

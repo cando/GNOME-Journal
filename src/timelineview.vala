@@ -245,6 +245,7 @@ private class Journal.ClutterVTL : Box {
         timeline_texture.add_constraint (new Clutter.AlignConstraint (
                                         stage, Clutter.AlignAxis.X_AXIS, 0.5f));
         container.add_child (timeline_texture);
+        timeline_texture.depth = 1;
 
         container.scroll_event.connect ( (e) => {
         
@@ -288,8 +289,8 @@ private class Journal.ClutterVTL : Box {
        vnav = new TimelineNavigator (Orientation.VERTICAL);
        vnav.go_to_date.connect ((date) => {this.jump_to_day (date);});
 
-       this.pack_start (vnav, false, false, 0);
        this.pack_start (embed, true, true, 0);
+       this.pack_start (vnav, false, false, 10);
        this.pack_start (scrollbar, false, false, 0);
        
        osd_label = new OSDLabel (stage);
@@ -394,6 +395,7 @@ private class Journal.ClutterVTL : Box {
               last_y_position = int.max (last_left_actor_y, last_right_actor_y) + 
                                 text_size + 30;
               day_line.set_y (last_y_position);
+              
               container.add_actor (day_line);
               container.add_actor (date_text);
               last_y_position += (int)(day_line.height + text_size);
@@ -420,6 +422,7 @@ private class Journal.ClutterVTL : Box {
                 timeline_texture.add_constraint (new Clutter.AlignConstraint (
                                         stage, Clutter.AlignAxis.X_AXIS, 0.5f));
                 container.add_child (timeline_texture);
+                timeline_texture.depth = 1;
                 last_y_texture = position;
             }
             var actor = new RoundBox (side);
@@ -577,6 +580,11 @@ private class Journal.TimelineTexture: Clutter.CairoTexture {
             this.clear ();
             uint height, width;
             get_surface_size (out width, out height);
+            //Draw backgroundColor
+            Clutter.cairo_set_source_color(cr, Utils.gdk_rgba_to_clutter_color 
+                                               (Utils.get_journal_bg_color ()));
+            ctx.rectangle (0, 0, width , height);
+            ctx.fill ();
             //Draw the timeline
             Clutter.cairo_set_source_color(cr, backgroundColor);
             ctx.rectangle (radius, 0, timeline_width , height);
@@ -607,7 +615,7 @@ private class Journal.TimelineTexture: Clutter.CairoTexture {
 }
 
 private class Journal.VTimeline : Object {
-    public const int MAXIMUM_TEXTURE_LENGHT = 512;
+    public const int MAXIMUM_TEXTURE_LENGHT = 1024;
     
     private Gee.List<int> point_circle;
     //Key: Y position, Value: TimelineTexture
