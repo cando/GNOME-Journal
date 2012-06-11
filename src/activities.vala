@@ -341,7 +341,11 @@ private class Journal.CompositeActivity : Object {
         //Subclasses will modify this.
         this.title = create_title ();
         //First activity timestamp? FIXME
-        this.time = activities.get (0).time;
+        int64 max_t = 0;
+        foreach (GenericActivity activity in activities)
+            if (activity.time > max_t)
+                max_t = activity.time;
+        this.time = max_t;
         this.selected = false;
 
         create_actor ();
@@ -538,7 +542,6 @@ private class Journal.ActivityFactory : Object {
         interpretation_types.set (Zeitgeist.NFO_TEXT_DOCUMENT, typeof (DocumentActivity));
         interpretation_types.set (Zeitgeist.NFO_SPREADSHEET, typeof (DocumentActivity));
         interpretation_types.set (Zeitgeist.NFO_PRESENTATION, typeof (DocumentActivity));
-        interpretation_types.set (Zeitgeist.NFO_PRESENTATION, typeof (DocumentActivity));
         /****PROGRAMMING****/
         interpretation_types.set (Zeitgeist.NFO_SOURCE_CODE, typeof (DevelopmentActivity));
         /****IMAGES****/
@@ -565,7 +568,6 @@ private class Journal.ActivityFactory : Object {
         interpretation_types_comp.set (Zeitgeist.NFO_HTML_DOCUMENT, typeof (CompositeDocumentActivity));
         interpretation_types_comp.set (Zeitgeist.NFO_TEXT_DOCUMENT, typeof (CompositeDocumentActivity));
         interpretation_types_comp.set (Zeitgeist.NFO_SPREADSHEET, typeof (CompositeDocumentActivity));
-        interpretation_types_comp.set (Zeitgeist.NFO_PRESENTATION, typeof (CompositeDocumentActivity));
         interpretation_types_comp.set (Zeitgeist.NFO_PRESENTATION, typeof (CompositeDocumentActivity));
         /****PROGRAMMING****/
         interpretation_types_comp.set (Zeitgeist.NFO_SOURCE_CODE, typeof (CompositeDevelopmentActivity));
@@ -675,6 +677,17 @@ private class Journal.DayActivityModel : Object {
                 });
                 composite_activities.add (c_activity);
             }
+            
+            composite_activities.sort ( (a,b) =>{
+                    CompositeActivity first = (CompositeActivity)a;
+                    CompositeActivity second = (CompositeActivity)b;
+                    if (first.time > second.time)
+                        return -1;
+                    else if (first.time == second.time)
+                        return 0;
+                    else
+                        return 1;
+            });
     }
     
 /****One day will be useful...but not now!*********/

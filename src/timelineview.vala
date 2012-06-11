@@ -194,8 +194,7 @@ private class Journal.ClutterVTL : Box {
     //Position and type of last drawn bubble
     private int last_y_position;
     private int last_type;
-    //Last position visible (utilized for scrolling).
-    private float last_y_visible;
+
     private int last_y_texture;
     //Used for proper placing of bubbles
     private int last_left_actor_y;
@@ -221,7 +220,6 @@ private class Journal.ClutterVTL : Box {
         
         last_y_position = 50;
         last_type = 0;
-        last_y_visible = 0;
         last_y_texture = 0;
         last_right_actor_y = 50;
         last_left_actor_y = 50;
@@ -250,20 +248,16 @@ private class Journal.ClutterVTL : Box {
         container.scroll_event.connect ( (e) => {
         
         var direction = e.direction;
-        var offset = (float)scrollbar.adjustment.step_increment;
 
         switch (direction)
         {
             case Clutter.ScrollDirection.UP:
-                last_y_visible -= offset;
-                last_y_visible = last_y_visible.clamp (0.0f, container.get_height () - stage.get_height ());
-                if (last_y_visible != 0.0f)
+                if (scrollbar.adjustment.value != 0.0f)
                     scrollbar.move_slider (ScrollType.STEP_UP);
                 break;
             case Clutter.ScrollDirection.DOWN:
-                last_y_visible += offset;
-                last_y_visible = last_y_visible.clamp (0.0f, container.get_height () - stage.get_height ());
-                if (last_y_visible != container.get_height () - stage.get_height ())
+                var limit = (int)scrollbar.adjustment.upper - scrollbar.adjustment.page_size;
+                if (scrollbar.adjustment.value < limit)
                     scrollbar.move_slider (ScrollType.STEP_DOWN);
                 break;
 
@@ -273,7 +267,7 @@ private class Journal.ClutterVTL : Box {
             break;
        }
        
-       viewport.scroll_to_point (0.0f, last_y_visible);
+       viewport.scroll_to_point (0.0f, (float)scrollbar.adjustment.value);
        return false;
        });
        
@@ -361,7 +355,7 @@ private class Journal.ClutterVTL : Box {
               container.add_child (hole);
               hole.add_constraint (new Clutter.BindConstraint (container, Clutter.BindCoordinate.WIDTH, 0));
               hole.height = 100;
-              hole.depth = 1;
+              hole.depth = 2;
               hole.background_color = {125, 125, 125, 255};
               hole.set_y (int.max (last_left_actor_y, last_right_actor_y) + 20);
               last_y_position = (int)hole.y;
@@ -466,7 +460,7 @@ private class Journal.ClutterVTL : Box {
        }
        
        //FIXME
-       scrollbar.adjustment.upper = last_y_position + last_actor_height;
+       scrollbar.adjustment.upper = int.max (last_left_actor_y, last_right_actor_y);
        uint num_child = container.get_children ().length ();
        scrollbar.adjustment.step_increment = scrollbar.adjustment.upper / (num_child*10);
        scrollbar.adjustment.page_increment = scrollbar.adjustment.upper / 10;
@@ -508,10 +502,7 @@ private class Journal.ClutterVTL : Box {
     
     public void on_scrollbar_scroll () {
         float y = (float)(scrollbar.adjustment.value);
-        y = y.clamp (0.0f, container.get_height () - stage.get_height ());
-        last_y_visible = y;
         viewport.scroll_to_point (0.0f, y);
-        
         //FIXME
 //        if (!on_loading && (y == (container.get_height () - stage.get_height ()))) {
 //            //We can't scroll anymmore! Let's load another day!

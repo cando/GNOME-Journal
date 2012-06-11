@@ -238,7 +238,7 @@ private class Journal.CompositeDocumentActor : Clutter.Actor {
         foreach (string uri in uris) {
             attr_list = new Pango.AttrList ();
             attr_list.insert (Pango.attr_scale_new (Pango.Scale.MEDIUM));
-            attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
+            //attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
             var uri_text = new TextActor.full_text (uri, attr_list);
             if (uri_text.width > max_w) max_w = uri_text.width;
             t_box.add_child (uri_text);
