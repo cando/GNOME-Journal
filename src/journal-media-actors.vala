@@ -38,6 +38,9 @@ private class Journal.TextActor : Clutter.Text {
     public TextActor.with_text (string text){
         this ();
         this.set_text (text);
+        float natural_height;
+        this.get_preferred_height (-1, out natural_height, null);
+        this.set_height (natural_height);
     }
     
     public TextActor.with_markup (string markup){

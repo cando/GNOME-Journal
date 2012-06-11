@@ -309,7 +309,11 @@ private class Journal.CompositeActivity : Object {
         get; private set;
     }
     
-    public int64 time {
+    public int64 time_start {
+        get; private set;
+    }
+    
+    public int64 time_end {
         get; private set;
     }
     
@@ -341,11 +345,16 @@ private class Journal.CompositeActivity : Object {
         //Subclasses will modify this.
         this.title = create_title ();
         //First activity timestamp? FIXME
-        int64 max_t = 0;
-        foreach (GenericActivity activity in activities)
-            if (activity.time > max_t)
-                max_t = activity.time;
-        this.time = max_t;
+        int64 min_start_t = activities.get(0).time;
+        int64 max_end_t = 0;
+        foreach (GenericActivity activity in activities) {
+            if (activity.time < min_start_t)
+                min_start_t = activity.time;
+            else if (activity.time > max_end_t )
+                max_end_t = activity.time;
+        }
+        this.time_start = min_start_t;
+        this.time_end = max_end_t;
         this.selected = false;
 
         create_actor ();
@@ -361,8 +370,16 @@ private class Journal.CompositeActivity : Object {
     }
     
     public virtual Clutter.Actor create_actor () {
-        DateTime d = new DateTime.from_unix_utc (this.time / 1000).to_local ();
-        string date = d.format (_("from %H:%M"));
+        string s_date, e_date = "";
+        DateTime d_start = new DateTime.from_unix_utc (this.time_start / 1000).to_local ();
+        s_date = d_start.format (_("from %H:%M "));
+        DateTime d_end = new DateTime.from_unix_utc (this.time_end / 1000).to_local ();
+        if (d_start.compare (d_end) == 0)
+            s_date = d_start.format (_("At %H:%M "));
+        else 
+            e_date = d_end.format (_("until %H:%M"));
+        
+        string date = s_date + e_date;
         actor = new CompositeDocumentActor (this.title, this.icon, this.uris, date);
         return actor;
     }
@@ -681,9 +698,9 @@ private class Journal.DayActivityModel : Object {
             composite_activities.sort ( (a,b) =>{
                     CompositeActivity first = (CompositeActivity)a;
                     CompositeActivity second = (CompositeActivity)b;
-                    if (first.time > second.time)
+                    if (first.time_start > second.time_start)
                         return -1;
-                    else if (first.time == second.time)
+                    else if (first.time_start == second.time_start)
                         return 0;
                     else
                         return 1;
