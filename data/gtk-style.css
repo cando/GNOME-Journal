@@ -10,6 +10,16 @@ GtkNotebook{
     background-color: alpha(#000, 0.0);
 }
 
+/*LOADING Label*/
+.loading {
+}
+
+.loading GtkLabel{
+    font-size: 40;
+    font-weight: bold;
+}
+
+
 /* DAY VIEW STYLE */
 .dayview {
     background-color: @journal_label_color;

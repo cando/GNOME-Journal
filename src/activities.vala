@@ -850,4 +850,17 @@ private class Journal.ActivityModel : Object {
         
         backend.load_events_for_date_range (start_date, end_date);
     }
+    
+    public void load_another_day () {
+        TimeVal tv;
+        DateTime larger_date = backend.last_loaded_date.add_days (-1);
+        larger_date.to_timeval (out tv);
+        Date start_date = {};
+        start_date.set_time_val (tv);
+        Date end_date = {};
+        backend.last_loaded_date.to_timeval (out tv);
+        end_date.set_time_val (tv);
+        
+        backend.load_events_for_date_range (start_date, end_date);
+    }
 }

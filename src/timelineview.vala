@@ -207,8 +207,6 @@ private class Journal.ClutterVTL : Box {
     
     //Date to jump when we have loaded new events
     private DateTime? date_to_jump;
-    
-    private bool on_loading;
 
     public ClutterVTL (App app, ActivityModel model){
         Object (orientation: Orientation.HORIZONTAL, spacing : 0);
@@ -230,7 +228,6 @@ private class Journal.ClutterVTL : Box {
         last_left_actor_y = 50;
         last_actor_height = 0;
         date_to_jump = null;
-        on_loading = false;
         
         viewport = new ScrollableViewport ();
         viewport.scroll_mode = ScrollMode.Y;
@@ -295,7 +292,7 @@ private class Journal.ClutterVTL : Box {
        osd_label = new OSDLabel (stage);
        stage.add_actor (osd_label.actor);
         
-       loading = new LoadingActor (this.app, stage);
+       loading = new LoadingActor (stage);
        loading.start ();
        
        model.activities_loaded.connect ((dates_loaded)=> {
@@ -421,8 +418,7 @@ private class Journal.ClutterVTL : Box {
                 timeline_texture.depth = 0;
                 last_y_texture = position;
             }
-            var actor = new RoundBox (side);
-            actor.add_content (activity.actor);
+            var actor = new RoundBox (side, activity.actor);
             
             actor.button_release_event.connect ((e) => {
                 activity.launch ();
@@ -476,11 +472,10 @@ private class Journal.ClutterVTL : Box {
             viewport.scroll_to_point (0.0f, y);
             scrollbar.adjustment.upper = container.height;
             scrollbar.adjustment.value = y;
-            on_loading = false;
             date_to_jump = null;
         }
         else {
-            osd_label.set_message_and_show (_("Loading Activities..."));
+            //osd_label.set_message_and_show (_("Loading Activities..."));
             loading.start ();
             if (date == date_to_jump) {
                 //Break the infinite loop that happens when the user ask for an
@@ -491,14 +486,12 @@ private class Journal.ClutterVTL : Box {
                     viewport.scroll_to_point (0.0f, y);
                     scrollbar.adjustment.upper = container.height;
                     scrollbar.adjustment.value = y;
-                    on_loading = false;
                     date_to_jump = null;
                 }
                 return;
             }
             date_to_jump = date;
             model.load_activities (date);
-            on_loading = true;
         }
     }
     
@@ -506,22 +499,11 @@ private class Journal.ClutterVTL : Box {
         float y = (float)(scrollbar.adjustment.value);
         viewport.scroll_to_point (0.0f, y);
         //FIXME
-//        if (!on_loading && (y == (container.get_height () - stage.get_height ()))) {
-//            //We can't scroll anymmore! Let's load another day!
-//            on_loading = true;
-//            osd_label.set_message_and_show (_("Loading Activities..."));
-//            TimeVal tv;
-//            DateTime new_date = app.backend.last_loaded_date.add_days (-1);
-//            warning("aa"+new_date.to_string ());
-//            date_to_jump = new_date;
-//            new_date.to_timeval (out tv);
-//            Date start_date = {};
-//            start_date.set_time_val (tv);
-//            app.backend.last_loaded_date.to_timeval (out tv);
-//            Date end_date = {};
-//            end_date.set_time_val (tv);
-//            app.backend.load_events_for_date_range (start_date, end_date);
-//        }
+        var limit = (int)scrollbar.adjustment.upper - scrollbar.adjustment.page_size;
+        if (y == limit) {
+            //We can't scroll anymmore! Let's load another day!
+            model.load_another_day ();
+        }
         
         //We are moving so we should highligth the right TimelineNavigator's label
         string final_key = "";
@@ -684,7 +666,7 @@ private class Journal.RoundBox : Clutter.Actor {
     }
 
     private Clutter.BinLayout box;
-    public RoundBox (Side side) {
+    public RoundBox (Side side, Clutter.Actor content) {
        this._arrowSide = side;
        this.border_width = BORDER_WIDTH;
        this.reactive = true;
@@ -697,6 +679,14 @@ private class Journal.RoundBox : Clutter.Actor {
        canvas.draw.connect ((cr, w, h) => { return paint_canvas (cr, w, h); });
        var canvas_box = new Clutter.Actor ();
        canvas_box.set_content (canvas);
+       this.add_child (canvas_box);
+       
+       this.add_content (content);
+       float c_nat_width, c_nat_height;
+       this.get_preferred_height (-1, null, out c_nat_height);
+       this.get_preferred_width (-1, null, out c_nat_width);
+       canvas_box.set_size ((int)c_nat_width, (int) c_nat_height);
+       canvas.set_size ((int)c_nat_width, (int) c_nat_height);
        this.allocation_changed.connect ((box, f) => {
             Idle.add (()=>{
                 //see this http://www.mail-archive.com/clutter-app-devel-list@clutter-project.org/msg00116.html
@@ -705,7 +695,6 @@ private class Journal.RoundBox : Clutter.Actor {
                 return false;
             });
        });
-       this.add_child (canvas_box);
     }
 
     private bool paint_canvas (Cairo.Context ctx, int width, int height) {
@@ -865,6 +854,16 @@ private class Journal.RoundBox : Clutter.Actor {
             min_width = min_width_t + 4 * BORDER_WIDTH;
         }
     }
+    
+    public override void get_preferred_height (float for_width, out float min_height, out float nat_height) {
+       float min_height_t, nat_height_t;
+       min_height = nat_height = 0;
+        if (content_actor != null) {
+            content_actor.get_preferred_height (-1, out min_height_t, out nat_height_t);
+            nat_height = min_height_t + 2 * BORDER_WIDTH;
+            min_height = min_height_t + 2 * BORDER_WIDTH;
+        }
+   }
 }
 
 private class Journal.HoleActor : Clutter.Actor {
@@ -874,7 +873,6 @@ private class Journal.HoleActor : Clutter.Actor {
     private Clutter.BinLayout box;
     public HoleActor () {
        this.reactive = true;
-
        box = new Clutter.BinLayout (Clutter.BinAlignment.CENTER, 
                                     Clutter.BinAlignment.CENTER);
        set_layout_manager (box);
@@ -899,7 +897,6 @@ private class Journal.HoleActor : Clutter.Actor {
         Clutter.Color backgroundColor = {192,192,192, 255};
         Clutter.Color borderColor = {255, 255, 255, 255};
 
-        double boxWidth = width;
         double boxHeight = height;
         
         var cr = ctx;
@@ -910,18 +907,22 @@ private class Journal.HoleActor : Clutter.Actor {
         cr.restore ();
         
         cr.move_to (0, 0);
-        double step = boxWidth / 40;
+        double step = 30;
         double i = step;
         double old_h = boxHeight/6;
         cr.line_to (i, old_h);
-        for (i = step * 2; i <= step * 40; i += step) {
+        for (i = step * 2; i <= step* 42; i += step) {
             old_h = -old_h;
             cr.rel_line_to (step, old_h);
         }
         
-        old_h = -old_h;
-        cr.rel_line_to (0, boxHeight);
-        for (i = 0; i <= step * 40; i += step ) {
+        old_h = boxHeight/6;
+        if(old_h > 0)
+            cr.rel_line_to (0, boxHeight);
+        else
+            cr.rel_line_to (0, boxHeight - old_h);
+
+        for (i = 0; i <= step * 42; i += step ) {
             old_h = -old_h;
             cr.rel_line_to (-step, old_h);
         }

@@ -23,46 +23,38 @@ using Gtk;
 using Cairo;
 
 private class Journal.LoadingActor: GLib.Object {
-    private App app;
     private Clutter.Stage stage;
-    private GtkClutter.Actor gtk_actor_box;
-    private GtkClutter.Actor gtk_actor_throbber;
-    private Box box;
-    private Spinner throbber;
+    private GtkClutter.Actor gtk_actor_label;
+    private Label label;
 
-    public LoadingActor (App app, Clutter.Stage stage) {
-        this.app = app;
+    public LoadingActor (Clutter.Stage stage) {
         this.stage = stage;
-        
-        box = new Box(Orientation.VERTICAL, 0);
-        throbber = new Spinner ();
-        throbber.set_size_request((int)stage.height/3, (int)stage.height/3);
-        
-        gtk_actor_box = new GtkClutter.Actor.with_contents (box);
-        gtk_actor_box.opacity = 200;
-        gtk_actor_throbber = new GtkClutter.Actor.with_contents (throbber);
-        gtk_actor_throbber.get_widget ().get_style_context ().add_class ("throbber");
-        
-        gtk_actor_throbber.add_constraint (new Clutter.AlignConstraint (stage, Clutter.AlignAxis.X_AXIS, 0.5f));
-        gtk_actor_throbber.add_constraint (new Clutter.AlignConstraint (stage, Clutter.AlignAxis.Y_AXIS, 0.5f));
-        gtk_actor_box.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.SIZE, 0));
-        stage.add_actor (gtk_actor_box);
-        stage.add_actor (gtk_actor_throbber);
 
-        box.show_all ();
-        throbber.show_all ();
+        var event_box = new EventBox ();
+        label = new Label(_("Loading..."));
+        event_box.add (label);
+        gtk_actor_label = new GtkClutter.Actor.with_contents (event_box);
+        event_box.get_style_context ().add_class ("loading");
+        
+        gtk_actor_label.add_constraint (new Clutter.BindConstraint (stage, Clutter.BindCoordinate.SIZE, 0));
+        stage.add_actor (gtk_actor_label);
+
+        event_box.show_all();
     }
     
     public void start () {
-        throbber.start ();
-        gtk_actor_box.show ();
-        gtk_actor_throbber.show ();
+        gtk_actor_label.opacity = 255;
+        gtk_actor_label.show ();
     }
     
     public void stop () {
-        throbber.stop ();
-        gtk_actor_box.hide ();
-        gtk_actor_throbber.hide ();
+        var animation = gtk_actor_label.animate (
+                       Clutter.AnimationMode.LINEAR,
+                       500,
+                       "opacity", 0);
+        animation.completed.connect (() => {
+            gtk_actor_label.hide ();
+        });
     }
 }
 

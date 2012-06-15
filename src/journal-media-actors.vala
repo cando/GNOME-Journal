@@ -39,7 +39,7 @@ private class Journal.TextActor : Clutter.Text {
         this ();
         this.set_text (text);
         float natural_height;
-        this.get_preferred_height (-1, out natural_height, null);
+        this.get_preferred_height (-1, null, out natural_height);
         this.set_height (natural_height);
     }
     
@@ -202,7 +202,7 @@ private class Journal.DocumentActor : Clutter.Actor {
 
 private class Journal.CompositeDocumentActor : Clutter.Actor {
     
-    private TextActor title;
+    public TextActor title;
     private ImageActor image;
     
     private TextActor time;
@@ -273,7 +273,7 @@ private class Journal.CompositeDocumentActor : Clutter.Actor {
 
 private class Journal.CompositeApplicationActor : Clutter.Actor {
     
-    private TextActor title;
+    public TextActor title;
     private TextActor time;
     private Clutter.Actor icon_box;
     
@@ -300,8 +300,8 @@ private class Journal.CompositeApplicationActor : Clutter.Actor {
         set_layout_manager (box);
 
         icon_box = new Clutter.Actor ();
-        var manager = new Clutter.FlowLayout (Clutter.FlowOrientation.HORIZONTAL);
-        manager.set_column_spacing (5);
+        var manager = new Clutter.BoxLayout ();
+        manager.vertical = false;
         icon_box.set_layout_manager (manager);
         foreach (string uri in uris) {
             var info = new  DesktopAppInfo (uri);
@@ -322,10 +322,21 @@ private class Journal.CompositeApplicationActor : Clutter.Actor {
     public override void get_preferred_width (float for_height, out float min_width, out float nat_width) {
        float box_min_width, box_nat_width;
        float title_min_width, title_nat_width;
-       icon_box.get_preferred_width(-1, out box_min_width, out box_nat_width);
-       title.get_preferred_width(-1, out title_min_width, out title_nat_width);
+       icon_box.get_preferred_width (-1, out box_min_width, out box_nat_width);
+       title.get_preferred_width (-1, out title_min_width, out title_nat_width);
        min_width = float.max (box_min_width, title_min_width) + 10 * 2 ;
        nat_width = float.max (box_nat_width, title_nat_width) + 10 * 2 ;
+   }
+   
+   public override void get_preferred_height (float for_width, out float min_height, out float nat_height) {
+       float box_min_height, box_nat_height;
+       float title_min_height, title_nat_height;
+       float time_min_height, time_nat_height;
+       icon_box.get_preferred_height(-1, out box_min_height, out box_nat_height);
+       title.get_preferred_height(-1, out title_min_height, out title_nat_height);
+       time.get_preferred_height(-1, out time_min_height, out time_nat_height);
+       min_height = box_min_height + title_min_height + time_min_height ;
+       nat_height = box_nat_height + title_nat_height + time_nat_height;
    }
 }
 
