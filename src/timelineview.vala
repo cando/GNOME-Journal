@@ -207,6 +207,8 @@ private class Journal.ClutterVTL : Box {
     
     //Date to jump when we have loaded new events
     private DateTime? date_to_jump;
+    
+    private bool on_loading;
 
     public ClutterVTL (App app, ActivityModel model){
         Object (orientation: Orientation.HORIZONTAL, spacing : 0);
@@ -228,6 +230,7 @@ private class Journal.ClutterVTL : Box {
         last_left_actor_y = 50;
         last_actor_height = 0;
         date_to_jump = null;
+        on_loading = false;
         
         viewport = new ScrollableViewport ();
         viewport.scroll_mode = ScrollMode.Y;
@@ -261,6 +264,10 @@ private class Journal.ClutterVTL : Box {
                 var limit = (int)scrollbar.adjustment.upper - scrollbar.adjustment.page_size;
                 if (scrollbar.adjustment.value < limit)
                     scrollbar.move_slider (ScrollType.STEP_DOWN);
+                else {
+                    scrollbar.adjustment.value = limit;
+                    on_scrollbar_scroll ();
+                }
                 break;
 
             /* we're only interested in up and down */
@@ -298,6 +305,7 @@ private class Journal.ClutterVTL : Box {
        model.activities_loaded.connect ((dates_loaded)=> {
             load_activities (dates_loaded);
             loading.stop ();
+            on_loading = false;
        });
     }
     
@@ -498,11 +506,12 @@ private class Journal.ClutterVTL : Box {
     public void on_scrollbar_scroll () {
         float y = (float)(scrollbar.adjustment.value);
         viewport.scroll_to_point (0.0f, y);
-        //FIXME
         var limit = (int)scrollbar.adjustment.upper - scrollbar.adjustment.page_size;
-        if (y == limit) {
+        if (!on_loading && y == limit) {
             //We can't scroll anymmore! Let's load another day!
+            loading.start ();
             model.load_another_day ();
+            on_loading = true;
         }
         
         //We are moving so we should highligth the right TimelineNavigator's label

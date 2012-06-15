@@ -600,6 +600,7 @@ private class Journal.ActivityFactory : Object {
         /****IMAGES****/
         interpretation_types.set (Zeitgeist.NFO_IMAGE, typeof (ImageActivity));
         interpretation_types.set (Zeitgeist.NFO_VECTOR_IMAGE, typeof (ImageActivity));
+        interpretation_types.set (Zeitgeist.NFO_RASTER_IMAGE, typeof (ImageActivity));
         /****AUDIO****/
         interpretation_types.set (Zeitgeist.NFO_AUDIO, typeof (AudioActivity));
         interpretation_types.set (Zeitgeist.NMM_MUSIC_ALBUM, typeof (AudioActivity));
@@ -630,6 +631,7 @@ private class Journal.ActivityFactory : Object {
         /****IMAGES****/
         interpretation_types_comp.set (Zeitgeist.NFO_IMAGE, typeof (CompositeImageActivity));
         interpretation_types_comp.set (Zeitgeist.NFO_VECTOR_IMAGE, typeof (CompositeImageActivity));
+        interpretation_types_comp.set (Zeitgeist.NFO_RASTER_IMAGE, typeof (CompositeImageActivity));
         /****AUDIO****/
         interpretation_types_comp.set (Zeitgeist.NFO_AUDIO, typeof (CompositeAudioActivity));
         interpretation_types_comp.set (Zeitgeist.NMM_MUSIC_ALBUM, typeof (CompositeAudioActivity));
