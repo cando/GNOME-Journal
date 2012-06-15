@@ -301,7 +301,7 @@ private class Journal.CompositeApplicationActor : Clutter.Actor {
 
         icon_box = new Clutter.Actor ();
         var manager = new Clutter.FlowLayout (Clutter.FlowOrientation.HORIZONTAL);
-        //manager.set_column_spacing (5);
+        manager.set_column_spacing (5);
         icon_box.set_layout_manager (manager);
         foreach (string uri in uris) {
             var info = new  DesktopAppInfo (uri);
