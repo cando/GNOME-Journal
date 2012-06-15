@@ -45,7 +45,6 @@ public class Journal.App: GLib.Object {
 
     public App () {
         application = new Gtk.Application ("org.gnome.journal", 0);
-        
         model = new ActivityModel ();
 
         var action = new GLib.SimpleAction ("quit", null);

@@ -378,6 +378,9 @@ private class Journal.ClutterVTL : Box {
               //Text's date
               string text = Utils.datetime_from_string (date).format (_("%A, %x"));
               Clutter.Text date_text = new Clutter.Text.with_text (null, text);
+              float natural_height;
+              date_text.get_preferred_height (-1, out natural_height, null);
+              date_text.set_height (natural_height);
               var attr_list = new Pango.AttrList ();
               attr_list.insert (Pango.attr_scale_new (Pango.Scale.MEDIUM));
               attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));

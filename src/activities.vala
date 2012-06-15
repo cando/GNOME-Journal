@@ -41,11 +41,11 @@ private class Journal.GenericActivity : Object {
     }
     
     public Pixbuf? type_icon {
-        get; private set;
+        get; protected set;
     }
     
     public Pixbuf? thumb_icon {
-        get; private set;
+        get; protected set;
     }
     
     public string display_uri {
@@ -118,7 +118,7 @@ private class Journal.GenericActivity : Object {
     //from GNOME Documents. Thanks!
     //TODO move the file:// code in the DocumentActivity Class
     // Let's make it generic.
-    private async void updateActivityIcon () {
+    protected virtual async void updateActivityIcon () {
         if (this.thumb_path != null) {
             this.get_thumb ();
             return;
@@ -284,6 +284,28 @@ private class Journal.VideoActivity : GenericActivity {
     }
 }
 
+private class Journal.ApplicationActivity : GenericActivity {
+    public ApplicationActivity (Zeitgeist.Event event) {
+        Object (event:event);
+    }
+    
+    protected override async void updateActivityIcon () {
+        var info = new  DesktopAppInfo (display_uri);
+        this.type_icon = Utils.load_pixbuf_from_name ("application-x-executable",
+                                                    Utils.getIconSize ());
+        if (info == null) {
+            this.thumb_icon = this.type_icon;
+            return;
+        }
+        this.thumb_icon = Utils.load_pixbuf_from_icon (info.get_icon (), 
+                                                       Utils.getIconSize ());
+    }
+    
+    public override void update_icon () {
+        //do nothing
+    }
+}
+
 /**Collection of Activity TODO documention here!**/
 private class Journal.CompositeActivity : Object {
 
@@ -314,6 +336,10 @@ private class Journal.CompositeActivity : Object {
     }
     
     public int64 time_end {
+        get; private set;
+    }
+    
+    public string date {
         get; private set;
     }
     
@@ -355,9 +381,24 @@ private class Journal.CompositeActivity : Object {
         }
         this.time_start = min_start_t;
         this.time_end = max_end_t;
+        this.date = create_date ();
         this.selected = false;
 
         create_actor ();
+    }
+    
+    private string create_date () {
+        string s_date, e_date = "";
+        DateTime d_start = new DateTime.from_unix_utc (this.time_start / 1000).to_local ();
+        s_date = d_start.format (_("from %H:%M "));
+        DateTime d_end = new DateTime.from_unix_utc (this.time_end / 1000).to_local ();
+        if (d_start.compare (d_end) == 0)
+            s_date = d_start.format (_("At %H:%M "));
+        else 
+            e_date = d_end.format (_("until %H:%M"));
+        
+        string date = s_date + e_date;
+        return date;
     }
     
     public virtual string create_title () {
@@ -370,17 +411,7 @@ private class Journal.CompositeActivity : Object {
     }
     
     public virtual Clutter.Actor create_actor () {
-        string s_date, e_date = "";
-        DateTime d_start = new DateTime.from_unix_utc (this.time_start / 1000).to_local ();
-        s_date = d_start.format (_("from %H:%M "));
-        DateTime d_end = new DateTime.from_unix_utc (this.time_end / 1000).to_local ();
-        if (d_start.compare (d_end) == 0)
-            s_date = d_start.format (_("At %H:%M "));
-        else 
-            e_date = d_end.format (_("until %H:%M"));
-        
-        string date = s_date + e_date;
-        actor = new CompositeDocumentActor (this.title, this.icon, this.uris, date);
+        actor = new CompositeDocumentActor (this.title, this.icon, this.uris, this.date);
         return actor;
     }
     
@@ -499,8 +530,8 @@ private class Journal.CompositeVideoActivity : CompositeActivity {
     }
 }
 
-private class Journal.CompositeApplicationsActivity : CompositeActivity {
-    public CompositeApplicationsActivity (Gee.List<GenericActivity> activities) {
+private class Journal.CompositeApplicationActivity : CompositeActivity {
+    public CompositeApplicationActivity (Gee.List<GenericActivity> activities) {
         Object (activities:activities);
     }
     
@@ -518,6 +549,11 @@ private class Journal.CompositeApplicationsActivity : CompositeActivity {
         }
         
         return null;
+    }
+    
+    public override Clutter.Actor create_actor () {
+        actor = new CompositeApplicationActor (this.title, this.uris, this.date);
+        return actor;
     }
 }
 
@@ -574,6 +610,9 @@ private class Journal.ActivityFactory : Object {
         interpretation_types.set (Zeitgeist.NMM_MUSIC_ALBUM, typeof (VideoActivity));
         interpretation_types.set (Zeitgeist.NMM_TVSERIES, typeof (VideoActivity));
         interpretation_types.set (Zeitgeist.NMM_TVSHOW ,typeof (VideoActivity));
+        /****APPLICATIONS****/
+        interpretation_types.set (Zeitgeist.NFO_APPLICATION ,typeof (ApplicationActivity));
+        interpretation_types.set (Zeitgeist.NFO_SOFTWARE ,typeof (ApplicationActivity));
         
         /**************COMPOSITE ACTIVITIES*********/
         interpretation_types_comp = new Gee.HashMap<string, Type> ();
@@ -602,8 +641,8 @@ private class Journal.ActivityFactory : Object {
         interpretation_types_comp.set (Zeitgeist.NMM_TVSERIES, typeof (CompositeVideoActivity));
         interpretation_types_comp.set (Zeitgeist.NMM_TVSHOW ,typeof (CompositeVideoActivity));
         /****APPLICATIONS****/
-        interpretation_types_comp.set (Zeitgeist.NFO_APPLICATION ,typeof (CompositeApplicationsActivity));
-        interpretation_types_comp.set (Zeitgeist.NFO_SOFTWARE ,typeof (CompositeApplicationsActivity));
+        interpretation_types_comp.set (Zeitgeist.NFO_APPLICATION ,typeof (CompositeApplicationActivity));
+        interpretation_types_comp.set (Zeitgeist.NFO_SOFTWARE ,typeof (CompositeApplicationActivity));
     }
     
     /****PUBLIC METHODS****/

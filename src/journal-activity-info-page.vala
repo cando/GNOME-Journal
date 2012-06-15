@@ -71,7 +71,15 @@ private class Journal.ActivityInfoPage : Box {
             this.model.get_value (iter, 0, out uri);
             if (path.compare (path_in) == 0) {
                 try {
-                    AppInfo.launch_default_for_uri (uri.get_string (), null);
+                    if (uri.get_string ().has_suffix (".desktop")) {
+                        Value display_uri;
+                        this.model.get_value (iter, 3, out display_uri);
+                        var app = new DesktopAppInfo (display_uri.get_string ());
+                        string exec = app.get_executable ();
+                        Process.spawn_command_line_async (exec);
+                    }
+                    else
+                        AppInfo.launch_default_for_uri (uri.get_string (), null);
                 } catch (Error e) {
                     warning ("Error in launching: "+ uri.get_string ());
                 }

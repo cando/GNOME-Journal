@@ -119,22 +119,41 @@ private class Journal.Utils : Object{
            return ICON_VIEW_SIZE;
     }
     
-    public static Gdk.Pixbuf? load_fallback_icon () {
-            IconInfo icon_info = null;
-            var _icon = ContentType.get_icon ("text/plain");
-            if (_icon != null)
-                icon_info = 
-                    Gtk.IconTheme.get_default().lookup_by_gicon (_icon, Utils.getIconSize (),
+    public static Gdk.Pixbuf? load_pixbuf_from_name (string name, int size = 48) {
+        IconInfo icon_info = 
+                Gtk.IconTheme.get_default().lookup_icon (name, size,
                                             IconLookupFlags.FORCE_SVG | 
                                             IconLookupFlags.GENERIC_FALLBACK);
-            if (icon_info != null) {
-                try {
-                    return icon_info.load_icon();
-                } catch (Error e) {
-                    warning ("Unable to load pixbuf: " + e.message);
-                }
+        if (icon_info != null) {
+            try {
+                return icon_info.load_icon();
+            } catch (Error e) {
+                warning ("Unable to load pixbuf: " + e.message);
             }
-            return null;
+        }
+        return null;
+    }
+    
+    public static Gdk.Pixbuf? load_pixbuf_from_icon (Icon icon, int size = 48) {
+        IconInfo icon_info = null;
+        if (icon != null)
+            icon_info = 
+                Gtk.IconTheme.get_default().lookup_by_gicon (icon, size,
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
+        if (icon_info != null) {
+            try {
+                return icon_info.load_icon();
+            } catch (Error e) {
+                warning ("Unable to load pixbuf: " + e.message);
+            }
+        }
+        return null;
+    }
+    
+    public static Gdk.Pixbuf? load_fallback_icon () {
+        var _icon = ContentType.get_icon ("text/plain");
+        return load_pixbuf_from_icon (_icon, Utils.getIconSize ());
     }
 
     public async static bool queue_thumbnail_job_for_file_async (File file) {

@@ -269,11 +269,66 @@ private class Journal.CompositeDocumentActor : Clutter.Actor {
     public void update_image (Gdk.Pixbuf pixbuf) {
         this.image.set_pixbuf (pixbuf);
     }
-    
-    public override void get_preferred_width (float for_height,out float min_width, out float nat_width) {
-        nat_width = min_width = image.width + title.width + 1000;
-    }
 }
+
+private class Journal.CompositeApplicationActor : Clutter.Actor {
+    
+    private TextActor title;
+    private TextActor time;
+    private Clutter.Actor icon_box;
+    
+    private Clutter.BoxLayout box;
+    public CompositeApplicationActor (string title_s, string[] uris, string date) {
+        GLib.Object ();
+        this.reactive = true;
+        
+        var attr_list = new Pango.AttrList ();
+        attr_list.insert (Pango.attr_scale_new (Pango.Scale.LARGE));
+        attr_list.insert (Pango.attr_weight_new (Pango.Weight.SEMIBOLD));
+
+        title = new TextActor.full_text (title_s, attr_list);
+        title.margin_bottom = 10;
+
+        attr_list = new Pango.AttrList ();
+        attr_list.insert (Pango.attr_scale_new (Pango.Scale.SMALL));
+        attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
+
+        time = new TextActor.full_text (date, attr_list);
+        time.margin_top = 10;
+        box = new Clutter.BoxLayout ();
+        box.vertical = true;
+        set_layout_manager (box);
+
+        icon_box = new Clutter.Actor ();
+        var manager = new Clutter.FlowLayout (Clutter.FlowOrientation.HORIZONTAL);
+        //manager.set_column_spacing (5);
+        icon_box.set_layout_manager (manager);
+        foreach (string uri in uris) {
+            var info = new  DesktopAppInfo (uri);
+            if (info == null)
+                continue;
+            Gdk.Pixbuf pixbuf = Utils.load_pixbuf_from_icon (info.get_icon ());
+            var image = new ImageActor.from_pixbuf (pixbuf);
+            icon_box.add_child (image);
+        }
+        
+        this.add_child (title);
+        this.add_child (icon_box);
+        this.add_child (time);
+        
+        this.margin_left = this.margin_right = 10;
+    }
+    
+    public override void get_preferred_width (float for_height, out float min_width, out float nat_width) {
+       float box_min_width, box_nat_width;
+       float title_min_width, title_nat_width;
+       icon_box.get_preferred_width(-1, out box_min_width, out box_nat_width);
+       title.get_preferred_width(-1, out title_min_width, out title_nat_width);
+       min_width = float.max (box_min_width, title_min_width) + 10 * 2 ;
+       nat_width = float.max (box_nat_width, title_nat_width) + 10 * 2 ;
+   }
+}
+
 
 private class Journal.RoundedBox : Clutter.Actor {
 
