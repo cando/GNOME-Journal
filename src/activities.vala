@@ -727,13 +727,16 @@ private class Journal.DayActivityModel : Object {
     
     public void create_composite_activities () {
             foreach (string intr in this.activities.keys) {
-                CompositeActivity c_activity = 
-                ActivityFactory.get_composite_activity_for_interpretation (intr, 
-                                                    this.activities.get (intr));
-                c_activity.launch_activity.connect ((activity) => {
-                    this.launch_activity (activity);
-                });
-                composite_activities.add (c_activity);
+                var list = this.activities.get (intr);
+                if (list.size > 0) {
+                    CompositeActivity c_activity = 
+                    ActivityFactory.get_composite_activity_for_interpretation (intr, 
+                                                        this.activities.get (intr));
+                    c_activity.launch_activity.connect ((activity) => {
+                        this.launch_activity (activity);
+                    });
+                    composite_activities.add (c_activity);
+                }
             }
             
             composite_activities.sort ( (a,b) =>{
