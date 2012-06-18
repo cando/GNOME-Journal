@@ -190,6 +190,11 @@ private class Journal.ClutterVTL : Box {
     
     private Gee.Map<string, int> y_positions;
     private Gee.List<string> dates_added;
+    private Gee.Map<string, int> dates_index;
+    
+    //The global and current index of actors
+    private int global_index;
+    private int current_index;
     
     //Position and type of last drawn bubble
     private int last_y_position;
@@ -219,9 +224,11 @@ private class Journal.ClutterVTL : Box {
         this.stage.set_user_resizable (false);
         this.stage.set_background_color (Utils.gdk_rgba_to_clutter_color (
                                          Utils.get_journal_bg_color ()));
-        y_positions = new Gee.HashMap<string, int> ();
-        dates_added = new Gee.ArrayList<string> ();
+        y_positions = new Gee.HashMap <string, int> ();
+        dates_added = new Gee.ArrayList <string> ();
+        dates_index = new Gee.HashMap <string, int> ();
         
+        global_index = 0;current_index = 0;
         last_y_position = 50;
         last_day_line_position = 0;
         last_type = 0;
@@ -248,6 +255,7 @@ private class Journal.ClutterVTL : Box {
         timeline_texture.add_constraint (new Clutter.AlignConstraint (
                                         stage, Clutter.AlignAxis.X_AXIS, 0.5f));
         container.add_child (timeline_texture);
+        global_index++;
         timeline_texture.depth = 0;
 
         container.scroll_event.connect ( (e) => {
@@ -321,7 +329,7 @@ private class Journal.ClutterVTL : Box {
         
           
         if (dates_added.size > 0 && dates_loaded.size > 0) {
-            DateTime dt = Utils.datetime_from_string (dates_loaded[0]);;
+            DateTime dt = Utils.datetime_from_string (dates_loaded[0]);
             DateTime last_dt = Utils.datetime_from_string (dates_added.get (dates_added.size - 1));
             if ((last_dt.difference(dt) / TimeSpan.DAY) > 1)
                 //FIXME better name
@@ -347,6 +355,7 @@ private class Journal.ClutterVTL : Box {
             hole.add_child (hole_text);
             hole.set_content_gravity (Clutter.ContentGravity.CENTER);
             container.add_child (hole);
+            global_index++;
             hole.add_constraint (new Clutter.BindConstraint (container, Clutter.BindCoordinate.WIDTH, 0));
             hole.height = 150;
             hole.depth = 2;
@@ -401,6 +410,8 @@ private class Journal.ClutterVTL : Box {
               
               container.add_actor (day_line);
               container.add_actor (date_text);
+              global_index += 2;
+              dates_index.set (date, global_index);
               last_y_position += (int)(day_line.height + text_size);
               
               last_day_line_position = (int)(day_line.y - text_size * 3);
@@ -427,6 +438,7 @@ private class Journal.ClutterVTL : Box {
                 timeline_texture.add_constraint (new Clutter.AlignConstraint (
                                         stage, Clutter.AlignAxis.X_AXIS, 0.5f));
                 container.add_child (timeline_texture);
+                global_index++;
                 timeline_texture.depth = 0;
                 last_y_texture = position;
             }
@@ -440,6 +452,7 @@ private class Journal.ClutterVTL : Box {
             actor.set_y (last_y_position);
             timeline.add_circle (last_y_position);
             container.add_child (actor);
+            global_index++;
             last_actor_height = (int)actor.get_height();
             if (last_type % 2 == 1){ 
                     last_y_position += 40;
@@ -514,7 +527,7 @@ private class Journal.ClutterVTL : Box {
         if (!on_loading && y == limit) {
             //We can't scroll anymmore! Let's load another day!
             loading.start ();
-            model.load_another_day ();
+            model.load_other_days (3);
             on_loading = true;
         }
         

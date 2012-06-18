@@ -829,7 +829,7 @@ private class Journal.ActivityModel : Object {
         }
         
         if (empty) 
-            this.load_another_day ();
+            this.load_other_days (3);
         else
             activities_loaded (dates_loaded);
     }
@@ -868,13 +868,17 @@ private class Journal.ActivityModel : Object {
         backend.load_events_for_date_range (start_date, end_date);
     }
     
-    public void load_another_day () {
+    public void load_other_days (int num_days) {
         TimeVal tv;
-        DateTime larger_date = backend.last_loaded_date.add_days (-1);
+        DateTime larger_date = backend.last_loaded_date.add_days (-num_days);
         larger_date.to_timeval (out tv);
         Date start_date = {};
         start_date.set_time_val (tv);
+        
+        Date end_date = {};
+        backend.last_loaded_date.to_timeval (out tv);
+        end_date.set_time_val (tv);
 
-        backend.load_events_for_date (start_date);
+        backend.load_events_for_date_range (start_date, end_date);
     }
 }
