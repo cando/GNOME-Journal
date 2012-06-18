@@ -141,10 +141,8 @@ public class Journal.ZeitgeistBackend: GLib.Object
           DateTime date = Utils.get_date_for_event (e1);
           string key = date.format("%Y-%m-%d");
           if (days_map.has_key (key) == false)
-          {
             days_map[key] = new Gee.ArrayList<Zeitgeist.Event> ();
-            last_loaded_date = date;
-          }
+            
           days_map[key].add (e1);
         }
         
@@ -157,6 +155,8 @@ public class Journal.ZeitgeistBackend: GLib.Object
     public void load_events_for_timerange (Zeitgeist.TimeRange tr) {
         load_uri_events.begin (tr);
         load_application_events.begin (tr);
+        
+        last_loaded_date = Utils.get_start_of_the_day (tr.get_start ());
     }
     
     public void load_events_for_timestamp_range (int64 start, int64 end) {
@@ -183,6 +183,16 @@ public class Journal.ZeitgeistBackend: GLib.Object
             end = Zeitgeist.Timestamp.from_date (end_date);
             tr = new Zeitgeist.TimeRange (start, end);
         }
+        
+        load_events_for_timerange (tr);
+    }
+    
+    public void load_events_for_date (Date date) {
+        int64 ts = Zeitgeist.Timestamp.from_date (date);
+        int64 start = ts;
+        int64 end = Zeitgeist.Timestamp.next_midnight (ts);
+        var tr = new Zeitgeist.TimeRange (start, end);
+        
         load_events_for_timerange (tr);
     }
     

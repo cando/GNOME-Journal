@@ -789,8 +789,8 @@ private class Journal.ActivityModel : Object {
     private void on_events_loaded (Zeitgeist.TimeRange tr) {
         int64 start = tr.get_start () / 1000;
         int64 end = tr.get_end () / 1000;
-        DateTime start_date = new DateTime.from_unix_utc (start).to_local ();
-        DateTime end_date = new DateTime.from_unix_utc (end).to_local ();
+        DateTime start_date = new DateTime.from_unix_local (start);
+        DateTime end_date = new DateTime.from_unix_local (end);
         
         var dates_loaded = new Gee.ArrayList<string> ();
         DateTime next_date = end_date;
@@ -819,7 +819,19 @@ private class Journal.ActivityModel : Object {
                     else
                         return 1;
                 });
-        activities_loaded (dates_loaded);
+        
+        var empty = true;
+        foreach (string d in dates_loaded) {
+            if (!d.has_prefix ("*")) {
+                empty = false;
+                break;
+            }
+        }
+        
+        if (empty) 
+            this.load_another_day ();
+        else
+            activities_loaded (dates_loaded);
     }
     
     private bool add_day (string day) {
@@ -862,10 +874,7 @@ private class Journal.ActivityModel : Object {
         larger_date.to_timeval (out tv);
         Date start_date = {};
         start_date.set_time_val (tv);
-        Date end_date = {};
-        backend.last_loaded_date.to_timeval (out tv);
-        end_date.set_time_val (tv);
-        
-        backend.load_events_for_date_range (start_date, end_date);
+
+        backend.load_events_for_date (start_date);
     }
 }

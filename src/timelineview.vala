@@ -318,9 +318,10 @@ private class Journal.ClutterVTL : Box {
         //or if there is an hole between two loaded period.
         var add_empty_range = false;
         var skip_date = false;
+        
           
-        if (dates_added.size > 0) {
-            DateTime dt = Utils.datetime_from_string (dates_loaded[0]);
+        if (dates_added.size > 0 && dates_loaded.size > 0) {
+            DateTime dt = Utils.datetime_from_string (dates_loaded[0]);;
             DateTime last_dt = Utils.datetime_from_string (dates_added.get (dates_added.size - 1));
             if ((last_dt.difference(dt) / TimeSpan.DAY) > 1)
                 //FIXME better name
@@ -358,6 +359,9 @@ private class Journal.ClutterVTL : Box {
         
         foreach (string date in dates_loaded)
         {
+          if (dates_added.contains (date))
+              continue;
+              
           skip_date = false;
           if (date.has_prefix ("*")){
                 date = date.split ("*")[1];
