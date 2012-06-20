@@ -192,7 +192,7 @@ public class Journal.App: GLib.Object {
         activity_page = new ActivityInfoPage ();
         notebook.append_page (activity_page, null);
         
-        model.launch_activity.connect ((activity) => {
+        model.launch_composite_activity.connect ((activity) => {
             activity_page.set_activity (activity);
             notebook.next_page ();
             main_toolbar.set_back_visible (true);

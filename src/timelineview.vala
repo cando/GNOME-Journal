@@ -285,7 +285,7 @@ private class Journal.ClutterVTL : Box {
 
             var activity_list = model.activities.get (date);
             BubbleContainer bubble_c = new BubbleContainer (stage);
-            foreach (CompositeActivity activity in activity_list.composite_activities) 
+            foreach (GenericActivity activity in activity_list.composite_activities) 
                  bubble_c.append_bubble (activity);
 
             container.get_layout_manager ().child_set_property (container, bubble_c, "x-fill", true);
@@ -416,7 +416,7 @@ private class Journal.BubbleContainer : Clutter.Actor {
         turn = 0;
     }
     
-    public void append_bubble (CompositeActivity activity) {
+    public void append_bubble (GenericActivity activity) {
         RoundBox rb;
         if (turn % 2 == 0) {
             rb = new RoundBox (Side.RIGHT, activity);
@@ -509,7 +509,7 @@ private class Journal.RoundBox : Clutter.Actor {
     private Clutter.Canvas canvas;
     private Clutter.Actor content_actor;
     
-    private CompositeActivity activity;
+    private GenericActivity activity;
 
     public Side arrow_side {
         get { return _arrowSide; }
@@ -518,7 +518,7 @@ private class Journal.RoundBox : Clutter.Actor {
     private bool enter;
 
     private Clutter.BinLayout box;
-    public RoundBox (Side side, CompositeActivity activity) {
+    public RoundBox (Side side, GenericActivity activity) {
        this._arrowSide = side;
        this.border_width = BORDER_WIDTH;
        this.activity = activity;

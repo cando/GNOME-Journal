@@ -22,11 +22,25 @@
 using Gdk;
 using Gtk;
 
-private class Journal.GenericActivity : Object {
+private abstract class Journal.GenericActivity : Object {
 
     public Clutter.Actor actor {
         get; protected set;
     }
+    
+    public int64 time_start {
+        get; protected set;
+    }
+    
+    public int64 time_end {
+        get; protected set;
+    }
+    
+    public abstract void launch ();
+    
+}
+
+private class Journal.SingleActivity : GenericActivity {
 
     public Zeitgeist.Event event {
         get; construct set;
@@ -52,10 +66,6 @@ private class Journal.GenericActivity : Object {
         get; private set;
     }
     
-    public int64 time {
-        get; private set;
-    }
-    
     public bool selected {
         get; set;
     }
@@ -73,7 +83,7 @@ private class Journal.GenericActivity : Object {
     
     public signal void thumb_loaded ();
 
-    public GenericActivity (Zeitgeist.Event event) {
+    public SingleActivity (Zeitgeist.Event event) {
         Object (event: event);
     }
     
@@ -85,7 +95,7 @@ private class Journal.GenericActivity : Object {
         this.display_uri = create_display_uri ();
         this.title = subject.get_text () == null ? 
                      this.display_uri : subject.get_text ();
-        this.time = event.get_timestamp ();
+        this.time_start = this.time_end = event.get_timestamp ();
         this.selected = false;
         this.mimetype = subject.get_mimetype ();
         string intpr = subject.get_interpretation ();
@@ -136,7 +146,7 @@ private class Journal.GenericActivity : Object {
             info = yield file.query_info_async(FileAttribute.THUMBNAIL_PATH,
                                                     0, 0, null);
         } catch (Error e) {
-            warning ("Unable to query info for file at " + this.uri + ": " + e.message);
+            debug ("Unable to query info for file at " + this.uri + ": " + e.message);
         }
         
         if (info != null) {
@@ -156,7 +166,7 @@ private class Journal.GenericActivity : Object {
             info = yield file.query_info_async (FileAttribute.THUMBNAIL_PATH,
                                                0, 0, null);
         } catch (Error e) {
-            warning ("Unable to query info for file at " + this.uri + ": " + e.message);
+            debug ("Unable to query info for file at " + this.uri + ": " + e.message);
             return;
         }
 
@@ -182,7 +192,7 @@ private class Journal.GenericActivity : Object {
                 //Let's use this for the moment.
                 this.thumb_icon = this.type_icon;
             } catch (Error e) {
-                warning ("Unable to load pixbuf: " + e.message);
+                debug ("Unable to load pixbuf: " + e.message);
             }
         }
         
@@ -201,7 +211,7 @@ private class Journal.GenericActivity : Object {
                     //Let's use this for the moment.
                     this.thumb_icon = this.type_icon;
                 } catch (Error e) {
-                    warning ("Unable to load pixbuf: " + e.message);
+                    debug ("Unable to load pixbuf: " + e.message);
                 }
             }
         }
@@ -219,12 +229,12 @@ private class Journal.GenericActivity : Object {
             update_icon ();
             thumb_loaded ();
         } catch (Error e) {
-            warning ("Unable to load pixbuf of"+ this.uri+" : " + e.message);
+            debug ("Unable to load pixbuf of"+ this.uri+" : " + e.message);
        }
     }
     
     public virtual Clutter.Actor create_actor () {
-        DateTime d = new DateTime.from_unix_utc (this.time / 1000).to_local ();
+        DateTime d = new DateTime.from_unix_utc (this.time_start / 1000).to_local ();
         string date = d.format ("%H:%M");
         actor = new DocumentActor (this.title, this.type_icon, date);
         return actor;
@@ -233,28 +243,36 @@ private class Journal.GenericActivity : Object {
     public virtual void update_icon () {
         ((DocumentActor)actor).update_image (this.thumb_icon);
     }
+    
+    public override void launch (){
+        try {
+            AppInfo.launch_default_for_uri (uri, null);
+        } catch (Error e) {
+            warning ("Impossible to launch " + uri);
+        }
+    }
 }
 
 /**Single Activity**/
-private class Journal.DocumentActivity : GenericActivity {
+private class Journal.DocumentActivity : SingleActivity {
     public DocumentActivity (Zeitgeist.Event event) {
         Object (event:event);
     }
 }
 
-private class Journal.DevelopmentActivity : GenericActivity {
+private class Journal.DevelopmentActivity : SingleActivity {
     public DevelopmentActivity (Zeitgeist.Event event) {
         Object (event:event);
     }
 }
 
-private class Journal.AudioActivity : GenericActivity {
+private class Journal.AudioActivity : SingleActivity {
     public AudioActivity (Zeitgeist.Event event) {
         Object (event:event);
     }
 }
 
-private class Journal.ImageActivity : GenericActivity {
+private class Journal.ImageActivity : SingleActivity {
     public ImageActivity (Zeitgeist.Event event) {
         Object (event:event);
     }
@@ -269,7 +287,7 @@ private class Journal.ImageActivity : GenericActivity {
     }
 }
 
-private class Journal.VideoActivity : GenericActivity {
+private class Journal.VideoActivity : SingleActivity {
     public VideoActivity (Zeitgeist.Event event) {
         Object (event:event);
     }
@@ -284,7 +302,7 @@ private class Journal.VideoActivity : GenericActivity {
     }
 }
 
-private class Journal.ApplicationActivity : GenericActivity {
+private class Journal.ApplicationActivity : SingleActivity {
     public ApplicationActivity (Zeitgeist.Event event) {
         Object (event:event);
     }
@@ -307,15 +325,11 @@ private class Journal.ApplicationActivity : GenericActivity {
 }
 
 /**Collection of Activity TODO documention here!**/
-private class Journal.CompositeActivity : Object {
+private class Journal.CompositeActivity : GenericActivity {
 
     private const int MAXIMUM_ITEMS = 5;
 
-    public Clutter.Actor actor {
-        get; protected set;
-    }
-
-    public Gee.List<GenericActivity> activities {
+    public Gee.List<SingleActivity> activities {
         get; construct set;
     }
     
@@ -331,14 +345,6 @@ private class Journal.CompositeActivity : Object {
         get; private set;
     }
     
-    public int64 time_start {
-        get; private set;
-    }
-    
-    public int64 time_end {
-        get; private set;
-    }
-    
     public string date {
         get; private set;
     }
@@ -346,17 +352,17 @@ private class Journal.CompositeActivity : Object {
     public bool selected {
         get; set;
     }
-
-    public CompositeActivity (Gee.List<GenericActivity> activities) {
-        Object (activities: activities);
-    }
     
     public signal void launch_activity (CompositeActivity activity);
+
+    public CompositeActivity (Gee.List<SingleActivity> activities) {
+        Object (activities: activities);
+    }
     
     construct {
         this.uris = new string[int.min (MAXIMUM_ITEMS + 1, activities.size)];
         int i = 0;
-        foreach (GenericActivity activity in activities) {
+        foreach (SingleActivity activity in activities) {
             if (i >= MAXIMUM_ITEMS) {
                 this.uris[i] = "...";
                 break;
@@ -371,13 +377,13 @@ private class Journal.CompositeActivity : Object {
         //Subclasses will modify this.
         this.title = create_title ();
         //First activity timestamp? FIXME
-        int64 min_start_t = activities.get(0).time;
+        int64 min_start_t = activities.get(0).time_start;
         int64 max_end_t = 0;
-        foreach (GenericActivity activity in activities) {
-            if (activity.time < min_start_t)
-                min_start_t = activity.time;
-            else if (activity.time > max_end_t )
-                max_end_t = activity.time;
+        foreach (SingleActivity activity in activities) {
+            if (activity.time_start < min_start_t)
+                min_start_t = activity.time_start;
+            else if (activity.time_start > max_end_t )
+                max_end_t = activity.time_start;
         }
         this.time_start = min_start_t;
         this.time_end = max_end_t;
@@ -415,13 +421,13 @@ private class Journal.CompositeActivity : Object {
         return actor;
     }
     
-    public void launch (){
+    public override void launch (){
         this.launch_activity (this);
     }
 }
 
 private class Journal.CompositeDocumentActivity : CompositeActivity {
-    public CompositeDocumentActivity (Gee.List<GenericActivity> activities) {
+    public CompositeDocumentActivity (Gee.List<SingleActivity> activities) {
         Object (activities:activities);
     }
     
@@ -435,7 +441,7 @@ private class Journal.CompositeDocumentActivity : CompositeActivity {
                                             IconLookupFlags.FORCE_SVG | 
                                             IconLookupFlags.GENERIC_FALLBACK);
         } catch (Error e) {
-            warning ("Unable to load pixbuf: " + e.message);
+            debug ("Unable to load pixbuf: " + e.message);
         }
         
         return null;
@@ -443,7 +449,7 @@ private class Journal.CompositeDocumentActivity : CompositeActivity {
 }
 
 private class Journal.CompositeAudioActivity : CompositeActivity {
-    public CompositeAudioActivity (Gee.List<GenericActivity> activities) {
+    public CompositeAudioActivity (Gee.List<SingleActivity> activities) {
         Object (activities:activities);
     }
     
@@ -457,7 +463,7 @@ private class Journal.CompositeAudioActivity : CompositeActivity {
                                             IconLookupFlags.FORCE_SVG | 
                                             IconLookupFlags.GENERIC_FALLBACK);
         } catch (Error e) {
-            warning ("Unable to load pixbuf: " + e.message);
+            debug ("Unable to load pixbuf: " + e.message);
         }
         
         return null;
@@ -465,7 +471,7 @@ private class Journal.CompositeAudioActivity : CompositeActivity {
 }
 
 private class Journal.CompositeDevelopmentActivity : CompositeActivity {
-    public CompositeDevelopmentActivity (Gee.List<GenericActivity> activities) {
+    public CompositeDevelopmentActivity (Gee.List<SingleActivity> activities) {
         Object (activities:activities);
     }
     
@@ -479,7 +485,7 @@ private class Journal.CompositeDevelopmentActivity : CompositeActivity {
                                             IconLookupFlags.FORCE_SVG | 
                                             IconLookupFlags.GENERIC_FALLBACK);
         } catch (Error e) {
-            warning ("Unable to load pixbuf: " + e.message);
+            debug ("Unable to load pixbuf: " + e.message);
         }
         
         return null;
@@ -487,7 +493,7 @@ private class Journal.CompositeDevelopmentActivity : CompositeActivity {
 }
 
 private class Journal.CompositeImageActivity : CompositeActivity {
-    public CompositeImageActivity (Gee.List<GenericActivity> activities) {
+    public CompositeImageActivity (Gee.List<SingleActivity> activities) {
         Object (activities:activities);
     }
     
@@ -501,7 +507,7 @@ private class Journal.CompositeImageActivity : CompositeActivity {
                                             IconLookupFlags.FORCE_SVG | 
                                             IconLookupFlags.GENERIC_FALLBACK);
         } catch (Error e) {
-            warning ("Unable to load pixbuf: " + e.message);
+            debug ("Unable to load pixbuf: " + e.message);
         }
         
         return null;
@@ -509,7 +515,7 @@ private class Journal.CompositeImageActivity : CompositeActivity {
 }
 
 private class Journal.CompositeVideoActivity : CompositeActivity {
-    public CompositeVideoActivity (Gee.List<GenericActivity> activities) {
+    public CompositeVideoActivity (Gee.List<SingleActivity> activities) {
         Object (activities:activities);
     }
     
@@ -523,7 +529,7 @@ private class Journal.CompositeVideoActivity : CompositeActivity {
                                             IconLookupFlags.FORCE_SVG | 
                                             IconLookupFlags.GENERIC_FALLBACK);
         } catch (Error e) {
-            warning ("Unable to load pixbuf: " + e.message);
+            debug ("Unable to load pixbuf: " + e.message);
         }
         
         return null;
@@ -531,7 +537,7 @@ private class Journal.CompositeVideoActivity : CompositeActivity {
 }
 
 private class Journal.CompositeApplicationActivity : CompositeActivity {
-    public CompositeApplicationActivity (Gee.List<GenericActivity> activities) {
+    public CompositeApplicationActivity (Gee.List<SingleActivity> activities) {
         Object (activities:activities);
     }
     
@@ -545,7 +551,7 @@ private class Journal.CompositeApplicationActivity : CompositeActivity {
                                             IconLookupFlags.FORCE_SVG | 
                                             IconLookupFlags.GENERIC_FALLBACK);
         } catch (Error e) {
-            warning ("Unable to load pixbuf: " + e.message);
+            debug ("Unable to load pixbuf: " + e.message);
         }
         
         return null;
@@ -558,7 +564,7 @@ private class Journal.CompositeApplicationActivity : CompositeActivity {
 }
 
 private class Journal.CompositeDownloadActivity : CompositeActivity {
-    public CompositeDownloadActivity (Gee.List<GenericActivity> activities) {
+    public CompositeDownloadActivity (Gee.List<SingleActivity> activities) {
         Object (activities:activities);
     }
     
@@ -572,7 +578,7 @@ private class Journal.CompositeDownloadActivity : CompositeActivity {
                                             IconLookupFlags.FORCE_SVG | 
                                             IconLookupFlags.GENERIC_FALLBACK);
         } catch (Error e) {
-            warning ("Unable to load pixbuf: " + e.message);
+            debug ("Unable to load pixbuf: " + e.message);
         }
         
         return null;
@@ -649,7 +655,7 @@ private class Journal.ActivityFactory : Object {
     
     /****PUBLIC METHODS****/
     
-    public static GenericActivity get_activity_for_event (Zeitgeist.Event event) {
+    public static SingleActivity get_activity_for_event (Zeitgeist.Event event) {
         if (interpretation_types == null)
             init ();
             
@@ -660,16 +666,16 @@ private class Journal.ActivityFactory : Object {
         
         if (interpretation_types.has_key (intpr)){
             Type activity_class = interpretation_types.get (intpr);
-            GenericActivity activity = (GenericActivity) 
+            SingleActivity activity = (SingleActivity) 
                                         Object.new (activity_class, event:event);
             return activity;
         }
-        return new GenericActivity (event);
+        return new SingleActivity (event);
     }
     
     public static CompositeActivity get_composite_activity_for_interpretation (
                                      string intpr,
-                                     Gee.List<GenericActivity> activities) {
+                                     Gee.List<SingleActivity> activities) {
         if (interpretation_types_comp == null)
             init ();
             
@@ -690,11 +696,11 @@ private class Journal.ActivityFactory : Object {
 private class Journal.DayActivityModel : Object {
 
     //Key: Zeitgeist.Interpretation
-    public Gee.Map<string, Gee.List<GenericActivity>> activities {
+    public Gee.Map<string, Gee.List<SingleActivity>> activities {
         get; private set;
     }
     
-    public Gee.List<CompositeActivity> composite_activities {
+    public Gee.List<GenericActivity> composite_activities {
         get; private set;
     }
     
@@ -702,21 +708,21 @@ private class Journal.DayActivityModel : Object {
         get; private set;
     }
     
-    public signal void launch_activity (CompositeActivity activity);
+    public signal void launch_composite_activity (CompositeActivity activity);
 
     public DayActivityModel (string day) {
-        activities = new Gee.HashMap<string, Gee.List<GenericActivity>> ();
-        composite_activities = new Gee.ArrayList<CompositeActivity> ();
+        activities = new Gee.HashMap<string, Gee.List<SingleActivity>> ();
+        composite_activities = new Gee.ArrayList<GenericActivity> ();
         this.day = day;
     }
     
-    public void add_activity (GenericActivity activity) {
+    public void add_activity (SingleActivity activity) {
         string interpretation = activity.interpretation;
         if (!activities.has_key (interpretation))
             activities.set (activity.interpretation, 
-                            new Gee.ArrayList<GenericActivity> ((a, b) => {
-                                GenericActivity first = (GenericActivity) a;
-                                GenericActivity second = (GenericActivity) b;
+                            new Gee.ArrayList<SingleActivity> ((a, b) => {
+                                SingleActivity first = (SingleActivity) a;
+                                SingleActivity second = (SingleActivity) b;
                                 return (first.uri == second.uri);
                             }));
                             
@@ -728,20 +734,22 @@ private class Journal.DayActivityModel : Object {
     public void create_composite_activities () {
             foreach (string intr in this.activities.keys) {
                 var list = this.activities.get (intr);
-                if (list.size > 0) {
+                if (list.size > 1) {
                     CompositeActivity c_activity = 
                     ActivityFactory.get_composite_activity_for_interpretation (intr, 
                                                         this.activities.get (intr));
                     c_activity.launch_activity.connect ((activity) => {
-                        this.launch_activity (activity);
+                        this.launch_composite_activity (activity as CompositeActivity);
                     });
                     composite_activities.add (c_activity);
                 }
+                else 
+                    composite_activities.add (list.get (0));
             }
             
             composite_activities.sort ( (a,b) =>{
-                    CompositeActivity first = (CompositeActivity)a;
-                    CompositeActivity second = (CompositeActivity)b;
+                    GenericActivity first = (GenericActivity)a;
+                    GenericActivity second = (GenericActivity)b;
                     if (first.time_start > second.time_start)
                         return -1;
                     else if (first.time_start == second.time_start)
@@ -752,7 +760,7 @@ private class Journal.DayActivityModel : Object {
     }
     
 /****One day will be useful...but not now!*********/
-//    public void remove_activity (GenericActivity activity) {
+//    public void remove_activity (SingleActivity activity) {
 //        string interpretation = activity.interpretation;
 //        if (!activities.has_key (interpretation))
 //            return;
@@ -774,7 +782,7 @@ private class Journal.ActivityModel : Object {
     }
     
     public signal void activities_loaded (Gee.ArrayList<string> dates_loaded);
-    public signal void launch_activity (CompositeActivity activity);
+    public signal void launch_composite_activity (CompositeActivity activity);
 
     public ActivityModel () {
         activities = new Gee.HashMap<string, DayActivityModel> ();
@@ -808,13 +816,13 @@ private class Journal.ActivityModel : Object {
         
         //Sort for timestamp order
         foreach (DayActivityModel day_model in activities.values) 
-            foreach (Gee.List<GenericActivity> list in day_model.activities.values)
+            foreach (Gee.List<SingleActivity> list in day_model.activities.values)
                 list.sort ( (a,b) =>{
-                    GenericActivity first = (GenericActivity)a;
-                    GenericActivity second = (GenericActivity)b;
-                    if (first.time > second.time)
+                    SingleActivity first = (SingleActivity)a;
+                    SingleActivity second = (SingleActivity)b;
+                    if (first.time_start > second.time_start)
                         return -1;
-                    else if (first.time == second.time)
+                    else if (first.time_start == second.time_start)
                         return 0;
                     else
                         return 1;
@@ -840,13 +848,13 @@ private class Journal.ActivityModel : Object {
         if (event_list == null)
                 return false;
         foreach (Zeitgeist.Event e in event_list) {
-            GenericActivity activity = ActivityFactory.get_activity_for_event (e);
+            SingleActivity activity = ActivityFactory.get_activity_for_event (e);
             model.add_activity (activity);
         }
         model.create_composite_activities ();
         activities.set (day, model);
-        model.launch_activity.connect ((activity) => {
-                    this.launch_activity (activity);
+        model.launch_composite_activity.connect ((activity) => {
+                    this.launch_composite_activity (activity);
         });
         return true;
     }

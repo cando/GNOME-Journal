@@ -90,7 +90,7 @@ private class Journal.ImageActor : Clutter.Actor {
         try {
             pixbuf =  new Gdk.Pixbuf.from_file (uri);
         } catch (Error e) {
-            warning("Can't load " + uri);
+            debug ("Can't load " + uri);
             pixbuf = Utils.load_fallback_icon ();
         }
         if (pixbuf != null)
@@ -107,7 +107,7 @@ private class Journal.ImageActor : Clutter.Actor {
             pixbuf.height,
             pixbuf.rowstride);
         } catch (Error e) {
-            warning("Can't load pixbuf");
+            debug ("Can't load pixbuf");
         }
         
         this.set_size (pixbuf.width, pixbuf.height);
@@ -122,7 +122,7 @@ private class Journal.ImageActor : Clutter.Actor {
             pixbuf.height,
             pixbuf.rowstride);
         } catch (Error e) {
-            warning("Can't load pixbuf");
+            debug ("Can't load pixbuf");
         }
         this.set_size (pixbuf.width, pixbuf.height);
      }
@@ -135,7 +135,7 @@ private class Journal.VideoActor : ClutterGst.VideoTexture {
         GLib.Object ();
         this.reactive = true;
         this.playing = false;
-        this.set_keep_aspect_ratio (true);
+        //this.set_keep_aspect_ratio (true);
         this.set_height (MEDIA_SIZE_LARGE);
         this.set_width (MEDIA_SIZE_LARGE);
         this.set_filename (uri);

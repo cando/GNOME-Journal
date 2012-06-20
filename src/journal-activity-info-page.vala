@@ -30,14 +30,14 @@ private class Journal.ActivityInfoPage : Box {
     public void set_activity (CompositeActivity activity) {
         model.clear ();
         TreeIter iter;
-        foreach (GenericActivity act in activity.activities) {
+        foreach (SingleActivity act in activity.activities) {
             this.model.append (out iter);
             this.model.set (iter,
                             0, act.uri,
                             1, act.title,
                             2, act.thumb_icon,
                             3, act.display_uri,
-                            4, act.time,
+                            4, act.time_start,
                             5, act.selected);
            
            act.thumb_loaded.connect (() => {
@@ -52,7 +52,7 @@ private class Journal.ActivityInfoPage : Box {
         this.show_all ();
     }
     
-    private void update_icon_for_activity (GenericActivity activity) {
+    private void update_icon_for_activity (SingleActivity activity) {
         //TODO Animated transition for the new icon?
         this.model.foreach ((model, path, iter) => {
             Value uri;
