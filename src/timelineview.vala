@@ -226,8 +226,10 @@ private class Journal.ClutterVTL : Box {
        
        model.activities_loaded.connect ((dates_loaded)=> {
             load_activities (dates_loaded);
-            loading.stop ();
             on_loading = false;
+            loading.stop ();
+            if(date_to_jump != null) 
+                jump_to_day (date_to_jump);
        });
     }
     
@@ -249,7 +251,6 @@ private class Journal.ClutterVTL : Box {
             }
             i++;
         }
-        
         //Else append to the end
         return container.get_n_children ();
     }
@@ -267,7 +268,7 @@ private class Journal.ClutterVTL : Box {
        scrollbar.adjustment.page_increment = scrollbar.adjustment.upper / 10;
     }
     
-    public void load_activities (Gee.ArrayList<string> dates_loaded) {
+    private void load_activities (Gee.ArrayList<string> dates_loaded) {
         foreach (string date in dates_loaded) {
             if (dates_added.contains (date) || date.has_prefix ("*"))
               continue;
@@ -290,18 +291,21 @@ private class Journal.ClutterVTL : Box {
             container.get_layout_manager ().child_set_property (container, bubble_c, "x-fill", true);
             container.insert_child_at_index (bubble_c, index);
         }
-            
-       if(date_to_jump != null) 
-            jump_to_day (date_to_jump);
-            
+       
        adjust_scrollbar ();
     }
     
-    public void jump_to_day (DateTime date) {
+    private void jump_to_day (DateTime date) {
         float y = 0;
         string date_s = date.format("%Y-%m-%d");
         if (y_positions.has_key (date_s) == true) {
             y = this.y_positions.get (date_s).get_y ();
+            if (y == 0 && date.compare (Utils.get_start_of_today ()) != 0)
+                //FIXME WTF? why y is 0 for a newly added actor;
+                Idle.add (()=>{
+                    jump_to_day (date);
+                    return false;
+                });
             viewport.scroll_to_point (0.0f, y);
             scrollbar.adjustment.upper = container.height;
             scrollbar.adjustment.value = y;
@@ -328,7 +332,7 @@ private class Journal.ClutterVTL : Box {
         }
     }
     
-    public void on_scrollbar_scroll () {
+    private void on_scrollbar_scroll () {
         float y = (float)(scrollbar.adjustment.value);
         viewport.scroll_to_point (0.0f, y);
         var limit = (int)scrollbar.adjustment.upper - scrollbar.adjustment.page_size;
