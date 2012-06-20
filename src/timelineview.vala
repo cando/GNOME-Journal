@@ -138,9 +138,9 @@ private class Journal.ClutterVTL : Box {
     private OSDLabel osd_label;
     private LoadingActor loading;
     
-    private Gee.Map<string, float?> y_positions;
+    private Gee.Map<string, Clutter.Actor> y_positions;
     private Gee.List<string> dates_added;
-    
+
     //Date to jump when we have loaded new events
     private DateTime? date_to_jump;
     
@@ -156,7 +156,7 @@ private class Journal.ClutterVTL : Box {
         this.stage.set_background_color (Utils.gdk_rgba_to_clutter_color (
                                          Utils.get_journal_bg_color ()));
         
-        y_positions = new Gee.HashMap <string, float?> ();
+        y_positions = new Gee.HashMap <string, Clutter.Actor> ();
         dates_added = new Gee.ArrayList <string> ();
         
         viewport = new ScrollableViewport ();
@@ -231,19 +231,56 @@ private class Journal.ClutterVTL : Box {
        });
     }
     
-    public void load_activities (Gee.ArrayList<string> dates_loaded) {
+    private int get_child_index_for_date (string date) {
+        var datetime = Utils.datetime_from_string (date);
+        dates_added.sort ( (a,b) => {
+            DateTime first = Utils.datetime_from_string ((string)a);
+            DateTime second= Utils.datetime_from_string ((string)b);
+            return - first.compare (second);
+        });
+        
+        int i = 0;
+        foreach (string d in dates_added) {
+            DateTime dt = Utils.datetime_from_string (d);
+            if (dt.compare (datetime) <= 0) {
+                //i*2 because the first child is the date and the second is the
+                //list of activities
+                return i * 2;
+            }
+            i++;
+        }
+        
+        //Else append to the end
+        return container.get_n_children ();
+    }
+    
+    private void adjust_scrollbar () {
+        if (container.height <= stage.height)
+            scrollbar.hide ();
+       else 
+            scrollbar.show ();
 
+       scrollbar.adjustment.upper = container.height;
+       uint num_child = container.get_n_children ();
+       scrollbar.adjustment.step_increment = scrollbar.adjustment.upper / 
+                                            (num_child * 15);
+       scrollbar.adjustment.page_increment = scrollbar.adjustment.upper / 10;
+    }
+    
+    public void load_activities (Gee.ArrayList<string> dates_loaded) {
         foreach (string date in dates_loaded) {
             if (dates_added.contains (date) || date.has_prefix ("*"))
               continue;
             
+            var index = get_child_index_for_date (date);
             dates_added.add (date);
-            
-            y_positions.set (date, container.height);
             
             var day_actor = new DayActor (date);
             day_actor.add_constraint (new Clutter.AlignConstraint (stage, Clutter.AlignAxis.X_AXIS, 0.5f));
-            container.add_child (day_actor);
+            container.insert_child_at_index (day_actor, index);
+            y_positions.set (date, day_actor);
+
+            index ++;
 
             var activity_list = model.activities.get (date);
             BubbleContainer bubble_c = new BubbleContainer (stage);
@@ -251,28 +288,20 @@ private class Journal.ClutterVTL : Box {
                  bubble_c.append_bubble (activity);
 
             container.get_layout_manager ().child_set_property (container, bubble_c, "x-fill", true);
-            container.add_child (bubble_c);
+            container.insert_child_at_index (bubble_c, index);
         }
-        
-       if (container.height <= stage.height)
-            scrollbar.hide ();
-       else 
-            scrollbar.show ();
             
        if(date_to_jump != null) 
             jump_to_day (date_to_jump);
-
-       scrollbar.adjustment.upper = container.height;
-       uint num_child = container.get_children ().length ();
-       scrollbar.adjustment.step_increment = scrollbar.adjustment.upper / (num_child * 15);
-       scrollbar.adjustment.page_increment = scrollbar.adjustment.upper / 10;
+            
+       adjust_scrollbar ();
     }
     
     public void jump_to_day (DateTime date) {
         float y = 0;
         string date_s = date.format("%Y-%m-%d");
         if (y_positions.has_key (date_s) == true) {
-            y = this.y_positions.get (date_s);
+            y = this.y_positions.get (date_s).get_y ();
             viewport.scroll_to_point (0.0f, y);
             scrollbar.adjustment.upper = container.height;
             scrollbar.adjustment.value = y;
@@ -286,7 +315,7 @@ private class Journal.ClutterVTL : Box {
                 //event period too far and not present in the db.
                 date_s = dates_added.get (dates_added.size - 1);
                 if (y_positions.has_key (date_s) == true) {
-                    y = this.y_positions.get (date_s);
+                    y = this.y_positions.get (date_s).get_y ();
                     viewport.scroll_to_point (0.0f, y);
                     scrollbar.adjustment.upper = container.height;
                     scrollbar.adjustment.value = y;
@@ -294,8 +323,8 @@ private class Journal.ClutterVTL : Box {
                 }
                 return;
             }
-            date_to_jump = date;
             model.load_activities (date);
+            date_to_jump = date;
         }
     }
     
@@ -313,8 +342,8 @@ private class Journal.ClutterVTL : Box {
         //We are moving so we should highligth the right TimelineNavigator's label
         string final_key = "";
         float final_pos = 0;
-        foreach (Gee.Map.Entry<string, float?> entry in y_positions.entries) {
-            float current_value = entry.value;
+        foreach (Gee.Map.Entry<string, Clutter.Actor> entry in y_positions.entries) {
+            float current_value = entry.value.get_y ();
             if (current_value <= ((y) + stage.height / 2) && current_value > final_pos) {
                 final_key = entry.key;
                 final_pos = current_value;
@@ -481,6 +510,8 @@ private class Journal.RoundBox : Clutter.Actor {
     public Side arrow_side {
         get { return _arrowSide; }
     }
+    
+    private bool enter;
 
     private Clutter.BinLayout box;
     public RoundBox (Side side, CompositeActivity activity) {
@@ -518,6 +549,8 @@ private class Journal.RoundBox : Clutter.Actor {
                 activity.launch ();
                 return false;
        });
+       
+       enter = false;
     }
 
     private bool paint_canvas (Cairo.Context ctx, int width, int height) {
@@ -534,6 +567,8 @@ private class Journal.RoundBox : Clutter.Actor {
         Clutter.Color backgroundColor = Utils.gdk_rgba_to_clutter_color (bg);
         var color = Utils.get_roundbox_border_color ();
         Clutter.Color borderColor = Utils.gdk_rgba_to_clutter_color (color);
+        if (enter)
+            borderColor = borderColor.darken ();
 
         var boxWidth = width;
         var boxHeight = height;
@@ -655,12 +690,14 @@ private class Journal.RoundBox : Clutter.Actor {
     }
     
     public override  bool enter_event (Clutter.CrossingEvent event) {
-        //FIXME do something
+        enter = true;
+        canvas.invalidate ();
         return false;
     }
     
     public override  bool leave_event (Clutter.CrossingEvent event) {
-        //FIXME do something
+        enter = false;
+        canvas.invalidate ();
         return false;
     }
     
