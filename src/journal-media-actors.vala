@@ -153,34 +153,29 @@ private class Journal.ImageContent : Clutter.Actor {
 private class Journal.VideoContent : Clutter.Actor {
 
     private ClutterGst.VideoTexture video;
+    private ImageContent preview;
     private bool playing;
 
-    public VideoContent (string uri) {
+    public VideoContent (string uri, Gdk.Pixbuf thumbnail) {
         GLib.Object ();
         this.playing = false;
         this.reactive = true;
         
         video = new ClutterGst.VideoTexture ();
         //FIXME IMPROVE
-        video.set_height (MEDIA_SIZE_NORMAL);
-        video.set_width (MEDIA_SIZE_NORMAL * 1.5f);
         video.set_keep_aspect_ratio (true);
         video.set_property("seek-flags", 1);
         video.set_uri (uri);
         
-        video.size_change.connect ((b_w, b_h) => {
-            //FIXME Improve!
-            b_w /= 4;
-            b_h /= 4;
-            video.save_easing_state();
-            video.set_size (b_w, b_h);
-            video.restore_easing_state();
-        });
+        preview = new ImageContent.from_pixbuf (thumbnail);
+        video.set_size (thumbnail.width, thumbnail.height);
         
         this.enter_event.connect ((e) => {
             if (!playing) {
                 this.playing = true;
                 video.set_playing (playing);
+                video.show ();
+                preview.hide ();
             }
             return false;
         });
@@ -191,7 +186,14 @@ private class Journal.VideoContent : Clutter.Actor {
             return false;
         });
         
+        this.add_child (preview);
         this.add_child (video);
+        video.hide ();
+    }
+    
+    public void set_thumbnail (Gdk.Pixbuf thumbnail) {
+        preview.set_pixbuf (thumbnail);
+        video.set_size (thumbnail.width, thumbnail.height);
     }
 }
 
@@ -418,12 +420,24 @@ private class Journal.CompositeImageActor : Clutter.Actor {
         set_layout_manager (box);
 
         image_box = new Clutter.Actor ();
-        var manager = new Clutter.BoxLayout ();
-        manager.vertical = false;
-        manager.spacing = 2;
+        var manager = new Clutter.TableLayout ();
+        manager.column_spacing = 2;
+        manager.row_spacing = 2;
         image_box.set_layout_manager (manager);
-        foreach (ImageContent image in pixbufs) {
-            image_box.add_child (image);
+        int z = 0;
+        if (pixbufs.length > 3) {
+            int num_row = pixbufs.length / 3 + 1;
+            for (int i = 0; i < num_row; i++)
+                for (int j = 0; j < 3 && z < pixbufs.length; j++, z++) {
+                    manager.pack (pixbufs[z], j, i);
+                    manager.set_fill (pixbufs[z], false, false);
+                }
+        }
+        else{
+            for (int i = 0; i < pixbufs.length; i++) {
+                manager.pack (pixbufs[i], 0, i);
+                manager.set_fill (pixbufs[z], false, false);
+            }
         }
         
         this.add_child (title);

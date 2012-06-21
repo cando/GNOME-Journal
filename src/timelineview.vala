@@ -696,13 +696,13 @@ private class Journal.RoundBox : Clutter.Actor {
     public override  bool enter_event (Clutter.CrossingEvent event) {
         enter = true;
         canvas.invalidate ();
-        return false;
+        return true;
     }
     
     public override  bool leave_event (Clutter.CrossingEvent event) {
         enter = false;
         canvas.invalidate ();
-        return false;
+        return true;
     }
     
     public void add_content (Clutter.Actor content) {

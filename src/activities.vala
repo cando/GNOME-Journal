@@ -291,11 +291,11 @@ private class Journal.VideoActivity : SingleActivity {
     }
     
     public override void create_content () {
-        content = new VideoContent (uri);
+        content = new VideoContent (uri, this.type_icon);
     }
     
     public override void update_icon () {
-        //do nothing
+        ((VideoContent)content).set_thumbnail (this.thumb_icon);
     }
 }
 
@@ -367,7 +367,7 @@ private class Journal.CompositeActivity : GenericActivity {
             var uri = Path.get_basename (activity.uri);
             if (uri == null)
                 continue;
-            this.uris[i] = uri;
+            this.uris[i] = uri.replace ("%20", " ");
             i++;
         }
         this.icon = create_icon ();
@@ -513,8 +513,9 @@ private class Journal.CompositeImageActivity : CompositeActivity {
     }
     
     public override void create_actor () {
-        ImageContent[] pixbufs = new ImageContent[activities.size];
-        for (int i = 0; i < activities.size; i++){
+        int num = int.min (12, activities.size);
+        ImageContent[] pixbufs = new ImageContent[num];
+        for (int i = 0; i < num; i++){
             var activity = activities.get (i);
             var content = activity.content as ImageContent;
             if (content.get_parent () != null)
