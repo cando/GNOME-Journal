@@ -23,7 +23,9 @@ using Gtk;
 using Gst;
 
 const int MEDIA_SIZE_NORMAL = 84;
-const int MEDIA_SIZE_LARGE = 128;
+const int MEDIA_SIZE_LARGE = 256;
+
+//TODO Create a general class DocumentActor and then inherits from it
 
 private class Journal.TextActor : Clutter.Text {
 
@@ -74,19 +76,29 @@ private class Journal.TextActor : Clutter.Text {
     }
 }
 
-private class Journal.ImageActor : Clutter.Actor {
-    private Clutter.Image image;
+private class Journal.ImageContent : Clutter.Actor {
+    private Clutter.Canvas canvas;
+    private Gdk.Pixbuf pixbuf;
 
-    public ImageActor () {
+    private ImageContent () {
         GLib.Object ();
-        this.image = new Clutter.Image ();
+        this.canvas = new Clutter.Canvas ();
+        canvas.draw.connect ((cr, w, h) => { return paint_canvas (cr, w, h); });
+        this.set_content (canvas);
+      
         this.set_content_scaling_filters (Clutter.ScalingFilter.TRILINEAR,
-                                    Clutter.ScalingFilter.LINEAR);
-        this.set_content (image);
+                                          Clutter.ScalingFilter.LINEAR);
+                                          
+        this.allocation_changed.connect ((box, f) => {
+            Idle.add (()=>{
+                //see this http://www.mail-archive.com/clutter-app-devel-list@clutter-project.org/msg00116.html
+                canvas.set_size ((int)box.get_width (), (int) box.get_height ());
+                return false;
+            });
+       });
     }
     
-    public ImageActor.from_uri (string uri) {
-        Gdk.Pixbuf pixbuf = null;
+    public ImageContent.from_uri (string uri) {
         try {
             pixbuf =  new Gdk.Pixbuf.from_file (uri);
         } catch (Error e) {
@@ -97,80 +109,106 @@ private class Journal.ImageActor : Clutter.Actor {
             this.from_pixbuf (pixbuf);
     }
     
-     public ImageActor.from_pixbuf (Gdk.Pixbuf pixbuf) {
+     public ImageContent.from_pixbuf (Gdk.Pixbuf pixbuf) {
         this ();
-        try {
-            this.image.set_data (
-            pixbuf.get_pixels (),
-            pixbuf.has_alpha ? Cogl.PixelFormat.RGBA_8888 : Cogl.PixelFormat.RGB_888,
-            pixbuf.width,
-            pixbuf.height,
-            pixbuf.rowstride);
-        } catch (Error e) {
-            debug ("Can't load pixbuf");
-        }
-        
+        this.pixbuf = pixbuf;
         this.set_size (pixbuf.width, pixbuf.height);
+        canvas.set_size (pixbuf.width, pixbuf.height);
+        canvas.invalidate ();
      }
      
      public void set_pixbuf (Gdk.Pixbuf pixbuf) {
-        try {
-            this.image.set_data (
-            pixbuf.get_pixels (),
-            pixbuf.has_alpha ? Cogl.PixelFormat.RGBA_8888 : Cogl.PixelFormat.RGB_888,
-            pixbuf.width,
-            pixbuf.height,
-            pixbuf.rowstride);
-        } catch (Error e) {
-            debug ("Can't load pixbuf");
-        }
+        this.pixbuf = pixbuf;
         this.set_size (pixbuf.width, pixbuf.height);
+        canvas.set_size (pixbuf.width, pixbuf.height);
+        canvas.invalidate ();
+     }
+     
+     private bool paint_canvas (Cairo.Context cr, int width, int height) {
+         cr.save ();
+         cr.set_source_rgba (0.0, 0.0, 0.0, 0.0);
+         cr.set_operator (Cairo.Operator.SOURCE);
+         cr.paint ();
+         cr.restore ();
+       
+         cr.set_line_width (2);
+         var radius = 20.0f;
+         cr.move_to(0, radius);
+         cr.curve_to(0, 0, 0, 0, radius, 0);
+         cr.line_to(width - radius, 0);
+         cr.curve_to(width, 0, width, 0, width, radius);
+         cr.line_to(width, height - radius);
+         cr.curve_to(width, height, width, height, width - radius, height);
+         cr.line_to(radius, height);
+         cr.curve_to(0, height, 0, height, 0, height - radius);
+         cr.close_path();
+          
+         cr.clip();
+         Gdk.cairo_set_source_pixbuf (cr, pixbuf, 0, 0);
+         cr.paint ();
+         return true;
      }
 }
 
-private class Journal.VideoActor : ClutterGst.VideoTexture {
-    
+private class Journal.VideoContent : Clutter.Actor {
+
+    private ClutterGst.VideoTexture video;
     private bool playing;
-    public VideoActor (string uri) {
+
+    public VideoContent (string uri) {
         GLib.Object ();
-        this.reactive = true;
         this.playing = false;
-        //this.set_keep_aspect_ratio (true);
-        this.set_height (MEDIA_SIZE_LARGE);
-        this.set_width (MEDIA_SIZE_LARGE);
-        this.set_filename (uri);
+        this.reactive = true;
         
-        this.button_release_event.connect ((e) => {
+        video = new ClutterGst.VideoTexture ();
+        //FIXME IMPROVE
+        video.set_height (MEDIA_SIZE_NORMAL);
+        video.set_width (MEDIA_SIZE_NORMAL * 1.5f);
+        video.set_keep_aspect_ratio (true);
+        video.set_property("seek-flags", 1);
+        video.set_uri (uri);
+        
+        video.size_change.connect ((b_w, b_h) => {
+            //FIXME Improve!
+            b_w /= 4;
+            b_h /= 4;
+            video.save_easing_state();
+            video.set_size (b_w, b_h);
+            video.restore_easing_state();
+        });
+        
+        this.enter_event.connect ((e) => {
             if (!playing) {
                 this.playing = true;
-                this.set_playing (playing);
+                video.set_playing (playing);
             }
-            else {
-                this.playing = false;
-                this.set_playing (playing);
-            }
-            
             return false;
         });
+        this.leave_event.connect ((e) => {
+            this.playing = false;
+            video.set_playing (playing);
+            video.set_progress (0);
+            return false;
+        });
+        
+        this.add_child (video);
     }
 }
 
-private class Journal.DocumentActor : Clutter.Actor {
-    
+private class Journal.GenericActor : Clutter.Actor {
     private TextActor title;
-    private ImageActor image;
-    
+    private Clutter.Actor actor_content;
     private TextActor time;
     
-    private Clutter.BinLayout box;
-    public DocumentActor (string title_s, Gdk.Pixbuf pixbuf, string date) {
+    public GenericActor (string title_text, string date) {
         GLib.Object ();
+        this.reactive = true;
 
         var attr_list = new Pango.AttrList ();
         attr_list.insert (Pango.attr_scale_new (Pango.Scale.LARGE));
         attr_list.insert (Pango.attr_weight_new (Pango.Weight.SEMIBOLD));
 
-        title = new TextActor.full_text (title_s, attr_list);
+        title = new TextActor.full_text (title_text, attr_list);
         title.margin_bottom = 10;
 
         attr_list = new Pango.AttrList ();
@@ -179,32 +217,47 @@ private class Journal.DocumentActor : Clutter.Actor {
 
         time = new TextActor.full_text (date, attr_list);
         time.margin_top = 10;
-        image = new ImageActor.from_pixbuf (pixbuf);
-        image.margin_top = 10;
-        image.margin_bottom = 10;
-        box = new Clutter.BinLayout (Clutter.BinAlignment.CENTER, 
-                                         Clutter.BinAlignment.CENTER);
+        var box = new Clutter.BoxLayout ();
+        box.vertical = true;
+        box.spacing = 5;
         set_layout_manager (box);
 
-        box.add (image, Clutter.BinAlignment.CENTER, Clutter.BinAlignment.CENTER);
-        box.add (title, Clutter.BinAlignment.CENTER, Clutter.BinAlignment.START);
-        box.add (time, Clutter.BinAlignment.CENTER, Clutter.BinAlignment.END);
-        
-        this.set_height (image.height + time.height);
-        
-        this.margin_left = this.margin_right = 10;
+        this.margin_left = 10;
+        this.margin_right = 10;
     }
     
-    public void update_image (Gdk.Pixbuf pixbuf) {
-        this.image.set_pixbuf (pixbuf);
+    public void set_content_actor (Clutter.Actor content) {
+        this.actor_content = content;
+        this.add_child (title);
+        this.add_child (actor_content);
+        this.add_child (time);
     }
+    
+    public override void get_preferred_width (float for_height, out float min_width, out float nat_width) {
+       float content_min_width, content_nat_width;
+       float title_min_width, title_nat_width;
+       actor_content.get_preferred_width (-1, out content_min_width, out content_nat_width);
+       title.get_preferred_width (-1, out title_min_width, out title_nat_width);
+       min_width = float.max (content_min_width, title_min_width) + 10 * 2 ;
+       nat_width = float.max (content_nat_width, title_nat_width) + 10 * 2 ;
+    }
+    
+    public override void get_preferred_height (float for_width, out float min_height, out float nat_height) {
+       float content_min_height, content_nat_height;
+       float title_min_height, title_nat_height;
+       float time_min_height, time_nat_height;
+       actor_content.get_preferred_height(-1, out content_min_height, out content_nat_height);
+       title.get_preferred_height(-1, out title_min_height, out title_nat_height);
+       time.get_preferred_height(-1, out time_min_height, out time_nat_height);
+       min_height = content_min_height + title_min_height + time_min_height ;
+       nat_height = content_nat_height + title_nat_height + time_nat_height;
+   }
 }
 
 private class Journal.CompositeDocumentActor : Clutter.Actor {
     
     public TextActor title;
-    private ImageActor image;
-    
+    private ImageContent image;
     private TextActor time;
     
     private Clutter.BoxLayout box;
@@ -225,7 +278,7 @@ private class Journal.CompositeDocumentActor : Clutter.Actor {
 
         time = new TextActor.full_text (date, attr_list);
         time.margin_top = 10;
-        image = new ImageActor.from_pixbuf (pixbuf);
+        image = new ImageContent.from_pixbuf (pixbuf);
         image.margin_top = 10;
         image.margin_bottom = 10;
         image.margin_right = 5;
@@ -263,11 +316,6 @@ private class Journal.CompositeDocumentActor : Clutter.Actor {
         this.add_child (time);
         
         this.margin_left = this.margin_right = 10;
-
-    }
-    
-    public void update_image (Gdk.Pixbuf pixbuf) {
-        this.image.set_pixbuf (pixbuf);
     }
 }
 
@@ -302,13 +350,14 @@ private class Journal.CompositeApplicationActor : Clutter.Actor {
         icon_box = new Clutter.Actor ();
         var manager = new Clutter.BoxLayout ();
         manager.vertical = false;
+        manager.spacing = 2;
         icon_box.set_layout_manager (manager);
         foreach (string uri in uris) {
             var info = new  DesktopAppInfo (uri);
             if (info == null)
                 continue;
             Gdk.Pixbuf pixbuf = Utils.load_pixbuf_from_icon (info.get_icon ());
-            var image = new ImageActor.from_pixbuf (pixbuf);
+            var image = new ImageContent.from_pixbuf (pixbuf);
             icon_box.add_child (image);
         }
         
@@ -326,7 +375,7 @@ private class Journal.CompositeApplicationActor : Clutter.Actor {
        title.get_preferred_width (-1, out title_min_width, out title_nat_width);
        min_width = float.max (box_min_width, title_min_width) + 10 * 2 ;
        nat_width = float.max (box_nat_width, title_nat_width) + 10 * 2 ;
-   }
+    }
    
    public override void get_preferred_height (float for_width, out float min_height, out float nat_height) {
        float box_min_height, box_nat_height;
@@ -340,80 +389,68 @@ private class Journal.CompositeApplicationActor : Clutter.Actor {
    }
 }
 
-
-private class Journal.RoundedBox : Clutter.Actor {
-
-    private float arc;
-    private float step;
-    private float border_width;
+private class Journal.CompositeImageActor : Clutter.Actor {
     
-    private Cogl.Color bg_color;
-    private Cogl.Color border_color;
+    public TextActor title;
+    private TextActor time;
+    private Clutter.Actor image_box;
     
-    public RoundedBox (float arc = 5, float step = 0.1f, float border_width = 2) {
+    private Clutter.BoxLayout box;
+    public CompositeImageActor (string title_s, ImageContent[] pixbufs, string date) {
         GLib.Object ();
-        this.arc = arc;
-        this.step = step;
-        this.border_width = border_width;
-        var bg =  Utils.get_roundbox_bg_color ();
-        this.bg_color = Utils.gdk_rgba_to_cogl_color (bg);
-        var color = Utils.get_roundbox_border_color ();
-        this.border_color = Utils.gdk_rgba_to_cogl_color (color);
-    }
-    
-    public override void paint () {
-        var allocation = get_allocation_box ();
-        float width, height;
-        allocation.get_size (out width, out height);
+        this.reactive = true;
         
-        Cogl.Path.round_rectangle (0, 0, width, height, arc, step);
-        Cogl.Path.close ();
-        Cogl.clip_push_from_path ();
-        
-        Cogl.set_source_color (border_color);
-        Cogl.Path.round_rectangle (0, 0, width, height, arc, step);
-        Cogl.Path.close ();
-        Cogl.Path.fill ();
-        
-        Cogl.set_source_color (bg_color);
-        Cogl.Path.round_rectangle (border_width, border_width, 
-                                   width - border_width, 
-                                   height - border_width,
-                                   arc, step);
-        Cogl.Path.fill ();
-        Cogl.Path.close ();
-        
-        Cogl.clip_pop ();
-    }
-    
-    public override void pick (Clutter.Color c) {
-        if (should_pick_paint () == false)
-            return;
-            
-        Cogl.Path.round_rectangle (0, 0, width, height, arc, step);
-        Cogl.Path.close ();
-        Cogl.clip_push_from_path ();
-        
-        Cogl.Color color = Cogl.Color.from_4ub (c.red, c.green, c.blue, c.alpha);
-        Cogl.set_source_color(color);
-        
-        Cogl.Path.round_rectangle (0, 0, width, height, arc, step);
-        Cogl.Path.close ();
-        Cogl.Path.fill ();
-        Cogl.clip_pop ();
-    }
-    
-   public override void get_preferred_width (float for_height, out float min_width, out float nat_width) {
-       first_child.get_preferred_width(-1, out min_width, out nat_width);
-       min_width += border_width * 2 ;
-       nat_width += border_width * 2 ;
-   }
+        var attr_list = new Pango.AttrList ();
+        attr_list.insert (Pango.attr_scale_new (Pango.Scale.LARGE));
+        attr_list.insert (Pango.attr_weight_new (Pango.Weight.SEMIBOLD));
 
-   public override void get_preferred_height (float  width,
-                                                       out float min_height,
-                                                       out float nat_height) {
-       first_child.get_preferred_height (-1, out min_height, out nat_height);
-       min_height += border_width * 2 ;
-       nat_height += border_width * 2;
+        title = new TextActor.full_text (title_s, attr_list);
+        title.margin_bottom = 10;
+
+        attr_list = new Pango.AttrList ();
+        attr_list.insert (Pango.attr_scale_new (Pango.Scale.SMALL));
+        attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
+
+        time = new TextActor.full_text (date, attr_list);
+        time.margin_top = 10;
+        box = new Clutter.BoxLayout ();
+        box.vertical = true;
+        set_layout_manager (box);
+
+        image_box = new Clutter.Actor ();
+        var manager = new Clutter.BoxLayout ();
+        manager.vertical = false;
+        manager.spacing = 2;
+        image_box.set_layout_manager (manager);
+        foreach (ImageContent image in pixbufs) {
+            image_box.add_child (image);
+        }
+        
+        this.add_child (title);
+        this.add_child (image_box);
+        this.add_child (time);
+        
+        this.margin_left = this.margin_right = 10;
+    }
+    
+    public override void get_preferred_width (float for_height, out float min_width, out float nat_width) {
+       float box_min_width, box_nat_width;
+       float title_min_width, title_nat_width;
+       image_box.get_preferred_width (-1, out box_min_width, out box_nat_width);
+       title.get_preferred_width (-1, out title_min_width, out title_nat_width);
+       min_width = float.max (box_min_width, title_min_width) + 10 * 2 ;
+       nat_width = float.max (box_nat_width, title_nat_width) + 10 * 2 ;
+    }
+   
+   public override void get_preferred_height (float for_width, out float min_height, out float nat_height) {
+       float box_min_height, box_nat_height;
+       float title_min_height, title_nat_height;
+       float time_min_height, time_nat_height;
+       image_box.get_preferred_height(-1, out box_min_height, out box_nat_height);
+       title.get_preferred_height(-1, out title_min_height, out title_nat_height);
+       time.get_preferred_height(-1, out time_min_height, out time_nat_height);
+       min_height = box_min_height + title_min_height + time_min_height ;
+       nat_height = box_nat_height + title_nat_height + time_nat_height;
    }
 }
+

@@ -62,6 +62,7 @@ public int main (string[] args) {
     var res = GtkClutter.init (ref args);
     if (res != Clutter.InitError.SUCCESS) 
         error ("Can't init clutter-gtk");
+        
     Gst.init (ref args);
 
     Gtk.Window.set_default_icon_name ("Journal");

@@ -23,7 +23,6 @@ using Gdk;
 using Gtk;
 
 private abstract class Journal.GenericActivity : Object {
-
     public Clutter.Actor actor {
         get; protected set;
     }
@@ -44,6 +43,10 @@ private class Journal.SingleActivity : GenericActivity {
 
     public Zeitgeist.Event event {
         get; construct set;
+    }
+    
+    public Clutter.Actor content {
+        get; protected set;
     }
     
     public string uri {
@@ -105,7 +108,7 @@ private class Journal.SingleActivity : GenericActivity {
         this.interpretation = intpr;
 
         updateActivityIcon ();
-        
+        create_content ();
         create_actor ();
     }
     
@@ -233,15 +236,19 @@ private class Journal.SingleActivity : GenericActivity {
        }
     }
     
-    public virtual Clutter.Actor create_actor () {
+    public virtual void create_content () {
+        content = new ImageContent.from_pixbuf (this.type_icon);
+    }
+    
+    public void create_actor () {
         DateTime d = new DateTime.from_unix_utc (this.time_start / 1000).to_local ();
         string date = d.format ("%H:%M");
-        actor = new DocumentActor (this.title, this.type_icon, date);
-        return actor;
+        actor = new GenericActor (this.title, date);
+        ((GenericActor)actor).set_content_actor (content);
     }
     
     public virtual void update_icon () {
-        ((DocumentActor)actor).update_image (this.thumb_icon);
+        ((ImageContent)content).set_pixbuf (this.thumb_icon);
     }
     
     public override void launch (){
@@ -276,15 +283,6 @@ private class Journal.ImageActivity : SingleActivity {
     public ImageActivity (Zeitgeist.Event event) {
         Object (event:event);
     }
-    
-    public override Clutter.Actor create_actor () {
-        actor = new ImageActor.from_uri (this.uri);
-        return actor;
-    }
-    
-    public override void update_icon () {
-        ((ImageActor)actor).set_pixbuf (this.thumb_icon);
-    }
 }
 
 private class Journal.VideoActivity : SingleActivity {
@@ -292,9 +290,8 @@ private class Journal.VideoActivity : SingleActivity {
         Object (event:event);
     }
     
-    public override Clutter.Actor create_actor () {
-        actor = new VideoActor (this.uri);
-        return actor;
+    public override void create_content () {
+        content = new VideoContent (uri);
     }
     
     public override void update_icon () {
@@ -416,9 +413,11 @@ private class Journal.CompositeActivity : GenericActivity {
         return Utils.load_fallback_icon ();
     }
     
-    public virtual Clutter.Actor create_actor () {
-        actor = new CompositeDocumentActor (this.title, this.icon, this.uris, this.date);
-        return actor;
+    public virtual void create_actor () {
+        actor = new CompositeDocumentActor (this.title, 
+                                            this.icon, 
+                                            this.uris, 
+                                            this.date);
     }
     
     public override void launch (){
@@ -512,6 +511,18 @@ private class Journal.CompositeImageActivity : CompositeActivity {
         
         return null;
     }
+    
+    public override void create_actor () {
+        ImageContent[] pixbufs = new ImageContent[activities.size];
+        for (int i = 0; i < activities.size; i++){
+            var activity = activities.get (i);
+            var content = activity.content as ImageContent;
+            if (content.get_parent () != null)
+                content.get_parent ().remove_child (content);
+            pixbufs[i] = content;
+        }
+        actor = new CompositeImageActor (this.title, pixbufs, this.date);
+    }
 }
 
 private class Journal.CompositeVideoActivity : CompositeActivity {
@@ -557,9 +568,8 @@ private class Journal.CompositeApplicationActivity : CompositeActivity {
         return null;
     }
     
-    public override Clutter.Actor create_actor () {
+    public override void create_actor () {
         actor = new CompositeApplicationActor (this.title, this.uris, this.date);
-        return actor;
     }
 }
 
