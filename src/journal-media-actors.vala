@@ -130,8 +130,15 @@ private class Journal.ImageContent : Clutter.Actor {
          cr.set_operator (Cairo.Operator.SOURCE);
          cr.paint ();
          cr.restore ();
+         
+//         var p = new Cairo.Pattern.linear (0, 0, width, height);
+//         p.add_color_stop_rgba (0, 0, 0, 0, 0.4);
+//         p.add_color_stop_rgba (0.7, 0.4, 0, 0, 0.0);
+//         cr.set_source (p);
+//         cr.set_operator (Cairo.Operator.SOURCE);
+//         cr.rectangle (0, 0, width, height);
+//         cr.fill ();
        
-         cr.set_line_width (2);
          var radius = 20.0f;
          cr.move_to(0, radius);
          cr.curve_to(0, 0, 0, 0, radius, 0);
