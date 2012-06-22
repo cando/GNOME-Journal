@@ -104,7 +104,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
       event.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
       var subject = new Zeitgeist.Subject ();
       subject.set_interpretation ("!" + Zeitgeist.NFO_SOFTWARE);
-      subject.set_uri ("file://*");
+      //subject.set_uri ("file://*");
       event.add_subject (subject);
 
       var ptr_arr = new PtrArray ();

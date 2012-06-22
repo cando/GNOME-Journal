@@ -137,7 +137,6 @@ private class Journal.ClutterVTL : Box {
     
     private OSDLabel osd_label;
     private LoadingActor loading;
-    private Clutter.Text loading_text;
     
     private Gee.Map<string, Clutter.Actor> y_positions;
     private Gee.List<string> dates_added;
@@ -225,18 +224,10 @@ private class Journal.ClutterVTL : Box {
        loading = new LoadingActor (stage);
        loading.start ();
        
-       loading_text = new Clutter.Text.with_text (null, _("Loading..."));
-       var attr_list = new Pango.AttrList ();
-       attr_list.insert (Pango.attr_scale_new (Pango.Scale.MEDIUM));
-       attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
-       loading_text.attributes = attr_list;
-       
        model.activities_loaded.connect ((dates_loaded)=> {
             load_activities (dates_loaded);
             on_loading = false;
             loading.stop ();
-            if (loading_text.get_parent () != null)
-                container.remove_child (loading_text);
        });
     }
     
@@ -346,7 +337,6 @@ private class Journal.ClutterVTL : Box {
         if (!on_loading && y == limit) {
             //We can't scroll anymmore! Let's load another day!
             //loading.start ();
-            container.add_child (loading_text);
             model.load_other_days (3);
             on_loading = true;
         }
@@ -466,7 +456,6 @@ private class Journal.DayActor : Clutter.Actor {
 
         this.add_child (date_text);
     }
-
 }
 
 private class Journal.CircleTexture: Clutter.CairoTexture {
@@ -542,6 +531,7 @@ private class Journal.RoundBox : Clutter.Actor {
        canvas_box.set_content (canvas);
        this.add_child (canvas_box);
        
+       activity.create_actor ();
        this.add_content (activity.actor);
        float c_nat_width, c_nat_height;
        this.get_preferred_height (-1, null, out c_nat_height);

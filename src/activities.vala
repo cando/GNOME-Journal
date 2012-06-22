@@ -35,7 +35,13 @@ private abstract class Journal.GenericActivity : Object {
         get; protected set;
     }
     
+    public string title {
+        get; protected set;
+    }
+    
     public abstract void launch ();
+    
+    public abstract void create_actor ();
     
 }
 
@@ -50,10 +56,6 @@ private class Journal.SingleActivity : GenericActivity {
     }
     
     public string uri {
-        get; private set;
-    }
-    
-    public string title {
         get; private set;
     }
     
@@ -109,7 +111,6 @@ private class Journal.SingleActivity : GenericActivity {
 
         updateActivityIcon ();
         create_content ();
-        create_actor ();
     }
     
     private string create_display_uri () {
@@ -240,7 +241,7 @@ private class Journal.SingleActivity : GenericActivity {
         content = new ImageContent.from_pixbuf (this.type_icon);
     }
     
-    public void create_actor () {
+    public override void create_actor () {
         DateTime d = new DateTime.from_unix_utc (this.time_start / 1000).to_local ();
         string date = d.format ("%H:%M");
         actor = new GenericActor (this.title, date);
@@ -330,6 +331,12 @@ private class Journal.ApplicationActivity : SingleActivity {
     }
 }
 
+private class Journal.WebActivity : SingleActivity {
+    public WebActivity (Zeitgeist.Event event) {
+        Object (event:event);
+    }
+}
+
 /**Collection of Activity TODO documention here!**/
 private class Journal.CompositeActivity : GenericActivity {
 
@@ -342,11 +349,7 @@ private class Journal.CompositeActivity : GenericActivity {
     public string[] uris {
         get; private set;
     }
-    
-    public string title {
-        get; private set;
-    }
-    
+
     public Pixbuf? icon {
         get; private set;
     }
@@ -373,10 +376,7 @@ private class Journal.CompositeActivity : GenericActivity {
                 this.uris[i] = "...";
                 break;
             }
-            var uri = Path.get_basename (activity.uri);
-            if (uri == null)
-                continue;
-            this.uris[i] = uri.replace ("%20", " ");
+            this.uris[i] = activity.title;
             i++;
         }
         this.icon = create_icon ();
@@ -395,8 +395,6 @@ private class Journal.CompositeActivity : GenericActivity {
         this.time_end = max_end_t;
         this.date = create_date ();
         this.selected = false;
-
-        create_actor ();
     }
     
     private string create_date () {
@@ -422,7 +420,7 @@ private class Journal.CompositeActivity : GenericActivity {
         return Utils.load_fallback_icon ();
     }
     
-    public virtual void create_actor () {
+    public override void create_actor () {
         actor = new CompositeDocumentActor (this.title, 
                                             this.icon, 
                                             this.uris, 
@@ -620,6 +618,28 @@ private class Journal.CompositeDownloadActivity : CompositeActivity {
     }
 }
 
+private class Journal.CompositeWebActivity : CompositeActivity {
+    public CompositeWebActivity (Gee.List<SingleActivity> activities) {
+        Object (activities:activities);
+    }
+    
+    public override string create_title () {
+        return _("Surfed the web");
+    }
+    
+    public override Gdk.Pixbuf? create_icon () {
+        try {
+        return Gtk.IconTheme.get_default().load_icon ("applications-internet", Utils.getIconSize (),
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
+        } catch (Error e) {
+            debug ("Unable to load pixbuf: " + e.message);
+        }
+        
+        return null;
+    }
+}
+
 private class Journal.ActivityFactory : Object {
     
     private static Gee.Map<string, Type> interpretation_types;
@@ -655,6 +675,8 @@ private class Journal.ActivityFactory : Object {
         /****APPLICATIONS****/
         interpretation_types.set (Zeitgeist.NFO_APPLICATION ,typeof (ApplicationActivity));
         interpretation_types.set (Zeitgeist.NFO_SOFTWARE ,typeof (ApplicationActivity));
+        /****WEBSITE*******/
+        interpretation_types.set (Zeitgeist.NFO_WEBSITE ,typeof (WebActivity));
         
         /**************COMPOSITE ACTIVITIES*********/
         interpretation_types_comp = new Gee.HashMap<string, Type> ();
@@ -686,6 +708,8 @@ private class Journal.ActivityFactory : Object {
         /****APPLICATIONS****/
         interpretation_types_comp.set (Zeitgeist.NFO_APPLICATION ,typeof (CompositeApplicationActivity));
         interpretation_types_comp.set (Zeitgeist.NFO_SOFTWARE ,typeof (CompositeApplicationActivity));
+        /****WEBSITE*******/
+        interpretation_types_comp.set (Zeitgeist.NFO_WEBSITE ,typeof (CompositeWebActivity));
     }
     
     /****PUBLIC METHODS****/
