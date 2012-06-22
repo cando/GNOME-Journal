@@ -137,6 +137,7 @@ private class Journal.ClutterVTL : Box {
     
     private OSDLabel osd_label;
     private LoadingActor loading;
+    private Clutter.Text loading_text;
     
     private Gee.Map<string, Clutter.Actor> y_positions;
     private Gee.List<string> dates_added;
@@ -224,12 +225,18 @@ private class Journal.ClutterVTL : Box {
        loading = new LoadingActor (stage);
        loading.start ();
        
+       loading_text = new Clutter.Text.with_text (null, _("Loading..."));
+       var attr_list = new Pango.AttrList ();
+       attr_list.insert (Pango.attr_scale_new (Pango.Scale.MEDIUM));
+       attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
+       loading_text.attributes = attr_list;
+       
        model.activities_loaded.connect ((dates_loaded)=> {
             load_activities (dates_loaded);
             on_loading = false;
             loading.stop ();
-            if(date_to_jump != null) 
-                jump_to_day (date_to_jump);
+            if (loading_text.get_parent () != null)
+                container.remove_child (loading_text);
        });
     }
     
@@ -339,6 +346,7 @@ private class Journal.ClutterVTL : Box {
         if (!on_loading && y == limit) {
             //We can't scroll anymmore! Let's load another day!
             //loading.start ();
+            container.add_child (loading_text);
             model.load_other_days (3);
             on_loading = true;
         }
@@ -702,7 +710,7 @@ private class Journal.RoundBox : Clutter.Actor {
     public override  bool leave_event (Clutter.CrossingEvent event) {
         enter = false;
         canvas.invalidate ();
-        return true;
+        return false;
     }
     
     public void add_content (Clutter.Actor content) {

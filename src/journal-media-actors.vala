@@ -79,9 +79,28 @@ private class Journal.TextActor : Clutter.Text {
 private class Journal.ImageContent : Clutter.Actor {
     private Clutter.Canvas canvas;
     private Gdk.Pixbuf pixbuf;
+    
+    private int border_width = 4;
+    
+    //Used for highlight the border on mouse over
+    private bool enter;
+    private bool _highlight_border;
+    public bool highlight_items {
+        get {
+            return _highlight_border;
+        } 
+        set {
+            _highlight_border = value;
+            reactive = value;
+        }
+    }
+    
+    public signal void clicked ();
 
-    private ImageContent () {
+    private ImageContent (bool highlight_items=false) {
         GLib.Object ();
+        
+        this.reactive = highlight_items;
         this.canvas = new Clutter.Canvas ();
         canvas.draw.connect ((cr, w, h) => { return paint_canvas (cr, w, h); });
         this.set_content (canvas);
@@ -96,9 +115,12 @@ private class Journal.ImageContent : Clutter.Actor {
                 return false;
             });
        });
+       
+       enter = false;
+       this.highlight_items = highlight_items;
     }
     
-    public ImageContent.from_uri (string uri) {
+    public ImageContent.from_uri (string uri, bool highlight_items=false) {
         try {
             pixbuf =  new Gdk.Pixbuf.from_file (uri);
         } catch (Error e) {
@@ -106,21 +128,25 @@ private class Journal.ImageContent : Clutter.Actor {
             pixbuf = Utils.load_fallback_icon ();
         }
         if (pixbuf != null)
-            this.from_pixbuf (pixbuf);
+            this.from_pixbuf (pixbuf, highlight_items);
     }
     
-     public ImageContent.from_pixbuf (Gdk.Pixbuf pixbuf) {
-        this ();
+     public ImageContent.from_pixbuf (Gdk.Pixbuf pixbuf, bool highlight_items=false) {
+        this (highlight_items);
         this.pixbuf = pixbuf;
-        this.set_size (pixbuf.width, pixbuf.height);
-        canvas.set_size (pixbuf.width, pixbuf.height);
+        this.set_size (pixbuf.width + border_width * 2, 
+                       pixbuf.height + border_width * 2);
+        canvas.set_size (pixbuf.width + border_width * 2, 
+                         pixbuf.height + border_width * 2);
         canvas.invalidate ();
      }
      
      public void set_pixbuf (Gdk.Pixbuf pixbuf) {
         this.pixbuf = pixbuf;
-        this.set_size (pixbuf.width, pixbuf.height);
-        canvas.set_size (pixbuf.width, pixbuf.height);
+        this.set_size (pixbuf.width + border_width * 2,
+                       pixbuf.height + border_width * 2);
+        canvas.set_size (pixbuf.width + border_width * 2,
+                         pixbuf.height + border_width * 2);
         canvas.invalidate ();
      }
      
@@ -139,7 +165,7 @@ private class Journal.ImageContent : Clutter.Actor {
 //         cr.rectangle (0, 0, width, height);
 //         cr.fill ();
        
-         var radius = 20.0f;
+         var radius = 10.0f;
          cr.move_to(0, radius);
          cr.curve_to(0, 0, 0, 0, radius, 0);
          cr.line_to(width - radius, 0);
@@ -150,11 +176,36 @@ private class Journal.ImageContent : Clutter.Actor {
          cr.curve_to(0, height, 0, height, 0, height - radius);
          cr.close_path();
           
+         if (enter && highlight_items) {
+            var color = Utils.get_roundbox_border_color ();
+            Clutter.Color borderColor = Utils.gdk_rgba_to_clutter_color (color);
+            borderColor = borderColor.darken ();
+            Clutter.cairo_set_source_color(cr, borderColor);
+            cr.stroke_preserve ();
+         }
          cr.clip();
+         cr.translate (border_width, border_width);
          Gdk.cairo_set_source_pixbuf (cr, pixbuf, 0, 0);
          cr.paint ();
          return true;
      }
+     
+     public override  bool enter_event (Clutter.CrossingEvent event) {
+        enter = true;
+        canvas.invalidate ();
+        return false;
+    }
+    
+    public override  bool leave_event (Clutter.CrossingEvent event) {
+        enter = false;
+        canvas.invalidate ();
+        return false;
+    }
+    
+    public override  bool button_release_event (Clutter.ButtonEvent event) {
+        clicked ();
+        return true;
+    }
 }
 
 private class Journal.VideoContent : Clutter.Actor {
@@ -335,7 +386,7 @@ private class Journal.CompositeApplicationActor : Clutter.Actor {
     private Clutter.Actor icon_box;
     
     private Clutter.BoxLayout box;
-    public CompositeApplicationActor (string title_s, string[] uris, string date) {
+    public CompositeApplicationActor (string title_s, ImageContent[] pixbufs, string date) {
         GLib.Object ();
         this.reactive = true;
         
@@ -361,12 +412,7 @@ private class Journal.CompositeApplicationActor : Clutter.Actor {
         manager.vertical = false;
         manager.spacing = 2;
         icon_box.set_layout_manager (manager);
-        foreach (string uri in uris) {
-            var info = new  DesktopAppInfo (uri);
-            if (info == null)
-                continue;
-            Gdk.Pixbuf pixbuf = Utils.load_pixbuf_from_icon (info.get_icon ());
-            var image = new ImageContent.from_pixbuf (pixbuf);
+        foreach (ImageContent image in pixbufs) {
             icon_box.add_child (image);
         }
         
