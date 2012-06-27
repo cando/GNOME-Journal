@@ -63,7 +63,7 @@ private class Journal.TimelineNavigator : ButtonBox {
 
     public TimelineNavigator (Orientation orientation){
         Object (orientation: orientation);
-        this.set_layout (ButtonBoxStyle.SPREAD);
+        this.set_layout (ButtonBoxStyle.START);
         
         this.jump_date = new Gee.HashMap<string, DateTime> ();
         var today = Utils.get_start_of_today ();
@@ -118,6 +118,7 @@ private class Journal.TimelineNavigator : ButtonBox {
     
     private void load_attributes () {
         attr_list = new Pango.AttrList ();
+        attr_list.insert (Pango.attr_scale_new (Pango.Scale.MEDIUM));
         attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
     }
     
@@ -190,6 +191,7 @@ private class Journal.TimelineNavigator : ButtonBox {
         int i = 0;
         foreach(string s in select_time_labels ()) {
             Button b = new Button.with_label (s);
+            b.set_alignment (0, 0);
             //Let's highlight Today.
             if (i == 0) {
                 Label label = (Label) b.get_child ();
@@ -205,7 +207,7 @@ private class Journal.TimelineNavigator : ButtonBox {
                 DateTime date = jump_date.get (label.label);
                 this.go_to_date (date);
             });
-            this.pack_start (b, true, true, 0);
+            this.pack_start (b, false, false, 0);
             i++;
         }
         this.show_all();

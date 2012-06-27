@@ -97,6 +97,41 @@ public class Journal.ZeitgeistBackend: GLib.Object
       yield fill_days_map ();
       events_loaded (tr);
     }
+    
+    private async void load_web_events (Zeitgeist.TimeRange tr)
+    {
+      var event = new Zeitgeist.Event ();
+      event.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
+      var subject = new Zeitgeist.Subject ();
+      subject.set_interpretation (Zeitgeist.NFO_WEBSITE);
+      event.add_subject (subject);
+
+      var ptr_arr = new PtrArray ();
+      ptr_arr.add (event);
+
+      Zeitgeist.ResultSet rs;
+
+      try
+      {
+        rs = yield zg_log.find_events (tr, (owned) ptr_arr,
+                                       Zeitgeist.StorageState.ANY,
+                                       -1,
+                                       Zeitgeist.ResultType.MOST_RECENT_EVENTS,
+                                       null);
+
+        foreach (Zeitgeist.Event e in rs)
+        {
+          if (e.num_subjects () <= 0) continue;
+          all_events.add(e);
+          new_events.add(e);
+        }
+      }
+      catch (Error err)
+      {
+        warning ("%s", err.message);
+        return;
+      }
+    }
 
     private async void load_uri_events (Zeitgeist.TimeRange tr)
     {
@@ -104,7 +139,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
       event.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
       var subject = new Zeitgeist.Subject ();
       subject.set_interpretation ("!" + Zeitgeist.NFO_SOFTWARE);
-      //subject.set_uri ("file://*");
+      subject.set_uri ("file://*");
       event.add_subject (subject);
 
       var ptr_arr = new PtrArray ();
@@ -154,6 +189,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
     
     public void load_events_for_timerange (Zeitgeist.TimeRange tr) {
         load_uri_events.begin (tr);
+       // load_web_events.begin (tr);
         load_application_events.begin (tr);
         
         last_loaded_date = Utils.get_start_of_the_day (tr.get_start ());

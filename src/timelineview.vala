@@ -172,7 +172,10 @@ private class Journal.ClutterVTL : Box {
         container.set_layout_manager (layout);
 
         container.scroll_event.connect ( (e) => {
-        
+         
+        if (on_loading)
+            return false;
+            
         var direction = e.direction;
 
         switch (direction)
@@ -182,7 +185,7 @@ private class Journal.ClutterVTL : Box {
                     scrollbar.move_slider (ScrollType.STEP_UP);
                 break;
             case Clutter.ScrollDirection.DOWN:
-                var limit = (int)scrollbar.adjustment.upper - scrollbar.adjustment.page_size;
+                var limit = (int)scrollbar.adjustment.upper - scrollbar.adjustment.page_size - 500;
                 if (scrollbar.adjustment.value < limit)
                     scrollbar.move_slider (ScrollType.STEP_DOWN);
                 else {
@@ -214,6 +217,7 @@ private class Journal.ClutterVTL : Box {
        vnav = new TimelineNavigator (Orientation.VERTICAL);
        vnav.go_to_date.connect ((date) => {this.jump_to_day (date);});
 
+       this.pack_start (new Gtk.Label(""), false, false, 32);
        this.pack_start (embed, true, true, 0);
        this.pack_start (vnav, false, false, 10);
        this.pack_start (scrollbar, false, false, 0);
@@ -333,8 +337,8 @@ private class Journal.ClutterVTL : Box {
     private void on_scrollbar_scroll () {
         float y = (float)(scrollbar.adjustment.value);
         viewport.scroll_to_point (0.0f, y);
-        var limit = (int)scrollbar.adjustment.upper - scrollbar.adjustment.page_size;
-        if (!on_loading && y == limit) {
+        var limit = (int)scrollbar.adjustment.upper - scrollbar.adjustment.page_size - 500;
+        if (!on_loading && y >= limit) {
             //We can't scroll anymmore! Let's load another day!
             //loading.start ();
             model.load_other_days (3);
@@ -532,6 +536,7 @@ private class Journal.RoundBox : Clutter.Actor {
        this.add_child (canvas_box);
        
        activity.create_actor ();
+
        this.add_content (activity.actor);
        float c_nat_width, c_nat_height;
        this.get_preferred_height (-1, null, out c_nat_height);

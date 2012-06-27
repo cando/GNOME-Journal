@@ -39,6 +39,10 @@ private abstract class Journal.GenericActivity : Object {
         get; protected set;
     }
     
+    public Pixbuf? icon {
+        get; protected set;
+    }
+    
     public abstract void launch ();
     
     public abstract void create_actor ();
@@ -57,10 +61,6 @@ private class Journal.SingleActivity : GenericActivity {
     
     public string uri {
         get; private set;
-    }
-    
-    public Pixbuf? type_icon {
-        get; protected set;
     }
     
     public Pixbuf? thumb_icon {
@@ -95,7 +95,6 @@ private class Journal.SingleActivity : GenericActivity {
     construct {
         this.subject = event.get_subject (0);
         this.uri = subject.get_uri ();
-        this.type_icon = null;
         this.thumb_icon = null;
         this.display_uri = create_display_uri ();
         this.title = subject.get_text () == null ? 
@@ -192,16 +191,16 @@ private class Journal.SingleActivity : GenericActivity {
                                             IconLookupFlags.GENERIC_FALLBACK);
         if (icon_info != null) {
             try {
-                this.type_icon = icon_info.load_icon();
+                this.icon = icon_info.load_icon();
                 //Let's use this for the moment.
-                this.thumb_icon = this.type_icon;
+                this.thumb_icon = this.icon;
             } catch (Error e) {
                 debug ("Unable to load pixbuf: " + e.message);
             }
         }
         
         //If the icon is still null let's use a default text/plain mime icon.
-        if (type_icon == null) {
+        if (icon == null) {
             _icon = ContentType.get_icon ("text/plain");
 
             if (_icon != null)
@@ -211,9 +210,9 @@ private class Journal.SingleActivity : GenericActivity {
                                             IconLookupFlags.GENERIC_FALLBACK);
             if (icon_info != null) {
                 try {
-                    this.type_icon = icon_info.load_icon();
+                    this.icon = icon_info.load_icon();
                     //Let's use this for the moment.
-                    this.thumb_icon = this.type_icon;
+                    this.thumb_icon = this.icon;
                 } catch (Error e) {
                     debug ("Unable to load pixbuf: " + e.message);
                 }
@@ -238,7 +237,7 @@ private class Journal.SingleActivity : GenericActivity {
     }
     
     public virtual void create_content () {
-        content = new ImageContent.from_pixbuf (this.type_icon);
+        content = new ImageContent.from_pixbuf (this.icon);
     }
     
     public override void create_actor () {
@@ -292,7 +291,7 @@ private class Journal.VideoActivity : SingleActivity {
     }
     
     public override void create_content () {
-        content = new VideoContent (uri, this.type_icon);
+        content = new VideoContent (uri, this.icon);
     }
     
     public override void update_icon () {
@@ -307,10 +306,10 @@ private class Journal.ApplicationActivity : SingleActivity {
     
     protected override async void updateActivityIcon () {
         var info = new  DesktopAppInfo (display_uri);
-        this.type_icon = Utils.load_pixbuf_from_name ("application-x-executable",
+        this.icon = Utils.load_pixbuf_from_name ("application-x-executable",
                                                     Utils.getIconSize ());
         if (info == null) {
-            this.thumb_icon = this.type_icon;
+            this.thumb_icon = this.icon;
             return;
         }
         this.thumb_icon = Utils.load_pixbuf_from_icon (info.get_icon (), 
@@ -347,10 +346,6 @@ private class Journal.CompositeActivity : GenericActivity {
     }
     
     public string[] uris {
-        get; private set;
-    }
-
-    public Pixbuf? icon {
         get; private set;
     }
     
