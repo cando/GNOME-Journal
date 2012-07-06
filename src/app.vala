@@ -39,7 +39,7 @@ public class Journal.App: GLib.Object {
 
     private Gtk.Application application;
     private ActivityModel model;
-    private ClutterVTL cvtl;
+    private VTL vtl;
     private Gd.MainToolbar main_toolbar;
     private ActivityInfoPage activity_page;
 
@@ -185,8 +185,8 @@ public class Journal.App: GLib.Object {
         window.key_press_event.connect (on_key_pressed);
         
         //CLUTTER VTL
-        cvtl = new ClutterVTL (this, model);
-        notebook.append_page (cvtl, null);
+        vtl = new VTL (this, model);
+        notebook.append_page (vtl, null);
         
         //ACTIVITY PAGE
         activity_page = new ActivityInfoPage ();

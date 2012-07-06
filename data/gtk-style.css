@@ -10,6 +10,64 @@ GtkNotebook{
     background-color: alpha(#000, 0.0);
 }
 
+/*****************************
+* TESTING GTK STYLES
+*
+******************************/
+.round-button-left {
+    background-image : -gtk-gradient(radial,
+                                    center center, 0,
+                                    center center, 8,
+                                    from(#FFF),
+                                    color-stop(0.5, @journal_label_color),
+                                    to(#FFF));
+     border-image : none;
+     border-color: @journal_label_color;
+     border-radius: 5px;
+     border-top-left-radius : 0px;
+     border-bottom-left-radius : 0px;
+     border-width: 2px 2px 2px 0px;
+}
+
+.round-button-right {
+    background-image : -gtk-gradient(radial,
+                                    center center, 0,
+                                    center center, 8,
+                                    from(#FFF),
+                                    color-stop(0.5, @journal_label_color),
+                                    to(#FFF));
+     border-image : none;
+     border-color: @journal_label_color;
+     border-radius: 5px;
+     border-top-right-radius : 0px;
+     border-bottom-right-radius : 0px;
+     border-width: 2px 0px 2px 2px;
+}
+
+.round-button-right:hover {
+     border-color: @journal_timeline_color;
+}
+
+.round-button-left:hover {
+     border-color: @journal_timeline_color;
+}
+
+.border-right {
+/*    background-repeat : no-repeat;*/
+/*    background-image : url("assets/right.png");*/
+/*    border-image : none;*/
+/*    border-width: 0px;*/
+}
+
+.border-left {
+/*    background-repeat : no-repeat;*/
+/*    background-image : url("assets/left.png");*/
+/*    border-image : none;*/
+/*    border-width: 0px;*/
+      color : @journal_timeline_color;
+}
+
+
 /*LOADING Label*/
 .loading {
 }

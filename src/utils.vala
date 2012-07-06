@@ -87,7 +87,7 @@ private class Journal.Utils : Object{
         var path = new Gtk.WidgetPath ();
         path.append_type (typeof (Gtk.Window));
         style.set_path (path);
-        style.add_class ("roundbox");
+        style.add_class ("round-button-left");
         return style.get_background_color (0);
     }
     
@@ -96,8 +96,17 @@ private class Journal.Utils : Object{
         var path = new Gtk.WidgetPath ();
         path.append_type (typeof (Gtk.Window));
         style.set_path (path);
-        style.add_class ("roundbox");
+        style.add_class ("round-button-left");
         return style.get_border_color (0);
+    }
+    
+    public static Gdk.RGBA get_roundbox_border_hover_color () {
+        var style = new Gtk.StyleContext ();
+        var path = new Gtk.WidgetPath ();
+        path.append_type (typeof (Gtk.Window));
+        style.set_path (path);
+        style.add_class ("round-button-left");
+        return style.get_border_color (StateFlags.PRELIGHT);
     }
 
     public static int getIconSize() {
