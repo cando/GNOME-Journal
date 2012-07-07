@@ -84,42 +84,15 @@ private class Journal.VTL : Box {
         });
     }
     
-//    private int get_child_index_for_date (string date) {
-//        var datetime = Utils.datetime_from_string (date);
-//        dates_added.sort ( (a,b) => {
-//            DateTime first = Utils.datetime_from_string ((string)a);
-//            DateTime second= Utils.datetime_from_string ((string)b);
-//            return - first.compare (second);
-//        });
-//        
-//        int i = 0;
-//        foreach (string d in dates_added) {
-//            DateTime dt = Utils.datetime_from_string (d);
-//            if (dt.compare (datetime) <= 0) {
-//                //i*2 because the first child is the date and the second is the
-//                //list of activities
-//                return i * 2;
-//            }
-//            i++;
-//        }
-//        //Else append to the end
-//        return container.get_n_children ();
-//    }
-    
     private void load_activities (Gee.ArrayList<string> dates_loaded) {
         foreach (string date in dates_loaded) {
             if (dates_added.contains (date) || date.has_prefix ("*"))
               continue;
             
-//            var index = get_child_index_for_date (date);
-//            dates_added.add (date);
-//            
-//            var day_actor = new DayActor (date);
-//            day_actor.add_constraint (new Clutter.AlignConstraint (stage, Clutter.AlignAxis.X_AXIS, 0.5f));
-//            container.insert_child_at_index (day_actor, index);
-//            y_positions.set (date, day_actor);
-
-//            index ++;
+            dates_added.add (date);
+            string text = Utils.datetime_from_string (date).format (_("%A, %x"));
+            var d = new Button.with_label (text);
+            bubble_c.append_date (d);
 
             var activity_list = model.activities.get (date);
             foreach (GenericActivity activity in activity_list.composite_activities) 
@@ -186,31 +159,47 @@ private class Journal.VTL : Box {
     }
 }
 
-private class Journal.BubbleContainer : Box {
+private class Journal.BubbleContainer : EventBox {
     private Box right_c;
     private Box left_c;
-    private Button center_c;
+    private Overlay center_c;
+    
+    private VBox main_vbox;
 
     private int turn;
     
     public BubbleContainer () {
-        Object (orientation: Orientation.HORIZONTAL, spacing: 0);
-        center_c = new Button ();
-        center_c.sensitive = false;
+        main_vbox = new VBox (false, 0);
+        this.add (main_vbox);
+        
+        turn = 0;
+    }
+    
+    public void append_date (Widget date) {
+        date.get_style_context ().add_class ("timeline-date");
+        var al = new Alignment (0.5f, 0, 0, 0);
+        al.add (date);
+        main_vbox.pack_start (al, false, false, 0);
+        
+        //Let's add the new day boxes!
+        center_c = new Overlay ();
+        center_c.add (new Timeline ());
         right_c = new Box (Orientation.VERTICAL, 0);
         left_c = new Box (Orientation.VERTICAL, 0);
         
-        this.pack_start (left_c, true, true, 0);
-        this.pack_start (center_c, false, false, 5);
-        this.pack_start (right_c, true, true,  0);
+        var main_hbox = new HBox (false, 0);
         
-        turn = 0;
+        main_hbox.pack_start (left_c, true, true, 0);
+        main_hbox.pack_start (center_c, false, false, 0);
+        main_hbox.pack_start (right_c, true, true,  0);
+        
+        main_vbox.pack_start (main_hbox, false, false, 0);
     }
     
     public void append_bubble (GenericActivity activity) {
         var box = new Box (Orientation.HORIZONTAL, 0);
         
-        var spacing = Random.int_range (10, 30);
+        var spacing = Random.int_range (10, 50);
         if (turn % 2 == 0) {
             var bubble = new ActivityBubble (activity);
             bubble.get_style_context ().add_class ("round-button-right");
@@ -235,8 +224,28 @@ private class Journal.BubbleContainer : Box {
     }
 } 
 
+private class Journal.Timeline: DrawingArea {
+     public override bool draw (Cairo.Context cr) {
+         var width = get_allocated_width ();
+         var height = get_allocated_height ();
+         var color = Utils.get_timeline_bg_color ();
+         Gdk.cairo_set_source_rgba (cr, color);
+         cr.paint ();
+         return false;
+     }
+     
+     public override void get_preferred_width (out int minimum_width, out int natural_width) {
+            minimum_width = natural_width = 2;
+     }
+}
+
 private class Journal.Arrow : DrawingArea {
         private Side arrow_side;
+        
+        private const int arrow_width = 20;
+        private const int spacing = 10;
+        private const int radius = 6;
+        private const int line_width = 2;
         
         public bool hover {
             get; set;
@@ -260,44 +269,105 @@ private class Journal.Arrow : DrawingArea {
             Gdk.cairo_set_source_rgba (cr, color);
             cr.set_line_width (4);
             if (this.arrow_side == Side.RIGHT) {
+                //Draw and fill the arrow
+                cr.save ();
+                cr.move_to (0, height / 2 - arrow_height);
+                cr.line_to (arrow_width, height / 2);
+                cr.move_to (arrow_width, height / 2);
+                cr.line_to (0, height / 2 + arrow_height);
+                cr.rel_line_to(0, - arrow_height * 2);
+                color = Utils.get_roundbox_border_color ();
+                cr.set_source_rgba (1, 1, 1, 0.65);
+                cr.fill ();
+                cr.restore ();
+                
+                //Draw the border
                 cr.move_to (0, 0);
                 cr.line_to (0, height / 2 - arrow_height);
                 cr.set_line_width (4);
                 cr.stroke ();
                 cr.move_to (0, height / 2 - arrow_height);
                 cr.set_line_width (2);
-                cr.line_to (width, height /2);
+                cr.line_to (arrow_width, height /2);
                 cr.stroke ();
-                cr.move_to (width, height /2);
+                cr.move_to (arrow_width, height /2);
                 cr.line_to (0, height / 2 + arrow_height);
                 cr.stroke ();
                 cr.move_to (0, height / 2 + arrow_height);
                 cr.line_to (0, height);
                 cr.set_line_width (4);
                 cr.stroke ();
+                
+                //Draw the Circle
+                var bg =  Utils.get_timeline_bg_color ();
+                color = Utils.get_timeline_circle_color ();
+                cr.set_line_width (line_width ); 
+                // Paint the border cirle to start with.
+                Gdk.cairo_set_source_rgba (cr, bg);
+                cr.arc (arrow_width + spacing + radius + line_width, 
+                        height / 2 - arrow_height / 2 + radius + line_width - 1,
+                        radius, 0, 2*Math.PI);
+                cr.stroke ();
+                // Paint the colored cirle to start with.
+                Gdk.cairo_set_source_rgba (cr, color);
+                cr.arc (arrow_width + spacing + radius + line_width, 
+                        height / 2 - arrow_height / 2 + radius + line_width - 1,
+                        radius - 1, 0, 2*Math.PI);
+                cr.fill ();
             }
             else {
+                //Draw and fill the arrow
+                cr.save ();
+                cr.move_to (width, height / 2 - arrow_height);
+                cr.line_to (radius * 2 + line_width * 2 + spacing, height / 2);
+                cr.move_to (radius * 2 + line_width * 2 + spacing, height / 2);
+                cr.line_to (width, height / 2 + arrow_height);
+                cr.rel_line_to(0, - arrow_height * 2);
+                color = Utils.get_roundbox_border_color ();
+                cr.set_source_rgba (1, 1, 1, 0.65);
+                cr.fill ();
+                cr.restore ();
+                
+                // Draw the border
                 cr.move_to (width, 0);
                 cr.line_to (width, height / 2 - arrow_height);
                 cr.stroke ();
                 cr.move_to (width, height / 2 - arrow_height);
-                cr.line_to (0, height /2);
+                cr.line_to (radius * 2 + line_width * 2 + spacing , height /2);
                 cr.set_line_width (2);
                 cr.stroke ();   
-                cr.move_to (0, height /2);
+                cr.move_to (radius * 2 + line_width * 2 + spacing , height /2);
                 cr.line_to (width, height / 2 + arrow_height);
                 cr.stroke ();
                 cr.move_to (width, height / 2 + arrow_height);
                 cr.line_to (width, height);
                 cr.set_line_width (4);
                 cr.stroke ();
+                
+                //Draw the Circle
+                var bg =  Utils.get_timeline_bg_color ();
+                color = Utils.get_timeline_circle_color ();
+                cr.set_line_width (line_width ); 
+                // Paint the border cirle to start with.
+                Gdk.cairo_set_source_rgba (cr, bg);
+                cr.arc (radius + line_width, 
+                        height / 2 - arrow_height / 2 + radius + line_width - 1,
+                        radius, 0, 2*Math.PI);
+                cr.stroke ();
+                // Paint the colored cirle to start with.
+                Gdk.cairo_set_source_rgba (cr, color);
+                cr.arc (radius + line_width, 
+                        height / 2 - arrow_height / 2 + radius + line_width - 1,
+                        radius - 1, 0, 2*Math.PI);
+                cr.fill ();
             }
 
             return false;
         }
         
         public override void get_preferred_width (out int minimum_width, out int natural_width) {
-            minimum_width = natural_width = 20;
+            minimum_width = natural_width = arrow_width + spacing
+                                            + radius * 2 + line_width * 2;
         }
 }
 
@@ -359,7 +429,8 @@ private class Journal.CircleTexture: Clutter.CairoTexture {
 }
 
 private class Journal.ActivityBubble : Button {
-
+    private const int DEFAULT_WIDTH = 400;
+    
     public GenericActivity activity {
         get; private set;
     }
@@ -375,6 +446,8 @@ private class Journal.ActivityBubble : Button {
                this._image.set_from_pixbuf (act.thumb_icon);
            });
        }
+       
+       this.clicked.connect (() => {activity.launch ();});
        
        setup_ui ();
     }
@@ -398,6 +471,10 @@ private class Journal.ActivityBubble : Button {
         container.pack_start (_image,true, true, 0);
         
         this.add (container);
+    }
+    
+    public override void get_preferred_width (out int minimum_width, out int natural_width) {
+            minimum_width = natural_width = DEFAULT_WIDTH;
     }
 
 }

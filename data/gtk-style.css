@@ -17,9 +17,9 @@ GtkNotebook{
 .round-button-left {
     background-image : -gtk-gradient(radial,
                                     center center, 0,
-                                    center center, 8,
+                                    center center, 6,
                                     from(#FFF),
-                                    color-stop(0.5, @journal_label_color),
+                                    color-stop(0.6, @journal_label_color),
                                     to(#FFF));
      border-image : none;
      border-color: @journal_label_color;
@@ -32,9 +32,9 @@ GtkNotebook{
 .round-button-right {
     background-image : -gtk-gradient(radial,
                                     center center, 0,
-                                    center center, 8,
+                                    center center, 6,
                                     from(#FFF),
-                                    color-stop(0.5, @journal_label_color),
+                                    color-stop(0.6, @journal_label_color),
                                     to(#FFF));
      border-image : none;
      border-color: @journal_label_color;
@@ -52,19 +52,19 @@ GtkNotebook{
      border-color: @journal_timeline_color;
 }
 
-.border-right {
-/*    background-repeat : no-repeat;*/
-/*    background-image : url("assets/right.png");*/
-/*    border-image : none;*/
-/*    border-width: 0px;*/
+.timeline-date {
+    background-image : -gtk-gradient(radial,
+                                    center center, 0,
+                                    center center, 6,
+                                    from(#FFF),
+                                    color-stop(0.2, #ABC),
+                                    to(#FFF));
+     border-image : none;
+     border-radius: 5px;
 }
 
-.border-left {
-/*    background-repeat : no-repeat;*/
-/*    background-image : url("assets/left.png");*/
-/*    border-image : none;*/
-/*    border-width: 0px;*/
-      color : @journal_timeline_color;
+.timeline-date GtkLabel {
+    font-weight: bold;
 }
 
 
