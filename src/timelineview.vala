@@ -18,7 +18,11 @@
  * Author: Stefano Candori <scandori@gnome.org>
  *
  */
- 
+
+//FIXME :
+//        *Timeline circles not on timeline
+//        *When a day has only one activities the timeline is not centered
+//        *Highlight timenavigator widget
 using Gtk;
 using Cairo;
 
@@ -29,11 +33,6 @@ enum Side {
  BOTTOM
 }
 
-enum ScrollMode {
-    X,
-    Y
-}
-
 private class Journal.VTL : Box {
     
     private ActivityModel model;
@@ -42,11 +41,12 @@ private class Journal.VTL : Box {
     private TimelineNavigator vnav;
     
     public ScrolledWindow viewport;
-    public VBox container;
+    public Box container;
     private BubbleContainer bubble_c;
     
     private Gee.Map<string, Clutter.Actor> y_positions;
     private Gee.List<string> dates_added;
+    private Gee.Map<string, Widget?> dates_widget;
 
     //Date to jump when we have loaded new events
     private DateTime? date_to_jump;
@@ -59,13 +59,15 @@ private class Journal.VTL : Box {
         this.app = app;
         
         y_positions = new Gee.HashMap <string, Clutter.Actor> ();
+        dates_widget = new Gee.HashMap <string, Widget?> ();
         dates_added = new Gee.ArrayList <string> ();
         
         viewport = new ScrolledWindow (null, null);
         viewport.set_policy (PolicyType.NEVER, PolicyType.AUTOMATIC);
         scrollbar = (Scrollbar)viewport.get_vscrollbar ();
+        scrollbar.value_changed.connect (() => { on_scrollbar_scroll ();});
         
-        container = new VBox (false, 0);
+        container = new Box (Orientation.VERTICAL, 0);
         viewport.add_with_viewport (container);
         
         bubble_c = new BubbleContainer ();
@@ -84,46 +86,94 @@ private class Journal.VTL : Box {
         });
     }
     
+    private bool get_child_index_for_date (string date, out int index) {
+        index = -1;
+        var datetime = Utils.datetime_from_string (date);
+        dates_added.sort ( (a,b) => {
+            DateTime first = Utils.datetime_from_string ((string)a);
+            DateTime second= Utils.datetime_from_string ((string)b);
+            return - first.compare (second);
+        });
+        
+        int i = 0;
+        foreach (string d in dates_added) {
+            DateTime dt = Utils.datetime_from_string (d);
+            if (dt.compare (datetime) <= 0) {
+                //i*2 because the first child is the date and the second is the
+                //list of activities
+                index = i*2;
+                return true;
+            }
+            i++;
+        }
+        //Else append to the end
+        return false;
+    }
+    
     private void load_activities (Gee.ArrayList<string> dates_loaded) {
         foreach (string date in dates_loaded) {
             if (dates_added.contains (date) || date.has_prefix ("*"))
               continue;
             
-            dates_added.add (date);
+            int index;
+            get_child_index_for_date (date, out index);
             string text = Utils.datetime_from_string (date).format (_("%A, %x"));
             var d = new Button.with_label (text);
-            bubble_c.append_date (d);
-
+            bubble_c.append_date_and_reorder (d, index);
+            dates_widget.set (date, d);
+            dates_added.add (date);
+  
             var activity_list = model.activities.get (date);
-            foreach (GenericActivity activity in activity_list.composite_activities) 
-                 bubble_c.append_bubble (activity);
-
-            bubble_c.show_all ();
+            bubble_c.append_bubbles (activity_list.composite_activities);
         }
+        
+        if (date_to_jump != null)
+            jump_to_day (date_to_jump);
+    }
+    
+    private DateTime find_nearest_date (DateTime date) {
+        DateTime nearest = date;
+        int diff = 0;
+        int min_diff = int.MAX;
+        foreach (string tmp in dates_added) {
+            var tmp_d = Utils.datetime_from_string (tmp);
+            diff = (int)(tmp_d.difference (date) / TimeSpan.DAY).abs ();
+            if (diff < min_diff) {
+                nearest = tmp_d;
+                min_diff = diff;
+            }
+        }
+        return nearest;
+    }
+    
+    private void internal_jump_on_scroll (DateTime date, string date_s) {
+        //Thanks http://stackoverflow.com/questions/6903170/auto-scroll-a-gtkscrolledwindow
+        int y;
+        var vadj = scrollbar.adjustment;
+        dates_widget.get (date_s).translate_coordinates (container, 0, 0, null, out y);
+        if (y == -1)
+            Idle.add (()=>{
+                jump_to_day (date);
+                return false;
+            });
+        else
+            vadj.value = double.min (y, vadj.upper - vadj.page_size);
     }
     
     private void jump_to_day (DateTime date) {
-        float y = 0;
         string date_s = date.format("%Y-%m-%d");
-        if (y_positions.has_key (date_s) == true) {
-            y = this.y_positions.get (date_s).get_y ();
-            if (y == 0 && date.compare (Utils.get_start_of_today ()) != 0)
-                //FIXME WTF? why y is 0 for a newly added actor;
-                Idle.add (()=>{
-                    jump_to_day (date);
-                    return false;
-                });
-            //viewport.scroll_to_point (0.0f, y);
+        if (dates_widget.has_key (date_s)) {
+            internal_jump_on_scroll (date, date_s);
             date_to_jump = null;
         }
         else {
             if (date == date_to_jump) {
                 //Break the infinite loop that happens when the user ask for an
-                //event period too far and not present in the db.
-                date_s = dates_added.get (dates_added.size - 1);
-                if (y_positions.has_key (date_s) == true) {
-                    y = this.y_positions.get (date_s).get_y ();
-                    //viewport.scroll_to_point (0.0f, y);
+                //event period not present in the db.
+                var nearest_date = find_nearest_date (date);
+                var nearest_date_s = nearest_date.format("%Y-%m-%d");
+                if (dates_widget.has_key (nearest_date_s)) {
+                    internal_jump_on_scroll (nearest_date, nearest_date_s);
                     date_to_jump = null;
                 }
                 return;
@@ -135,71 +185,90 @@ private class Journal.VTL : Box {
     
     private void on_scrollbar_scroll () {
         float y = (float)(scrollbar.adjustment.value);
-        //viewport.scroll_to_point (0.0f, y);
-        var limit = (int)scrollbar.adjustment.upper - scrollbar.adjustment.page_size - 500;
+        var limit = (int)scrollbar.adjustment.upper - 
+                         scrollbar.adjustment.page_size 
+                         - 300;
+        
         if (!on_loading && y >= limit) {
             //We can't scroll anymmore! Let's load another day!
-            //loading.start ();
             model.load_other_days (3);
             on_loading = true;
         }
         
         //We are moving so we should highligth the right TimelineNavigator's label
-         //TODO
-//        string final_key = "";
-//        float final_pos = 0;
-//        foreach (Gee.Map.Entry<string, Clutter.Actor> entry in y_positions.entries) {
-//            float current_value = entry.value.get_y ();
-//            if (current_value <= ((y) + stage.height / 2) && current_value > final_pos) {
-//                final_key = entry.key;
-//                final_pos = current_value;
-//            }
-//        }
-//        vnav.highlight_date (final_key);
+        string final_key = "";
+        float final_pos = 0;
+        foreach (Gee.Map.Entry<string, Widget?> entry in dates_widget.entries) {
+            int current_value;
+            entry.value.translate_coordinates (container, 
+                                               0, 0, null, 
+                                               out current_value);
+            if (current_value <= y && current_value > final_pos) {
+                final_key = entry.key;
+                final_pos = current_value;
+            }
+        }
+        vnav.highlight_date (final_key);
     }
 }
 
 private class Journal.BubbleContainer : EventBox {
     private Box right_c;
     private Box left_c;
-    private Overlay center_c;
+    private Timeline center_c;
     
-    private VBox main_vbox;
+    private Box main_vbox;
 
     private int turn;
     
     public BubbleContainer () {
-        main_vbox = new VBox (false, 0);
+        main_vbox = new Box (Orientation.VERTICAL, 0);
         this.add (main_vbox);
         
         turn = 0;
     }
     
-    public void append_date (Widget date) {
+    public void append_date_and_reorder (Widget date, int index) {
         date.get_style_context ().add_class ("timeline-date");
-        var al = new Alignment (0.5f, 0, 0, 0);
+        var al = new Alignment (0.49f, 0, 0, 0);
         al.add (date);
         main_vbox.pack_start (al, false, false, 0);
         
         //Let's add the new day boxes!
-        center_c = new Overlay ();
-        center_c.add (new Timeline ());
+        center_c = new Timeline ();
         right_c = new Box (Orientation.VERTICAL, 0);
         left_c = new Box (Orientation.VERTICAL, 0);
         
-        var main_hbox = new HBox (false, 0);
+        var main_hbox = new Box (Orientation.HORIZONTAL, 0);
         
         main_hbox.pack_start (left_c, true, true, 0);
         main_hbox.pack_start (center_c, false, false, 0);
         main_hbox.pack_start (right_c, true, true,  0);
         
+        right_c.margin_right = 20;
+        
         main_vbox.pack_start (main_hbox, false, false, 0);
+        
+        if (index != -1) {
+            main_vbox.reorder_child (al, index);
+            main_vbox.reorder_child (main_hbox, index + 1);
+        }
     }
     
-    public void append_bubble (GenericActivity activity) {
+    public void append_bubbles (Gee.List<GenericActivity> activity_list) {
+        foreach (GenericActivity activity in activity_list)
+            this.append_bubble (activity);
+        
+        if (activity_list.size == 1)
+            this.append_invisible ();
+            
+        this.show_all ();
+    }
+    
+    private void append_bubble (GenericActivity activity) {
         var box = new Box (Orientation.HORIZONTAL, 0);
         
-        var spacing = Random.int_range (10, 50);
+        var spacing = Random.int_range (10, 30);
         if (turn % 2 == 0) {
             var bubble = new ActivityBubble (activity);
             bubble.get_style_context ().add_class ("round-button-right");
@@ -208,7 +277,7 @@ private class Journal.BubbleContainer : EventBox {
             bubble.leave.connect (() => {border.hover = false; border.queue_draw ();});
             box.pack_start (bubble, true, true, 0);
             box.pack_start (border, false, false, 0);
-            this.left_c.pack_start (box, true, true, spacing);
+            this.left_c.pack_start (box, false, false, spacing);
         }
         else {
             var bubble = new ActivityBubble (activity);
@@ -218,7 +287,17 @@ private class Journal.BubbleContainer : EventBox {
             bubble.leave.connect (() => {border.hover = false; border.queue_draw ();});
             box.pack_start (border, false, false, 0);
             box.pack_start (bubble, true, true, 0);
-            this.right_c.pack_start (box, true, true, spacing);
+            this.right_c.pack_start (box, false, false, spacing);
+        }
+        turn++;
+    }
+    
+    private void append_invisible () {
+        if (turn % 2 == 0) {
+            this.left_c.pack_start (new Label (""), true, true, 0);
+        }
+        else {
+            this.right_c.pack_start (new Label (""), true, true, 0);
         }
         turn++;
     }
@@ -235,7 +314,7 @@ private class Journal.Timeline: DrawingArea {
      }
      
      public override void get_preferred_width (out int minimum_width, out int natural_width) {
-            minimum_width = natural_width = 2;
+          minimum_width = natural_width = 2;
      }
 }
 
@@ -390,44 +469,6 @@ private class Journal.DayActor : Clutter.Actor {
     }
 }
 
-private class Journal.CircleTexture: Clutter.CairoTexture {
-        private const int radius = 6;
-        private const int line_width = 2;
-
-        public CircleTexture () {
-            this.auto_resize = true;
-            invalidate ();
-        }
-        
-        public override bool draw (Cairo.Context ctx) {
-            var bg =  Utils.get_timeline_bg_color ();
-            Clutter.Color backgroundColor = Utils.gdk_rgba_to_clutter_color (bg);
-            var color = Utils.get_timeline_circle_color ();
-            Clutter.Color circleColor = Utils.gdk_rgba_to_clutter_color (color);
-
-            var cr = ctx;
-            this.clear ();
-            // Paint the border cirle to start with.
-            Clutter.cairo_set_source_color(cr, backgroundColor);
-            ctx.arc (radius + line_width, radius + line_width, radius, 0, 2*Math.PI);
-            ctx.stroke ();
-            // Paint the colored cirle to start with.
-            Clutter.cairo_set_source_color(cr, circleColor);
-            ctx.arc (radius + line_width, radius + line_width, radius - 1, 0, 2*Math.PI);
-            ctx.fill ();
-            
-            return true;
-        }
-
-    public override void get_preferred_width (float for_height,out float min_width, out float nat_width) {
-        nat_width = min_width = 2 * radius + 2 * line_width;
-    }
-   
-    public override void get_preferred_height (float for_width,out float min_height, out float nat_height) {
-        nat_height = min_height = 2 * radius + 2 * line_width;
-    }
-}
-
 private class Journal.ActivityBubble : Button {
     private const int DEFAULT_WIDTH = 400;
     
@@ -459,16 +500,16 @@ private class Journal.ActivityBubble : Button {
         DateTime d = new DateTime.from_unix_utc (this.activity.time_start / 1000).to_local ();
         string date = d.format ("%H:%M");
         var time = new Label (date);
-        var vbox = new VBox (false, 5);
+        var vbox = new Box (Orientation.VERTICAL, 5);
         vbox.pack_start (title, true, true, 0);
         vbox.pack_start (time, true, true, 0);
         evbox.add (vbox);
         
         _image = new Image.from_pixbuf (activity.icon);
         
-        var container = new VBox (false, 5);
-        container.pack_start (evbox,true, true, 0);
-        container.pack_start (_image,true, true, 0);
+        var container = new Box (Orientation.VERTICAL, 5);
+        container.pack_start (evbox, true, true, 0);
+        container.pack_start (_image, true, true, 0);
         
         this.add (container);
     }
