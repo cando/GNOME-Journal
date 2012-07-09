@@ -32,7 +32,7 @@ private class Journal.Utils : Object{
     private static Gnome.DesktopThumbnailFactory factory;
     
     static construct{
-        settings = new GLib.Settings ("org.gnome.activity-journal");
+        settings = new GLib.Settings ("org.gnome.journal");
         factory = new Gnome.DesktopThumbnailFactory (Gnome.ThumbnailSize.NORMAL);
     }
 

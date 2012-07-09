@@ -236,11 +236,11 @@ private class Journal.SingleActivity : GenericActivity {
     }
     
     public override void create_content () {
-        this.content = new Image.from_pixbuf (this.icon);
+        this.content = new ImageContent.from_pixbuf (this.icon);
     }
     
     public virtual void update_icon () {
-        ((Image)content).set_from_pixbuf (this.thumb_icon);
+        ((ImageContent)content).set_from_pixbuf (this.thumb_icon);
     }
     
     public override void launch (){
@@ -288,13 +288,13 @@ private class Journal.VideoActivity : SingleActivity {
         Object (event:event);
     }
     
-//    public override void create_content () {
-//        content = new VideoContent (uri, this.icon);
-//    }
+    public override void create_content () {
+        content = new VideoWidget (uri);
+    }
     
-//    public override void update_icon () {
-//        ((VideoContent)content).set_thumbnail (this.thumb_icon);
-//    }
+    public override void update_icon () {
+       //None
+    }
 }
 
 private class Journal.ApplicationActivity : SingleActivity {
@@ -519,20 +519,20 @@ private class Journal.CompositeImageActivity : CompositeActivity {
         return null;
     }
     
-//    public override void create_content () {
-//        int num = int.min (9, activities.size);
-//        ImageContent[] pixbufs = new ImageContent[num];
-//        for (int i = 0; i < num; i++){
-//            var activity = activities.get (i);
-//            var content = activity.content as ImageContent;
-//            content.highlight_items = true;
-//            content.clicked.connect (() => {activity.launch ();});
-//            if (content.get_parent () != null)
-//                content.get_parent ().remove_child (content);
-//            pixbufs[i] = content;
-//        }
-//        actor = new CompositeImageActor (this.title, pixbufs, this.date);
-//    }
+    public override void create_content () {
+        int num = int.min (9, activities.size);
+        ImageContent[] pixbufs = new ImageContent[num];
+        for (int i = 0; i < num; i++){
+            var activity = activities.get (i);
+            var content = activity.content as ImageContent;
+            content.highlight_items = true;
+            content.clicked.connect (() => {activity.launch ();});
+            if (content.get_parent () != null)
+                content.unparent ();
+            pixbufs[i] = content;
+        }
+        content = new CompositeImageWidget (pixbufs);
+    }
 }
 
 private class Journal.CompositeVideoActivity : CompositeActivity {

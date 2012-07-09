@@ -1,5 +1,5 @@
 <schemalist>
-  <schema id="org.gnome.activity-journal" path="/org/gnome/activity-journal/" gettext-domain="gnome-activity-journal">
+  <schema id="org.gnome.journal" path="/org/gnome/journal/" gettext-domain="gnome-journal">
 
     <key name="animation-duration" type="i">
       <_summary>Animation duration</_summary>

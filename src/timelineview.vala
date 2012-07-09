@@ -23,6 +23,8 @@
 //        IMPORTANT!
 //        * Timeline circles not on timeline
 //        * Port ActivityActor to GTK;
+//        *Propagate Events
+//        * Find why certain buttons aren't clickable
 //        SECONDARY
 //        * Highlight timenavigator widget (Rewrite it!)
 //        * Disable scrollbar on loading? On-loading message?
@@ -488,17 +490,19 @@ private class Journal.ActivityBubble : Button {
         string date = d.format ("%H:%M");
         var time = new Label (date);
         
-        //_image = new Image.from_pixbuf (activity.icon);
-        
         var container = new Box (Orientation.VERTICAL, 5);
         container.pack_start (title, false, true, 0);
-         if (activity.content != null)
-            container.pack_start (activity.content, true, true, 9);
-        container.pack_start (time, false, true, 0);
+         if (activity.content != null) {
+            var al = new Alignment (0.5f, 0, 0, 0);
+            al.add (activity.content);
+            container.pack_start (al, false, false, 9);
+            
+         }
+         container.pack_start (time, false, true, 0);
         
         this.add (container);
     }
-    
+
     public override void get_preferred_width (out int minimum_width, out int natural_width) {
             minimum_width = natural_width = DEFAULT_WIDTH;
     }
