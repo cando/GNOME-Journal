@@ -470,6 +470,32 @@ private class Journal.Arrow : DrawingArea {
         }
 }
 
+private class Journal.ActivityBubbleHeader : HBox {
+    private Label title;
+    private Label time;
+    private Button option_button;
+    private Image icon;
+    public ActivityBubbleHeader (GenericActivity activity) {
+        this.title = new Label (activity.title);
+        this.title.set_alignment (0, 1);
+        DateTime d = new DateTime.from_unix_utc (activity.time_start / 1000).to_local ();
+        string date = d.format ("%H:%M");
+        this.title.set_markup ("<b>%s</b>\n<span size='small'><i>%s</i></span>".printf(activity.title, date));
+        
+        var pixbuf = activity.icon.scale_simple (32, 32, Gdk.InterpType.NEAREST);
+        this.icon = new Gtk.Image.from_pixbuf (pixbuf);
+        
+        this.pack_start (this.icon, false, true, 3);
+        var container = new Box (Orientation.VERTICAL, 5);
+        if (activity.content != null) {
+            container.pack_start (title, true, true, 0);
+            container.pack_start (new Gtk.HSeparator (), false, false, 0);
+        }
+        this.pack_start (container, true, true, 0);
+    }
+}
+
+
 private class Journal.ActivityBubble : Button {
     private const int DEFAULT_WIDTH = 400;
     
@@ -480,25 +506,15 @@ private class Journal.ActivityBubble : Button {
     public ActivityBubble (GenericActivity activity) {
        this.activity = activity;
        this.clicked.connect (() => {activity.launch ();});
-       
        setup_ui ();
     }
     
     private void setup_ui () {
-        var title = new Label (activity.title);
-        DateTime d = new DateTime.from_unix_utc (this.activity.time_start / 1000).to_local ();
-        string date = d.format ("%H:%M");
-        var time = new Label (date);
+        var header = new ActivityBubbleHeader (activity);
         
         var container = new Box (Orientation.VERTICAL, 5);
-        container.pack_start (title, false, true, 0);
-         if (activity.content != null) {
-            var al = new Alignment (0.5f, 0, 0, 0);
-            al.add (activity.content);
-            container.pack_start (al, false, false, 9);
-            
-         }
-         container.pack_start (time, false, true, 0);
+        container.pack_start (header, false, true, 2);
+        container.pack_start (activity.content, true, true, 9); 
         
         this.add (container);
     }
