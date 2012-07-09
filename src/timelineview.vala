@@ -20,9 +20,12 @@
  */
 
 //FIXME :
-//        *Timeline circles not on timeline
-//        *When a day has only one activities the timeline is not centered
-//        *Highlight timenavigator widget
+//        IMPORTANT!
+//        * Timeline circles not on timeline
+//        * Port ActivityActor to GTK;
+//        SECONDARY
+//        * Highlight timenavigator widget (Rewrite it!)
+//        * Disable scrollbar on loading? On-loading message?
 using Gtk;
 using Cairo;
 
@@ -52,6 +55,7 @@ private class Journal.VTL : Box {
     private DateTime? date_to_jump;
     
     private bool on_loading;
+    private float old_y;
 
     public VTL (App app, ActivityModel model){
         Object (orientation: Orientation.HORIZONTAL, spacing : 0);
@@ -84,6 +88,8 @@ private class Journal.VTL : Box {
              load_activities (dates_loaded);
              on_loading = false;
         });
+        
+        old_y = -1;
     }
     
     private bool get_child_index_for_date (string date, out int index) {
@@ -196,19 +202,29 @@ private class Journal.VTL : Box {
         }
         
         //We are moving so we should highligth the right TimelineNavigator's label
-        string final_key = "";
-        float final_pos = 0;
-        foreach (Gee.Map.Entry<string, Widget?> entry in dates_widget.entries) {
-            int current_value;
-            entry.value.translate_coordinates (container, 
-                                               0, 0, null, 
-                                               out current_value);
-            if (current_value <= y && current_value > final_pos) {
-                final_key = entry.key;
-                final_pos = current_value;
-            }
-        }
-        vnav.highlight_date (final_key);
+        //TODO
+//        int current_value;
+//        if (!dates_widget.has_key (vnav.current_highlighted)) {
+//            var widget = dates_widget.get (vnav.current_highlighted);
+//            widget.translate_coordinates (container, 
+//                                               0, 0, null, 
+//                                               out current_value);
+//        }
+//        else {
+//            var date = Utils.datetime_from_string (vnav.current_highlighted);
+//            var nearest_date = find_nearest_date (date);
+//            var nearest_date_s = nearest_date.format ("%Y-%m-%d");
+//            var widget = dates_widget.get (vnav.current_highlighted);
+//            widget.translate_coordinates (container, 
+//                                               0, 0, null, 
+//                                               out current_value);
+//        }
+//        if (current_value < y && y > old_y)
+//                vnav.highlight_next ();
+//        else if (current_value > y && y < old_y)
+//                vnav.highlight_previous ();
+//        
+//        old_y = y;
     }
 }
 
@@ -223,7 +239,9 @@ private class Journal.BubbleContainer : EventBox {
     
     public BubbleContainer () {
         main_vbox = new Box (Orientation.VERTICAL, 0);
-        this.add (main_vbox);
+        var al = new Alignment (0.5f, 0, 0, 0);
+        al.add (main_vbox);
+        this.add (al);
         
         turn = 0;
     }
@@ -241,9 +259,9 @@ private class Journal.BubbleContainer : EventBox {
         
         var main_hbox = new Box (Orientation.HORIZONTAL, 0);
         
-        main_hbox.pack_start (left_c, true, true, 0);
+        main_hbox.pack_start (left_c, false, true, 0);
         main_hbox.pack_start (center_c, false, false, 0);
-        main_hbox.pack_start (right_c, true, true,  0);
+        main_hbox.pack_start (right_c, false, true,  0);
         
         right_c.margin_right = 20;
         
@@ -448,25 +466,6 @@ private class Journal.Arrow : DrawingArea {
             minimum_width = natural_width = arrow_width + spacing
                                             + radius * 2 + line_width * 2;
         }
-}
-
-private class Journal.DayActor : Clutter.Actor {
-
-    private Clutter.Text date_text;
-    
-    public DayActor (string date) {
-        var color = Utils.get_timeline_bg_color ();
-        Clutter.Color bgColor = Utils.gdk_rgba_to_clutter_color (color);
-        this.background_color = bgColor.lighten();
-        string text = Utils.datetime_from_string (date).format (_("%A, %x"));
-        date_text = new Clutter.Text.with_text (null, text);
-        var attr_list = new Pango.AttrList ();
-        attr_list.insert (Pango.attr_scale_new (Pango.Scale.MEDIUM));
-        attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
-        date_text.attributes = attr_list;
-
-        this.add_child (date_text);
-    }
 }
 
 private class Journal.ActivityBubble : Button {

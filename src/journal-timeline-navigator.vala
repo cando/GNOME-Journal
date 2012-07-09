@@ -56,6 +56,8 @@ private class Journal.TimelineNavigator : ButtonBox {
     private Gee.Map<DateTime?, uint> count_map;
     
     public static Gee.Map<string, DateTime?> jump_date;
+    public string current_highlighted;
+    public int current_highlighted_index;
     
     private Pango.AttrList attr_list;
     
@@ -196,6 +198,8 @@ private class Journal.TimelineNavigator : ButtonBox {
             if (i == 0) {
                 Label label = (Label) b.get_child ();
                 label.attributes = attr_list;
+                current_highlighted = jump_date.get(time_labels[0]).format ("%Y-%m-%d");
+                current_highlighted_index = 0;
            }
             b.clicked.connect (() => {
                 foreach (Widget w in this.get_children ()) {
@@ -211,6 +215,32 @@ private class Journal.TimelineNavigator : ButtonBox {
             i++;
         }
         this.show_all();
+    }
+    
+    public void highlight_next () {
+        var index = current_highlighted_index + 1;
+        int i = 0;
+        foreach (Widget w in this.get_children ()) {
+            Label label = (Label)((Button)w).get_child ();
+            if (i == index)
+                label.attributes = attr_list;
+            else
+                label.attributes = null;
+            i++;
+        }
+    }
+    
+    public void highlight_previous () {
+        var index = current_highlighted_index - 1;
+        int i = 0;
+        foreach (Widget w in this.get_children ()) {
+            Label label = (Label)((Button)w).get_child ();
+            if (i == index)
+                label.attributes = attr_list;
+            else
+                label.attributes = null;
+            i++;
+        }
     }
     
     public void highlight_date (string date) {
