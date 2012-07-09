@@ -314,68 +314,23 @@ private class Journal.GenericActor : Clutter.Actor {
    }
 }
 
-private class Journal.CompositeDocumentActor : Clutter.Actor {
-    
-    public TextActor title;
-    private ImageContent image;
-    private TextActor time;
+private class Journal.CompositeDocumentWidget : Box {
     
     private Clutter.BoxLayout box;
-    public CompositeDocumentActor (string title_s, Gdk.Pixbuf? pixbuf, string[] uris, string date) {
-        GLib.Object ();
-        this.reactive = true;
-        
-        var attr_list = new Pango.AttrList ();
-        attr_list.insert (Pango.attr_scale_new (Pango.Scale.LARGE));
-        attr_list.insert (Pango.attr_weight_new (Pango.Weight.SEMIBOLD));
+    public CompositeDocumentWidget (Gdk.Pixbuf? pixbuf, string[] uris) {
+        GLib.Object (orientation:Orientation.HORIZONTAL, spacing:10);
 
-        title = new TextActor.full_text (title_s, attr_list);
-        title.margin_bottom = 10;
-
-        attr_list = new Pango.AttrList ();
-        attr_list.insert (Pango.attr_scale_new (Pango.Scale.SMALL));
-        attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
-
-        time = new TextActor.full_text (date, attr_list);
-        time.margin_top = 10;
-        image = new ImageContent.from_pixbuf (pixbuf);
-        image.margin_top = 10;
-        image.margin_bottom = 10;
-        image.margin_right = 5;
-        box = new Clutter.BoxLayout ();
-        box.vertical = true;
-        set_layout_manager (box);
-
-        var t_box = new Clutter.Actor ();
-        var manager = new Clutter.BoxLayout ();
-        manager.vertical = true;
-        t_box.set_layout_manager (manager);
-        float max_w = 0;
+        var vbox = new Box (Orientation.VERTICAL, 5);
         foreach (string uri in uris) {
-            attr_list = new Pango.AttrList ();
-            attr_list.insert (Pango.attr_scale_new (Pango.Scale.MEDIUM));
-            //attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
-            var uri_text = new TextActor.full_text (uri, attr_list);
-            if (uri_text.width > max_w) max_w = uri_text.width;
-            t_box.add_child (uri_text);
-            manager.set_alignment (uri_text, Clutter.BoxAlignment.START, 
-                                           Clutter.BoxAlignment.START);
+            var l_uri = new Label (uri);
+            l_uri.set_ellipsize (Pango.EllipsizeMode.END);
+            l_uri.halign = Align.START;
+            vbox.pack_start (l_uri, false, false, 0);
         }
         
-        var tmp_box = new Clutter.Actor ();
-        var manager2 = new Clutter.BoxLayout ();
-        manager2.vertical = false;
-        tmp_box.set_layout_manager (manager2);
-        tmp_box.add_child (image);
-        manager2.set_alignment(image, Clutter.BoxAlignment.START, 
-                                           Clutter.BoxAlignment.START);
-        tmp_box.add_child (t_box);
-        
-        this.add_child (title);
-        this.add_child(tmp_box);
-        this.add_child (time);
-        
-        this.margin_left = this.margin_right = 10;
+        var _image = new Image.from_pixbuf (pixbuf);
+        this.pack_start(_image, true, true, 0);
+        this.pack_start(vbox, true, true, 0);
     }
 }
 

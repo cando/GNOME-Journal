@@ -23,7 +23,8 @@ using Gdk;
 using Gtk;
 
 private abstract class Journal.GenericActivity : Object {
-    public Clutter.Actor actor {
+    
+    public Widget content {
         get; protected set;
     }
     
@@ -45,7 +46,9 @@ private abstract class Journal.GenericActivity : Object {
     
     public abstract void launch ();
     
-    public abstract void create_actor ();
+    public abstract void create_content ();
+    
+    public abstract Gee.List<Zeitgeist.Event> get_events ();
     
 }
 
@@ -53,10 +56,6 @@ private class Journal.SingleActivity : GenericActivity {
 
     public Zeitgeist.Event event {
         get; construct set;
-    }
-    
-    public Clutter.Actor content {
-        get; protected set;
     }
     
     public string uri {
@@ -236,19 +235,12 @@ private class Journal.SingleActivity : GenericActivity {
        }
     }
     
-    public virtual void create_content () {
-        content = new ImageContent.from_pixbuf (this.icon);
-    }
-    
-    public override void create_actor () {
-        DateTime d = new DateTime.from_unix_utc (this.time_start / 1000).to_local ();
-        string date = d.format ("%H:%M");
-        actor = new GenericActor (this.title, date);
-        ((GenericActor)actor).set_content_actor (content);
+    public override void create_content () {
+        this.content = new Image.from_pixbuf (this.icon);
     }
     
     public virtual void update_icon () {
-        ((ImageContent)content).set_pixbuf (this.thumb_icon);
+        ((Image)content).set_from_pixbuf (this.thumb_icon);
     }
     
     public override void launch (){
@@ -257,6 +249,12 @@ private class Journal.SingleActivity : GenericActivity {
         } catch (Error e) {
             warning ("Impossible to launch " + uri);
         }
+    }
+    
+    public override Gee.List<Zeitgeist.Event> get_events () {
+        var list = new Gee.ArrayList<Zeitgeist.Event> ();
+        list.add (event);
+        return list;
     }
 }
 
@@ -290,9 +288,9 @@ private class Journal.VideoActivity : SingleActivity {
         Object (event:event);
     }
     
-    public override void create_content () {
-        content = new VideoContent (uri, this.icon);
-    }
+//    public override void create_content () {
+//        content = new VideoContent (uri, this.icon);
+//    }
     
     public override void update_icon () {
         ((VideoContent)content).set_thumbnail (this.thumb_icon);
@@ -390,6 +388,8 @@ private class Journal.CompositeActivity : GenericActivity {
         this.time_end = max_end_t;
         this.date = create_date ();
         this.selected = false;
+        
+        create_content ();
     }
     
     private string create_date () {
@@ -415,15 +415,20 @@ private class Journal.CompositeActivity : GenericActivity {
         return Utils.load_fallback_icon ();
     }
     
-    public override void create_actor () {
-        actor = new CompositeDocumentActor (this.title, 
-                                            this.icon, 
-                                            this.uris, 
-                                            this.date);
+    public override void create_content () {
+        content = new CompositeDocumentWidget (this.icon, this.uris);
     }
     
     public override void launch (){
         this.launch_activity (this);
+    }
+    
+    public override Gee.List<Zeitgeist.Event> get_events () {
+        var list = new Gee.ArrayList<Zeitgeist.Event> ();
+        foreach (SingleActivity activity in activities) {
+            list.add (activity.event);
+        }
+        return list;
     }
 }
 
@@ -514,20 +519,20 @@ private class Journal.CompositeImageActivity : CompositeActivity {
         return null;
     }
     
-    public override void create_actor () {
-        int num = int.min (9, activities.size);
-        ImageContent[] pixbufs = new ImageContent[num];
-        for (int i = 0; i < num; i++){
-            var activity = activities.get (i);
-            var content = activity.content as ImageContent;
-            content.highlight_items = true;
-            content.clicked.connect (() => {activity.launch ();});
-            if (content.get_parent () != null)
-                content.get_parent ().remove_child (content);
-            pixbufs[i] = content;
-        }
-        actor = new CompositeImageActor (this.title, pixbufs, this.date);
-    }
+//    public override void create_content () {
+//        int num = int.min (9, activities.size);
+//        ImageContent[] pixbufs = new ImageContent[num];
+//        for (int i = 0; i < num; i++){
+//            var activity = activities.get (i);
+//            var content = activity.content as ImageContent;
+//            content.highlight_items = true;
+//            content.clicked.connect (() => {activity.launch ();});
+//            if (content.get_parent () != null)
+//                content.get_parent ().remove_child (content);
+//            pixbufs[i] = content;
+//        }
+//        actor = new CompositeImageActor (this.title, pixbufs, this.date);
+//    }
 }
 
 private class Journal.CompositeVideoActivity : CompositeActivity {
@@ -573,22 +578,22 @@ private class Journal.CompositeApplicationActivity : CompositeActivity {
         return null;
     }
     
-    public override void create_actor () {
-        int num = int.min (9, activities.size);
-        ImageContent[] pixbufs = new ImageContent[num];
-        for (int i = 0; i < num; i++){
-            var activity = activities.get (i);
-            var info = new  DesktopAppInfo (activity.display_uri);
-            if (info == null)
-                continue;
-            Gdk.Pixbuf pixbuf = Utils.load_pixbuf_from_icon (info.get_icon ());
-            var content = new ImageContent.from_pixbuf (pixbuf);
-            content.highlight_items = true;
-            content.clicked.connect (() => {activity.launch ();});
-            pixbufs[i] = content;
-        }
-        actor = new CompositeApplicationActor (this.title, pixbufs, this.date);
-    }
+//    public override void create_content () {
+//        int num = int.min (9, activities.size);
+//        ImageContent[] pixbufs = new ImageContent[num];
+//        for (int i = 0; i < num; i++){
+//            var activity = activities.get (i);
+//            var info = new  DesktopAppInfo (activity.display_uri);
+//            if (info == null)
+//                continue;
+//            Gdk.Pixbuf pixbuf = Utils.load_pixbuf_from_icon (info.get_icon ());
+//            var content = new ImageContent.from_pixbuf (pixbuf);
+//            content.highlight_items = true;
+//            content.clicked.connect (() => {activity.launch ();});
+//            pixbufs[i] = content;
+//        }
+//        actor = new CompositeApplicationActor (this.title, pixbufs, this.date);
+//    }
 }
 
 private class Journal.CompositeDownloadActivity : CompositeActivity {

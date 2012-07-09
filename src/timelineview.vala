@@ -475,18 +475,8 @@ private class Journal.ActivityBubble : Button {
         get; private set;
     }
     
-    private Image _image;
-    
     public ActivityBubble (GenericActivity activity) {
        this.activity = activity;
-       
-       if (activity is SingleActivity) {
-           var act = activity as SingleActivity;
-           act.thumb_loaded.connect (() => {
-               this._image.set_from_pixbuf (act.thumb_icon);
-           });
-       }
-       
        this.clicked.connect (() => {activity.launch ();});
        
        setup_ui ();
@@ -504,11 +494,12 @@ private class Journal.ActivityBubble : Button {
         vbox.pack_start (time, true, true, 0);
         evbox.add (vbox);
         
-        _image = new Image.from_pixbuf (activity.icon);
+        //_image = new Image.from_pixbuf (activity.icon);
         
         var container = new Box (Orientation.VERTICAL, 5);
         container.pack_start (evbox, true, true, 0);
-        container.pack_start (_image, true, true, 0);
+        if (activity.content != null) 
+            container.pack_start (activity.content, true, true, 0);
         
         this.add (container);
     }
