@@ -76,10 +76,8 @@ private class Journal.TextActor : Clutter.Text {
     }
 }
 
-private class Journal.ImageContent : Clutter.Actor {
-    private Clutter.Canvas canvas;
-    private Gdk.Pixbuf pixbuf;
-    
+private class Journal.ImageContent : Image {
+
     private int border_width = 4;
     
     //Used for highlight the border on mouse over
@@ -91,7 +89,6 @@ private class Journal.ImageContent : Clutter.Actor {
         } 
         set {
             _highlight_border = value;
-            reactive = value;
         }
     }
     
@@ -99,25 +96,13 @@ private class Journal.ImageContent : Clutter.Actor {
 
     private ImageContent (bool highlight_items=false) {
         GLib.Object ();
+        this.set_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
+                         Gdk.EventMask.LEAVE_NOTIFY_MASK |
+                         Gdk.EventMask.BUTTON_RELEASE_MASK);
+        draw.connect (on_draw);
         
-        this.reactive = highlight_items;
-        this.canvas = new Clutter.Canvas ();
-        canvas.draw.connect ((cr, w, h) => { return paint_canvas (cr, w, h); });
-        this.set_content (canvas);
-      
-        this.set_content_scaling_filters (Clutter.ScalingFilter.TRILINEAR,
-                                          Clutter.ScalingFilter.LINEAR);
-                                          
-        this.allocation_changed.connect ((box, f) => {
-            Idle.add (()=>{
-                //see this http://www.mail-archive.com/clutter-app-devel-list@clutter-project.org/msg00116.html
-                canvas.set_size ((int)box.get_width (), (int) box.get_height ());
-                return false;
-            });
-       });
-       
-       enter = false;
-       this.highlight_items = highlight_items;
+        enter = false;
+        this.highlight_items = highlight_items;
     }
     
     public ImageContent.from_uri (string uri, bool highlight_items=false) {
@@ -134,28 +119,19 @@ private class Journal.ImageContent : Clutter.Actor {
      public ImageContent.from_pixbuf (Gdk.Pixbuf pixbuf, bool highlight_items=false) {
         this (highlight_items);
         this.pixbuf = pixbuf;
-        this.set_size (pixbuf.width + border_width * 2, 
-                       pixbuf.height + border_width * 2);
-        canvas.set_size (pixbuf.width + border_width * 2, 
-                         pixbuf.height + border_width * 2);
-        canvas.invalidate ();
+        queue_draw ();
      }
      
      public void set_pixbuf (Gdk.Pixbuf pixbuf) {
         this.pixbuf = pixbuf;
-        this.set_size (pixbuf.width + border_width * 2,
-                       pixbuf.height + border_width * 2);
-        canvas.set_size (pixbuf.width + border_width * 2,
-                         pixbuf.height + border_width * 2);
-        canvas.invalidate ();
+        queue_draw ();
      }
      
-     private bool paint_canvas (Cairo.Context cr, int width, int height) {
-         cr.save ();
-         cr.set_source_rgba (0.0, 0.0, 0.0, 0.0);
-         cr.set_operator (Cairo.Operator.SOURCE);
-         cr.paint ();
-         cr.restore ();
+     private bool on_draw (Cairo.Context cr) {
+         Gtk.Allocation alloc;
+         get_allocation(out alloc);
+         int width = alloc.width;
+         int height = alloc.height;
          
 //         var p = new Cairo.Pattern.linear (0, 0, width, height);
 //         p.add_color_stop_rgba (0, 0, 0, 0, 0.4);
@@ -178,9 +154,7 @@ private class Journal.ImageContent : Clutter.Actor {
           
          if (enter && highlight_items) {
             var color = Utils.get_roundbox_border_color ();
-            Clutter.Color borderColor = Utils.gdk_rgba_to_clutter_color (color);
-            borderColor = borderColor.darken ();
-            Clutter.cairo_set_source_color(cr, borderColor);
+            Gdk.cairo_set_source_rgba (cr, color);
             cr.stroke_preserve ();
          }
          cr.clip();
@@ -190,133 +164,131 @@ private class Journal.ImageContent : Clutter.Actor {
          return true;
      }
      
-     public override  bool enter_event (Clutter.CrossingEvent event) {
+     public override  bool enter_notify_event (Gdk.EventCrossing event) {
         enter = true;
-        canvas.invalidate ();
+        queue_draw ();
         return false;
     }
     
-    public override  bool leave_event (Clutter.CrossingEvent event) {
+    public override  bool leave_notify_event (Gdk.EventCrossing event) {
         enter = false;
-        canvas.invalidate ();
+        queue_draw ();
         return false;
     }
     
-    public override  bool button_release_event (Clutter.ButtonEvent event) {
+    public override  bool button_release_event (Gdk.EventButton event) {
         clicked ();
         return true;
     }
 }
 
-private class Journal.VideoContent : Clutter.Actor {
+//private class Journal.VideoContent : Clutter.Actor {
 
-    private ClutterGst.VideoTexture video;
-    private ImageContent preview;
-    private bool playing;
+//    private ClutterGst.VideoTexture video;
+//    private ImageContent preview;
+//    private bool playing;
 
-    public VideoContent (string uri, Gdk.Pixbuf thumbnail) {
-        GLib.Object ();
-        this.playing = false;
-        this.reactive = true;
-        
-        video = new ClutterGst.VideoTexture ();
-        //FIXME IMPROVE
-        video.set_keep_aspect_ratio (true);
-        video.set_property("seek-flags", 1);
-        video.set_uri (uri);
-        
-        preview = new ImageContent.from_pixbuf (thumbnail);
-        video.set_size (thumbnail.width, thumbnail.height);
-        
-        this.enter_event.connect ((e) => {
-            if (!playing) {
-                this.playing = true;
-                video.set_playing (playing);
-                video.show ();
-                preview.hide ();
-            }
-            return false;
-        });
-        this.leave_event.connect ((e) => {
-            this.playing = false;
-            video.set_playing (playing);
-            video.set_progress (0);
-            return false;
-        });
-        
-        this.add_child (preview);
-        this.add_child (video);
-        video.hide ();
-    }
-    
-    public void set_thumbnail (Gdk.Pixbuf thumbnail) {
-        preview.set_pixbuf (thumbnail);
-        video.set_size (thumbnail.width, thumbnail.height);
-    }
-}
+//    public VideoContent (string uri, Gdk.Pixbuf thumbnail) {
+//        GLib.Object ();
+//        this.playing = false;
+//        this.reactive = true;
+//        
+//        video = new ClutterGst.VideoTexture ();
+//        //FIXME IMPROVE
+//        video.set_keep_aspect_ratio (true);
+//        video.set_property("seek-flags", 1);
+//        video.set_uri (uri);
+//        
+//        preview = new ImageContent.from_pixbuf (thumbnail);
+//        video.set_size (thumbnail.width, thumbnail.height);
+//        
+//        this.enter_event.connect ((e) => {
+//            if (!playing) {
+//                this.playing = true;
+//                video.set_playing (playing);
+//                video.show ();
+//                preview.hide ();
+//            }
+//            return false;
+//        });
+//        this.leave_event.connect ((e) => {
+//            this.playing = false;
+//            video.set_playing (playing);
+//            video.set_progress (0);
+//            return false;
+//        });
+//        
+//        this.add_child (preview);
+//        this.add_child (video);
+//        video.hide ();
+//    }
+//    
+//    public void set_thumbnail (Gdk.Pixbuf thumbnail) {
+//        preview.set_pixbuf (thumbnail);
+//        video.set_size (thumbnail.width, thumbnail.height);
+//    }
+//}
 
-private class Journal.GenericActor : Clutter.Actor {
-    private TextActor title;
-    private Clutter.Actor actor_content;
-    private TextActor time;
-    
-    public GenericActor (string title_text, string date) {
-        GLib.Object ();
-        this.reactive = true;
+//private class Journal.GenericActor : Clutter.Actor {
+//    private TextActor title;
+//    private Clutter.Actor actor_content;
+//    private TextActor time;
+//    
+//    public GenericActor (string title_text, string date) {
+//        GLib.Object ();
+//        this.reactive = true;
 
-        var attr_list = new Pango.AttrList ();
-        attr_list.insert (Pango.attr_scale_new (Pango.Scale.LARGE));
-        attr_list.insert (Pango.attr_weight_new (Pango.Weight.SEMIBOLD));
+//        var attr_list = new Pango.AttrList ();
+//        attr_list.insert (Pango.attr_scale_new (Pango.Scale.LARGE));
+//        attr_list.insert (Pango.attr_weight_new (Pango.Weight.SEMIBOLD));
 
-        title = new TextActor.full_text (title_text, attr_list);
-        title.margin_bottom = 10;
+//        title = new TextActor.full_text (title_text, attr_list);
+//        title.margin_bottom = 10;
 
-        attr_list = new Pango.AttrList ();
-        attr_list.insert (Pango.attr_scale_new (Pango.Scale.SMALL));
-        attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
+//        attr_list = new Pango.AttrList ();
+//        attr_list.insert (Pango.attr_scale_new (Pango.Scale.SMALL));
+//        attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
 
-        time = new TextActor.full_text (date, attr_list);
-        time.margin_top = 10;
-        var box = new Clutter.BoxLayout ();
-        box.vertical = true;
-        box.spacing = 5;
-        set_layout_manager (box);
+//        time = new TextActor.full_text (date, attr_list);
+//        time.margin_top = 10;
+//        var box = new Clutter.BoxLayout ();
+//        box.vertical = true;
+//        box.spacing = 5;
+//        set_layout_manager (box);
 
-        this.margin_left = 10;
-        this.margin_right = 10;
-    }
-    
-    public void set_content_actor (Clutter.Actor content) {
-        this.actor_content = content;
-        this.add_child (title);
-        this.add_child (actor_content);
-        this.add_child (time);
-    }
-    
-    public override void get_preferred_width (float for_height, out float min_width, out float nat_width) {
-       float content_min_width, content_nat_width;
-       float title_min_width, title_nat_width;
-       actor_content.get_preferred_width (-1, out content_min_width, out content_nat_width);
-       title.get_preferred_width (-1, out title_min_width, out title_nat_width);
-       min_width = float.max (content_min_width, title_min_width) + 10 * 2 ;
-       nat_width = float.max (content_nat_width, title_nat_width) + 10 * 2 ;
-    }
-    
-    public override void get_preferred_height (float for_width, out float min_height, out float nat_height) {
-       float content_min_height, content_nat_height;
-       float title_min_height, title_nat_height;
-       float time_min_height, time_nat_height;
-       actor_content.get_preferred_height(-1, out content_min_height, out content_nat_height);
-       title.get_preferred_height(-1, out title_min_height, out title_nat_height);
-       time.get_preferred_height(-1, out time_min_height, out time_nat_height);
-       min_height = content_min_height + title_min_height + time_min_height ;
-       nat_height = content_nat_height + title_nat_height + time_nat_height;
-   }
-}
+//        this.margin_left = 10;
+//        this.margin_right = 10;
+//    }
+//    
+//    public void set_content_actor (Clutter.Actor content) {
+//        this.actor_content = content;
+//        this.add_child (title);
+//        this.add_child (actor_content);
+//        this.add_child (time);
+//    }
+//    
+//    public override void get_preferred_width (float for_height, out float min_width, out float nat_width) {
+//       float content_min_width, content_nat_width;
+//       float title_min_width, title_nat_width;
+//       actor_content.get_preferred_width (-1, out content_min_width, out content_nat_width);
+//       title.get_preferred_width (-1, out title_min_width, out title_nat_width);
+//       min_width = float.max (content_min_width, title_min_width) + 10 * 2 ;
+//       nat_width = float.max (content_nat_width, title_nat_width) + 10 * 2 ;
+//    }
+//    
+//    public override void get_preferred_height (float for_width, out float min_height, out float nat_height) {
+//       float content_min_height, content_nat_height;
+//       float title_min_height, title_nat_height;
+//       float time_min_height, time_nat_height;
+//       actor_content.get_preferred_height(-1, out content_min_height, out content_nat_height);
+//       title.get_preferred_height(-1, out title_min_height, out title_nat_height);
+//       time.get_preferred_height(-1, out time_min_height, out time_nat_height);
+//       min_height = content_min_height + title_min_height + time_min_height ;
+//       nat_height = content_nat_height + title_nat_height + time_nat_height;
+//   }
+//}
 
 private class Journal.CompositeDocumentWidget : Box {
-    
-    private Clutter.BoxLayout box;
     public CompositeDocumentWidget (Gdk.Pixbuf? pixbuf, string[] uris) {
         GLib.Object (orientation:Orientation.HORIZONTAL, spacing:10);
 
@@ -334,145 +306,90 @@ private class Journal.CompositeDocumentWidget : Box {
     }
 }
 
-private class Journal.CompositeApplicationActor : Clutter.Actor {
-    
-    public TextActor title;
-    private TextActor time;
-    private Clutter.Actor icon_box;
-    
-    private Clutter.BoxLayout box;
-    public CompositeApplicationActor (string title_s, ImageContent[] pixbufs, string date) {
-        GLib.Object ();
-        this.reactive = true;
-        
-        var attr_list = new Pango.AttrList ();
-        attr_list.insert (Pango.attr_scale_new (Pango.Scale.LARGE));
-        attr_list.insert (Pango.attr_weight_new (Pango.Weight.SEMIBOLD));
+private class Journal.CompositeApplicationWidget : Box {
+    public CompositeApplicationWidget (ImageContent[] pixbufs) {
+        GLib.Object (orientation:Orientation.HORIZONTAL, spacing:10);
 
-        title = new TextActor.full_text (title_s, attr_list);
-        title.margin_bottom = 10;
-
-        attr_list = new Pango.AttrList ();
-        attr_list.insert (Pango.attr_scale_new (Pango.Scale.SMALL));
-        attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
-
-        time = new TextActor.full_text (date, attr_list);
-        time.margin_top = 10;
-        box = new Clutter.BoxLayout ();
-        box.vertical = true;
-        set_layout_manager (box);
-
-        icon_box = new Clutter.Actor ();
-        var manager = new Clutter.BoxLayout ();
-        manager.vertical = false;
-        manager.spacing = 2;
-        icon_box.set_layout_manager (manager);
         foreach (ImageContent image in pixbufs) {
-            icon_box.add_child (image);
+            this.pack_start (image, true, true, 0);
         }
-        
-        this.add_child (title);
-        this.add_child (icon_box);
-        this.add_child (time);
-        
-        this.margin_left = this.margin_right = 10;
     }
-    
-    public override void get_preferred_width (float for_height, out float min_width, out float nat_width) {
-       float box_min_width, box_nat_width;
-       float title_min_width, title_nat_width;
-       icon_box.get_preferred_width (-1, out box_min_width, out box_nat_width);
-       title.get_preferred_width (-1, out title_min_width, out title_nat_width);
-       min_width = float.max (box_min_width, title_min_width) + 10 * 2 ;
-       nat_width = float.max (box_nat_width, title_nat_width) + 10 * 2 ;
-    }
-   
-   public override void get_preferred_height (float for_width, out float min_height, out float nat_height) {
-       float box_min_height, box_nat_height;
-       float title_min_height, title_nat_height;
-       float time_min_height, time_nat_height;
-       icon_box.get_preferred_height(-1, out box_min_height, out box_nat_height);
-       title.get_preferred_height(-1, out title_min_height, out title_nat_height);
-       time.get_preferred_height(-1, out time_min_height, out time_nat_height);
-       min_height = box_min_height + title_min_height + time_min_height ;
-       nat_height = box_nat_height + title_nat_height + time_nat_height;
-   }
 }
 
-private class Journal.CompositeImageActor : Clutter.Actor {
-    
-    public TextActor title;
-    private TextActor time;
-    private Clutter.Actor image_box;
-    
-    private Clutter.BoxLayout box;
-    public CompositeImageActor (string title_s, ImageContent[] pixbufs, string date) {
-        GLib.Object ();
-        this.reactive = true;
-        
-        var attr_list = new Pango.AttrList ();
-        attr_list.insert (Pango.attr_scale_new (Pango.Scale.LARGE));
-        attr_list.insert (Pango.attr_weight_new (Pango.Weight.SEMIBOLD));
+//private class Journal.CompositeImageActor : Clutter.Actor {
+//    
+//    public TextActor title;
+//    private TextActor time;
+//    private Clutter.Actor image_box;
+//    
+//    private Clutter.BoxLayout box;
+//    public CompositeImageActor (ImageContent[] pixbufs) {
+//        GLib.Object ();
+//        this.reactive = true;
+//        
+//        var attr_list = new Pango.AttrList ();
+//        attr_list.insert (Pango.attr_scale_new (Pango.Scale.LARGE));
+//        attr_list.insert (Pango.attr_weight_new (Pango.Weight.SEMIBOLD));
 
-        title = new TextActor.full_text (title_s, attr_list);
-        title.margin_bottom = 10;
+//        title = new TextActor.full_text (title_s, attr_list);
+//        title.margin_bottom = 10;
 
-        attr_list = new Pango.AttrList ();
-        attr_list.insert (Pango.attr_scale_new (Pango.Scale.SMALL));
-        attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
+//        attr_list = new Pango.AttrList ();
+//        attr_list.insert (Pango.attr_scale_new (Pango.Scale.SMALL));
+//        attr_list.insert (Pango.attr_style_new (Pango.Style.ITALIC));
 
-        time = new TextActor.full_text (date, attr_list);
-        time.margin_top = 10;
-        box = new Clutter.BoxLayout ();
-        box.vertical = true;
-        set_layout_manager (box);
+//        time = new TextActor.full_text (date, attr_list);
+//        time.margin_top = 10;
+//        box = new Clutter.BoxLayout ();
+//        box.vertical = true;
+//        set_layout_manager (box);
 
-        image_box = new Clutter.Actor ();
-        var manager = new Clutter.TableLayout ();
-        manager.column_spacing = 2;
-        manager.row_spacing = 2;
-        image_box.set_layout_manager (manager);
-        int z = 0;
-        if (pixbufs.length > 3) {
-            int num_row = pixbufs.length / 3 + 1;
-            for (int i = 0; i < num_row; i++)
-                for (int j = 0; j < 3 && z < pixbufs.length; j++, z++) {
-                    manager.pack (pixbufs[z], j, i);
-                    manager.set_fill (pixbufs[z], false, false);
-                }
-        }
-        else{
-            for (int i = 0; i < pixbufs.length; i++) {
-                manager.pack (pixbufs[i], 0, i);
-                manager.set_fill (pixbufs[z], false, false);
-            }
-        }
-        
-        this.add_child (title);
-        this.add_child (image_box);
-        this.add_child (time);
-        
-        this.margin_left = this.margin_right = 10;
-    }
-    
-    public override void get_preferred_width (float for_height, out float min_width, out float nat_width) {
-       float box_min_width, box_nat_width;
-       float title_min_width, title_nat_width;
-       image_box.get_preferred_width (-1, out box_min_width, out box_nat_width);
-       title.get_preferred_width (-1, out title_min_width, out title_nat_width);
-       min_width = float.max (box_min_width, title_min_width) + 10 * 2 ;
-       nat_width = float.max (box_nat_width, title_nat_width) + 10 * 2 ;
-    }
-   
-   public override void get_preferred_height (float for_width, out float min_height, out float nat_height) {
-       float box_min_height, box_nat_height;
-       float title_min_height, title_nat_height;
-       float time_min_height, time_nat_height;
-       image_box.get_preferred_height(-1, out box_min_height, out box_nat_height);
-       title.get_preferred_height(-1, out title_min_height, out title_nat_height);
-       time.get_preferred_height(-1, out time_min_height, out time_nat_height);
-       min_height = box_min_height + title_min_height + time_min_height ;
-       nat_height = box_nat_height + title_nat_height + time_nat_height;
-   }
-}
+//        image_box = new Clutter.Actor ();
+//        var manager = new Clutter.TableLayout ();
+//        manager.column_spacing = 2;
+//        manager.row_spacing = 2;
+//        image_box.set_layout_manager (manager);
+//        int z = 0;
+//        if (pixbufs.length > 3) {
+//            int num_row = pixbufs.length / 3 + 1;
+//            for (int i = 0; i < num_row; i++)
+//                for (int j = 0; j < 3 && z < pixbufs.length; j++, z++) {
+//                    manager.pack (pixbufs[z], j, i);
+//                    manager.set_fill (pixbufs[z], false, false);
+//                }
+//        }
+//        else{
+//            for (int i = 0; i < pixbufs.length; i++) {
+//                manager.pack (pixbufs[i], 0, i);
+//                manager.set_fill (pixbufs[z], false, false);
+//            }
+//        }
+//        
+//        this.add_child (title);
+//        this.add_child (image_box);
+//        this.add_child (time);
+//        
+//        this.margin_left = this.margin_right = 10;
+//    }
+//    
+//    public override void get_preferred_width (float for_height, out float min_width, out float nat_width) {
+//       float box_min_width, box_nat_width;
+//       float title_min_width, title_nat_width;
+//       image_box.get_preferred_width (-1, out box_min_width, out box_nat_width);
+//       title.get_preferred_width (-1, out title_min_width, out title_nat_width);
+//       min_width = float.max (box_min_width, title_min_width) + 10 * 2 ;
+//       nat_width = float.max (box_nat_width, title_nat_width) + 10 * 2 ;
+//    }
+//   
+//   public override void get_preferred_height (float for_width, out float min_height, out float nat_height) {
+//       float box_min_height, box_nat_height;
+//       float title_min_height, title_nat_height;
+//       float time_min_height, time_nat_height;
+//       image_box.get_preferred_height(-1, out box_min_height, out box_nat_height);
+//       title.get_preferred_height(-1, out title_min_height, out title_nat_height);
+//       time.get_preferred_height(-1, out time_min_height, out time_nat_height);
+//       min_height = box_min_height + title_min_height + time_min_height ;
+//       nat_height = box_nat_height + title_nat_height + time_nat_height;
+//   }
+//}
 

@@ -483,23 +483,18 @@ private class Journal.ActivityBubble : Button {
     }
     
     private void setup_ui () {
-        var evbox = new EventBox ();
-        evbox.set_visible_window (true);
         var title = new Label (activity.title);
         DateTime d = new DateTime.from_unix_utc (this.activity.time_start / 1000).to_local ();
         string date = d.format ("%H:%M");
         var time = new Label (date);
-        var vbox = new Box (Orientation.VERTICAL, 5);
-        vbox.pack_start (title, true, true, 0);
-        vbox.pack_start (time, true, true, 0);
-        evbox.add (vbox);
         
         //_image = new Image.from_pixbuf (activity.icon);
         
         var container = new Box (Orientation.VERTICAL, 5);
-        container.pack_start (evbox, true, true, 0);
-        if (activity.content != null) 
-            container.pack_start (activity.content, true, true, 0);
+        container.pack_start (title, false, true, 0);
+         if (activity.content != null)
+            container.pack_start (activity.content, true, true, 9);
+        container.pack_start (time, false, true, 0);
         
         this.add (container);
     }

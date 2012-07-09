@@ -292,9 +292,9 @@ private class Journal.VideoActivity : SingleActivity {
 //        content = new VideoContent (uri, this.icon);
 //    }
     
-    public override void update_icon () {
-        ((VideoContent)content).set_thumbnail (this.thumb_icon);
-    }
+//    public override void update_icon () {
+//        ((VideoContent)content).set_thumbnail (this.thumb_icon);
+//    }
 }
 
 private class Journal.ApplicationActivity : SingleActivity {
@@ -578,22 +578,23 @@ private class Journal.CompositeApplicationActivity : CompositeActivity {
         return null;
     }
     
-//    public override void create_content () {
-//        int num = int.min (9, activities.size);
-//        ImageContent[] pixbufs = new ImageContent[num];
-//        for (int i = 0; i < num; i++){
-//            var activity = activities.get (i);
-//            var info = new  DesktopAppInfo (activity.display_uri);
-//            if (info == null)
-//                continue;
-//            Gdk.Pixbuf pixbuf = Utils.load_pixbuf_from_icon (info.get_icon ());
-//            var content = new ImageContent.from_pixbuf (pixbuf);
-//            content.highlight_items = true;
-//            content.clicked.connect (() => {activity.launch ();});
-//            pixbufs[i] = content;
-//        }
-//        actor = new CompositeApplicationActor (this.title, pixbufs, this.date);
-//    }
+    public override void create_content () {
+        int num = int.min (6, activities.size);
+        ImageContent[] pixbufs = new ImageContent[num];
+        for (int i = 0; i < num; i++){
+            var activity = activities.get (i);
+            var info = new  DesktopAppInfo (activity.display_uri);
+            if (info == null)
+                continue;
+            Gdk.Pixbuf pixbuf = Utils.load_pixbuf_from_icon (info.get_icon ());
+            var content = new ImageContent.from_pixbuf (pixbuf);
+            content.clicked.connect ((ev) => {
+                activity.launch ();
+            });
+            pixbufs[i] = content;
+        }
+        content = new CompositeApplicationWidget (pixbufs);
+    }
 }
 
 private class Journal.CompositeDownloadActivity : CompositeActivity {
