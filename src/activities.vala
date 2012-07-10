@@ -12,7 +12,7 @@
  * for more details.
  *
  * You should have received a copy of the GNU General Public License along
- * with Gnome Documents; if not, write to the Free Software Foundation,
+ * with Gnome Journal; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * Author: Stefano Candori <scandori@gnome.org>
@@ -109,6 +109,7 @@ private class Journal.SingleActivity : GenericActivity {
 
         updateActivityIcon ();
         create_content ();
+       
     }
     
     private string create_display_uri () {
@@ -131,12 +132,15 @@ private class Journal.SingleActivity : GenericActivity {
     //TODO move the file:// code in the DocumentActivity Class
     // Let's make it generic.
     protected virtual async void updateActivityIcon () {
+        updateTypeIcon ();
+        
+        //TODO Icon for WEB Events?
+        if (!uri.has_prefix ("file://"))
+            return;
         if (this.thumb_path != null) {
             this.get_thumb ();
             return;
         }
-
-        updateTypeIcon ();
 
         //Let's try to find the thumb
         var file = File.new_for_uri (this.uri);
@@ -304,14 +308,13 @@ private class Journal.ApplicationActivity : SingleActivity {
     
     protected override async void updateActivityIcon () {
         var info = new  DesktopAppInfo (display_uri);
-        this.icon = Utils.load_pixbuf_from_name ("application-x-executable",
-                                                    Utils.getIconSize ());
         if (info == null) {
-            this.thumb_icon = this.icon;
-            return;
+             this.icon = Utils.load_pixbuf_from_name ("application-x-executable");
+             this.thumb_icon = this.icon;
+             return;
         }
-        this.thumb_icon = Utils.load_pixbuf_from_icon (info.get_icon (), 
-                                                       Utils.getIconSize ());
+        Gdk.Pixbuf pixbuf = Utils.load_pixbuf_from_icon (info.get_icon ());
+        this.icon = this.thumb_icon = pixbuf;
     }
     
     public override void update_icon () {
@@ -330,6 +333,12 @@ private class Journal.ApplicationActivity : SingleActivity {
 
 private class Journal.WebActivity : SingleActivity {
     public WebActivity (Zeitgeist.Event event) {
+        Object (event:event);
+    }
+}
+
+private class Journal.DownloadActivity : SingleActivity {
+    public DownloadActivity (Zeitgeist.Event event) {
         Object (event:event);
     }
 }
@@ -362,6 +371,7 @@ private class Journal.CompositeActivity : GenericActivity {
     }
     
     construct {
+            
         this.uris = new string[int.min (MAXIMUM_ITEMS + 1, activities.size)];
         int i = 0;
         foreach (SingleActivity activity in activities) {
@@ -583,11 +593,7 @@ private class Journal.CompositeApplicationActivity : CompositeActivity {
         ImageContent[] pixbufs = new ImageContent[num];
         for (int i = 0; i < num; i++){
             var activity = activities.get (i);
-            var info = new  DesktopAppInfo (activity.display_uri);
-            if (info == null)
-                continue;
-            Gdk.Pixbuf pixbuf = Utils.load_pixbuf_from_icon (info.get_icon ());
-            var content = new ImageContent.from_pixbuf (pixbuf);
+            var content = new ImageContent.from_pixbuf (activity.icon);
             content.clicked.connect ((ev) => {
                 activity.launch ();
             });
@@ -718,12 +724,12 @@ private class Journal.ActivityFactory : Object {
     public static SingleActivity get_activity_for_event (Zeitgeist.Event event) {
         if (interpretation_types == null)
             init ();
-            
+
         string intpr = event.get_subject (0).get_interpretation ();
         if (intpr == null) 
             //Better way for handling this?
             intpr = Zeitgeist.NFO_DOCUMENT;
-        
+
         if (interpretation_types.has_key (intpr)){
             Type activity_class = interpretation_types.get (intpr);
             SingleActivity activity = (SingleActivity) 
@@ -908,6 +914,7 @@ private class Journal.ActivityModel : Object {
         if (event_list == null)
                 return false;
         foreach (Zeitgeist.Event e in event_list) {
+            var d = new DateTime.from_unix_local (e.get_timestamp () / 1000);
             SingleActivity activity = ActivityFactory.get_activity_for_event (e);
             model.add_activity (activity);
         }
@@ -923,13 +930,13 @@ private class Journal.ActivityModel : Object {
         TimeVal tv;
         //add some days to the jump date, permitting the user to navigate more.
         // FIXME always 3? Something better?
-        DateTime larger_date = start.add_days (-3);
+        DateTime larger_date = start.add_days (-3).to_utc ();
         larger_date.to_timeval (out tv);
         Date start_date = {};
         start_date.set_time_val (tv);
         //FIXME how many days we should load? Same as above
         Date end_date = {};
-        var tmp_date = start.add_days (3);
+        var tmp_date = start.add_days (3).to_utc ();
         tmp_date.to_timeval (out tv);
         end_date.set_time_val (tv);
         
@@ -938,13 +945,13 @@ private class Journal.ActivityModel : Object {
     
     public void load_other_days (int num_days) {
         TimeVal tv;
-        DateTime larger_date = backend.last_loaded_date.add_days (-num_days);
+        DateTime larger_date = backend.last_loaded_date.add_days (-num_days).to_utc ();
         larger_date.to_timeval (out tv);
         Date start_date = {};
         start_date.set_time_val (tv);
         
         Date end_date = {};
-        backend.last_loaded_date.to_timeval (out tv);
+        backend.last_loaded_date.to_utc ().to_timeval (out tv);
         end_date.set_time_val (tv);
 
         backend.load_events_for_date_range (start_date, end_date);

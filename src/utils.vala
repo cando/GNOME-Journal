@@ -206,7 +206,7 @@ private class Journal.Utils : Object{
     public static DateTime get_start_of_the_day (int64 time) {
         int64 timestamp = time / 1000;
         //TODO To localtime here? Zeitgeist uses UTC timestamp, right?
-        DateTime date = new DateTime.from_unix_utc (timestamp).to_local ();
+        DateTime date = new DateTime.from_unix_local (timestamp);
         int day, month, year;
         date.get_ymd (out year, out month, out day);
         var start_of_day = new DateTime.local (year, month, day, 0, 0, 0);

@@ -12,7 +12,7 @@
  * for more details.
  *
  * You should have received a copy of the GNU General Public License along
- * with Gnome Documents; if not, write to the Free Software Foundation,
+ * with Gnome Journal; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * Author: Stefano Candori <scandori@gnome.org>
@@ -22,8 +22,10 @@
 using Gtk;
 using Gst;
 
-private class Journal.ImageContent : Image {
+private class Journal.ImageContent : EventBox {
 
+    private Image image;
+    private Gdk.Pixbuf pixbuf;
     private int border_width = 4;
     
     //Used for highlight the border on mouse over
@@ -42,10 +44,10 @@ private class Journal.ImageContent : Image {
 
     private ImageContent (bool highlight_items=false) {
         GLib.Object ();
-        this.set_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
+        this.name = "image-box";
+        this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
                          Gdk.EventMask.LEAVE_NOTIFY_MASK |
                          Gdk.EventMask.BUTTON_RELEASE_MASK);
-        draw.connect (on_draw);
         
         enter = false;
         this.highlight_items = highlight_items;
@@ -65,17 +67,21 @@ private class Journal.ImageContent : Image {
      public ImageContent.from_pixbuf (Gdk.Pixbuf pixbuf, bool highlight_items=false) {
         this (highlight_items);
         this.pixbuf = pixbuf;
-        queue_draw ();
+        image = new Image.from_pixbuf (pixbuf);
+        image.draw.connect (on_draw);
+        
+        this.add (image);
+        image.queue_draw ();
      }
      
-     public void set_pixbuf (Gdk.Pixbuf pixbuf) {
+     public void set_from_pixbuf (Gdk.Pixbuf pixbuf) {
         this.pixbuf = pixbuf;
-        queue_draw ();
+        image.queue_draw ();
      }
      
      private bool on_draw (Cairo.Context cr) {
          Gtk.Allocation alloc;
-         get_allocation(out alloc);
+         image.get_allocation (out alloc);
          int width = alloc.width;
          int height = alloc.height;
          
@@ -87,7 +93,7 @@ private class Journal.ImageContent : Image {
 //         cr.rectangle (0, 0, width, height);
 //         cr.fill ();
        
-         var radius = 10.0f;
+         var radius = 5.0f;
          cr.move_to(0, radius);
          cr.curve_to(0, 0, 0, 0, radius, 0);
          cr.line_to(width - radius, 0);
@@ -113,13 +119,13 @@ private class Journal.ImageContent : Image {
      public override  bool enter_notify_event (Gdk.EventCrossing event) {
         warning ("qui");
         enter = true;
-        queue_draw ();
+        image.queue_draw ();
         return false;
     }
     
     public override  bool leave_notify_event (Gdk.EventCrossing event) {
         enter = false;
-        queue_draw ();
+        image.queue_draw ();
         return false;
     }
     
@@ -138,7 +144,7 @@ private class Journal.VideoWidget : EventBox {
 
     public VideoWidget (string uri) {
         GLib.Object ();
-        this.set_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
+        this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
                          Gdk.EventMask.LEAVE_NOTIFY_MASK |
                          Gdk.EventMask.BUTTON_RELEASE_MASK);
         this.drawing_area = new DrawingArea ();
@@ -203,7 +209,9 @@ private class Journal.CompositeApplicationWidget : Box {
         GLib.Object (orientation:Orientation.HORIZONTAL, spacing:10);
 
         foreach (ImageContent image in pixbufs) {
-            this.pack_start (image, true, true, 0);
+            if (image == null)
+                continue;
+            this.pack_start (image, false, false, 0);
         }
     }
 }

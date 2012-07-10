@@ -12,7 +12,7 @@
  * for more details.
  *
  * You should have received a copy of the GNU General Public License along
- * with Gnome Documents; if not, write to the Free Software Foundation,
+ * with Gnome Journal; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * Author: Stefano Candori <scandori@gnome.org>
@@ -22,8 +22,7 @@
 //FIXME :
 //        IMPORTANT!
 //        * Timeline circles not on timeline
-//        * Port ActivityActor to GTK;
-//        *Propagate Events
+//        * Propagate Events
 //        * Find why certain buttons aren't clickable
 //        SECONDARY
 //        * Highlight timenavigator widget (Rewrite it!)
@@ -88,10 +87,25 @@ private class Journal.VTL : Box {
        
         model.activities_loaded.connect ((dates_loaded)=> {
              load_activities (dates_loaded);
-             on_loading = false;
+             //Check if the last date is effectely loaded--> mean inserted in the
+             //GtkBox container
+             string date = dates_added.get (dates_added.size - 1);
+             check_finished_loading (date);
         });
         
         old_y = -1;
+    }
+    
+    private void check_finished_loading (string date) {
+        int y;
+        dates_widget.get (date).translate_coordinates (container, 0, 0, null, out y);
+        if (y == -1)
+            Idle.add (()=>{
+                check_finished_loading (date);
+                return false;
+            });
+        else
+            on_loading = false;
     }
     
     private bool get_child_index_for_date (string date, out int index) {
@@ -198,7 +212,7 @@ private class Journal.VTL : Box {
                          - 300;
         
         if (!on_loading && y >= limit) {
-            //We can't scroll anymmore! Let's load another day!
+            //We can't scroll anymmore! Let's load another date range!
             model.load_other_days (3);
             on_loading = true;
         }
@@ -293,8 +307,8 @@ private class Journal.BubbleContainer : EventBox {
             var bubble = new ActivityBubble (activity);
             bubble.get_style_context ().add_class ("round-button-right");
             var border = new Arrow (Side.RIGHT);
-            bubble.enter.connect (() => {border.hover = true; border.queue_draw ();});
-            bubble.leave.connect (() => {border.hover = false; border.queue_draw ();});
+            bubble.enter_notify_event.connect ((ev) => {border.hover = true; border.queue_draw ();return false;});
+            bubble.leave_notify_event.connect ((ev) => {border.hover = false; border.queue_draw ();return false;});
             box.pack_start (bubble, true, true, 0);
             box.pack_start (border, false, false, 0);
             this.left_c.pack_start (box, false, false, spacing);
@@ -303,8 +317,8 @@ private class Journal.BubbleContainer : EventBox {
             var bubble = new ActivityBubble (activity);
             bubble.get_style_context ().add_class ("round-button-left");
             var border = new Arrow (Side.LEFT);
-            bubble.enter.connect (() => {border.hover = true; border.queue_draw ();});
-            bubble.leave.connect (() => {border.hover = false; border.queue_draw ();});
+            bubble.enter_notify_event.connect ((ev) => {border.hover = true; border.queue_draw ();return false;});
+            bubble.leave_notify_event.connect ((ev) => {border.hover = false; border.queue_draw ();return false;});
             box.pack_start (border, false, false, 0);
             box.pack_start (bubble, true, true, 0);
             this.right_c.pack_start (box, false, false, spacing);
@@ -496,7 +510,7 @@ private class Journal.ActivityBubbleHeader : HBox {
 }
 
 
-private class Journal.ActivityBubble : Button {
+private class Journal.ActivityBubble : Button{
     private const int DEFAULT_WIDTH = 400;
     
     public GenericActivity activity {
@@ -505,7 +519,10 @@ private class Journal.ActivityBubble : Button {
     
     public ActivityBubble (GenericActivity activity) {
        this.activity = activity;
-       this.clicked.connect (() => {activity.launch ();});
+//       this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
+//                         Gdk.EventMask.LEAVE_NOTIFY_MASK |
+//                         Gdk.EventMask.BUTTON_RELEASE_MASK);
+       this.button_release_event.connect ((ev) => {activity.launch (); return false;});
        setup_ui ();
     }
     

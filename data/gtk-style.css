@@ -67,6 +67,11 @@ GtkNotebook{
     font-weight: bold;
 }
 
+#image-box {
+    background-image: none;
+    background-color: alpha(#000, 0.0);
+}
+
 /*LOADING Label*/
 .loading {
 }

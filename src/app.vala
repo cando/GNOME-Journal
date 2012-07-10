@@ -12,7 +12,7 @@
  * for more details.
  *
  * You should have received a copy of the GNU General Public License along
- * with Gnome Documents; if not, write to the Free Software Foundation,
+ * with Gnome Journal; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * Author: Stefano Candori <scandori@gnome.org>
@@ -158,11 +158,11 @@ public class Journal.App: GLib.Object {
         main_toolbar = new Gd.MainToolbar();
         main_toolbar.icon_size = IconSize.MENU;
         main_toolbar.set_mode (Gd.MainToolbarMode.OVERVIEW);
-        main_toolbar.set_labels (_("Timeline"), null);
+        main_toolbar.set_labels (_(""), null);
         main_toolbar.go_back_request.connect (() => {
             notebook.prev_page ();
             main_toolbar.set_back_visible (false);
-            main_toolbar.set_labels (_("Timeline"), null);
+            main_toolbar.set_labels (_(""), null);
         });
         main_toolbar.selection_mode_request.connect ((mode) => {
                 if (mode) {
@@ -171,7 +171,7 @@ public class Journal.App: GLib.Object {
                 }
                 else {
                     main_toolbar.set_mode (Gd.MainToolbarMode.OVERVIEW);
-                    main_toolbar.set_labels (_("Timeline"), null);
+                    main_toolbar.set_labels (_(""), null);
                 }
         });
         notebook = new Gtk.Notebook ();
@@ -184,7 +184,7 @@ public class Journal.App: GLib.Object {
         window.delete_event.connect (() => { return quit (); });
         window.key_press_event.connect (on_key_pressed);
         
-        //CLUTTER VTL
+        //VTL
         vtl = new VTL (this, model);
         notebook.append_page (vtl, null);
         

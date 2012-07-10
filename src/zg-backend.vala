@@ -12,7 +12,7 @@
  * for more details.
  *
  * You should have received a copy of the GNU General Public License along
- * with Gnome Documents; if not, write to the Free Software Foundation,
+ * with Gnome Journal; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * Author: Stefano Candori <scandori@gnome.org>
@@ -77,7 +77,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
         rs = yield zg_log.find_events (tr, (owned) ptr_arr,
                                        Zeitgeist.StorageState.ANY,
                                        -1,
-                                       Zeitgeist.ResultType.MOST_RECENT_EVENTS,
+                                       Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
                                        null);
 
         foreach (Zeitgeist.Event e in rs)
@@ -189,7 +189,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
     
     public void load_events_for_timerange (Zeitgeist.TimeRange tr) {
         load_uri_events.begin (tr);
-       // load_web_events.begin (tr);
+        load_web_events.begin (tr);
         load_application_events.begin (tr);
         
         last_loaded_date = Utils.get_start_of_the_day (tr.get_start ());
