@@ -23,7 +23,6 @@
 //        IMPORTANT!
 //        * Timeline circles not on timeline
 //        * Propagate Events
-//        * Find why certain buttons aren't clickable
 //        SECONDARY
 //        * Highlight timenavigator widget (Rewrite it!)
 //        * Disable scrollbar on loading? On-loading message?

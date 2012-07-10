@@ -774,12 +774,15 @@ private class Journal.DayActivityModel : Object {
         get; private set;
     }
     
+    public int num;
+    
     public signal void launch_composite_activity (CompositeActivity activity);
 
     public DayActivityModel (string day) {
         activities = new Gee.HashMap<string, Gee.List<SingleActivity>> ();
         composite_activities = new Gee.ArrayList<GenericActivity> ();
         this.day = day;
+        this.num = 0;
     }
     
     public void add_activity (SingleActivity activity) {
@@ -809,7 +812,7 @@ private class Journal.DayActivityModel : Object {
                     });
                     composite_activities.add (c_activity);
                 }
-                else 
+                else
                     composite_activities.add (list.get (0));
             }
             
@@ -951,7 +954,8 @@ private class Journal.ActivityModel : Object {
         start_date.set_time_val (tv);
         
         Date end_date = {};
-        backend.last_loaded_date.to_utc ().to_timeval (out tv);
+        DateTime finish_date = backend.last_loaded_date.add_days (-1).to_utc ();
+        finish_date.to_timeval (out tv);
         end_date.set_time_val (tv);
 
         backend.load_events_for_date_range (start_date, end_date);
