@@ -87,7 +87,7 @@ private class Journal.Utils : Object{
         var path = new Gtk.WidgetPath ();
         path.append_type (typeof (Gtk.Window));
         style.set_path (path);
-        style.add_class ("round-button-left");
+        style.add_class ("round-bubble-left");
         return style.get_background_color (0);
     }
     
@@ -96,7 +96,7 @@ private class Journal.Utils : Object{
         var path = new Gtk.WidgetPath ();
         path.append_type (typeof (Gtk.Window));
         style.set_path (path);
-        style.add_class ("round-button-left");
+        style.add_class ("round-bubble-left");
         return style.get_border_color (0);
     }
     
@@ -105,8 +105,8 @@ private class Journal.Utils : Object{
         var path = new Gtk.WidgetPath ();
         path.append_type (typeof (Gtk.Window));
         style.set_path (path);
-        style.add_class ("round-button-left");
-        return style.get_border_color (StateFlags.PRELIGHT);
+        style.add_class ("round-bubble-hover");
+        return style.get_border_color (0);
     }
 
     public static int getIconSize() {
@@ -228,5 +228,4 @@ private class Journal.Utils : Object{
         int day = int.parse (tmp [2]);
         return new DateTime.local(year, month, day, 0, 0, 0);
     }
-
 }

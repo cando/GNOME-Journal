@@ -83,7 +83,7 @@ private class Journal.ImageContent : EventBox {
          Gtk.Allocation alloc;
          image.get_allocation (out alloc);
          int width = alloc.width;
-         int height = alloc.height;
+         int height = int.min (alloc.height, pixbuf.height);
          
 //         var p = new Cairo.Pattern.linear (0, 0, width, height);
 //         p.add_color_stop_rgba (0, 0, 0, 0, 0.4);
@@ -107,20 +107,19 @@ private class Journal.ImageContent : EventBox {
          if (enter && highlight_items) {
             var color = Utils.get_roundbox_border_color ();
             Gdk.cairo_set_source_rgba (cr, color);
+            cr.set_line_width (3);
             cr.stroke_preserve ();
          }
          cr.clip();
-         cr.translate (border_width, border_width);
          Gdk.cairo_set_source_pixbuf (cr, pixbuf, 0, 0);
          cr.paint ();
          return true;
      }
      
      public override  bool enter_notify_event (Gdk.EventCrossing event) {
-        warning ("qui");
         enter = true;
         image.queue_draw ();
-        return false;
+        return true;
     }
     
     public override  bool leave_notify_event (Gdk.EventCrossing event) {
@@ -130,7 +129,6 @@ private class Journal.ImageContent : EventBox {
     }
     
     public override  bool button_release_event (Gdk.EventButton event) {
-        warning ("sii");
         clicked ();
         return true;
     }
@@ -225,7 +223,9 @@ private class Journal.CompositeImageWidget : Box {
         int z = 0;
         if (pixbufs.length > 3) {
             int num_row = pixbufs.length / 3 + 1;
-            image_box = new Table (num_row, 3, false);
+            image_box = new Table (num_row, 3, false); 
+            ((Table)image_box).column_spacing = 5;
+            ((Table)image_box).row_spacing = 5;
             for (int i = 0; i < num_row; i++)
                 for (int j = 0; j < 3 && z < pixbufs.length; j++, z++)
                    ((Table)image_box).attach_defaults (pixbufs[z], j, j+1, i, i+1);

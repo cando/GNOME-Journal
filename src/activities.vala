@@ -240,11 +240,11 @@ private class Journal.SingleActivity : GenericActivity {
     }
     
     public override void create_content () {
-        this.content = new ImageContent.from_pixbuf (this.icon);
+        this.content = new Image.from_pixbuf (this.icon);
     }
     
     public virtual void update_icon () {
-        ((ImageContent)content).set_from_pixbuf (this.thumb_icon);
+        ((Image)content).set_from_pixbuf (this.thumb_icon);
     }
     
     public override void launch (){
@@ -534,11 +534,12 @@ private class Journal.CompositeImageActivity : CompositeActivity {
         ImageContent[] pixbufs = new ImageContent[num];
         for (int i = 0; i < num; i++){
             var activity = activities.get (i);
-            var content = activity.content as ImageContent;
+            var content = new ImageContent.from_pixbuf (activity.icon);
             content.highlight_items = true;
             content.clicked.connect (() => {activity.launch ();});
-            if (content.get_parent () != null)
-                content.unparent ();
+            activity.thumb_loaded.connect (() => {
+                content.set_from_pixbuf (activity.thumb_icon);
+            });
             pixbufs[i] = content;
         }
         content = new CompositeImageWidget (pixbufs);
@@ -594,6 +595,7 @@ private class Journal.CompositeApplicationActivity : CompositeActivity {
         for (int i = 0; i < num; i++){
             var activity = activities.get (i);
             var content = new ImageContent.from_pixbuf (activity.icon);
+            content.highlight_items = true;
             content.clicked.connect ((ev) => {
                 activity.launch ();
             });
@@ -872,14 +874,15 @@ private class Journal.ActivityModel : Object {
         var dates_loaded = new Gee.ArrayList<string> ();
         DateTime next_date = end_date;
         string day = next_date.format("%Y-%m-%d");
-        if (add_day (day))
+        if (add_day (day) == 0)
             dates_loaded.add (day);
         while (next_date.compare (start_date) != 0) {
             next_date = next_date.add_days (-1);
             day = next_date.format("%Y-%m-%d");
-            if (add_day (day))
+            var res = add_day (day);
+            if (res == 0)
                 dates_loaded.add (day);
-            else 
+            else if (res == 1) 
                 dates_loaded.add ("*"+day); //means day with 0 events.FIXME hack!
         }
         
@@ -911,13 +914,17 @@ private class Journal.ActivityModel : Object {
             activities_loaded (dates_loaded);
     }
     
-    private bool add_day (string day) {
+    private int add_day (string day) {
+        //Return 0 if everything is ok
+        //Return -1 if we have already loaded this day
+        //Return 1 if this day has no events
+        if (activities.has_key (day))
+            return -1;
         var model = new DayActivityModel (day);
         Gee.List<Zeitgeist.Event> event_list = backend.get_events_for_date (day);
         if (event_list == null)
-                return false;
+                return 1;
         foreach (Zeitgeist.Event e in event_list) {
-            var d = new DateTime.from_unix_local (e.get_timestamp () / 1000);
             SingleActivity activity = ActivityFactory.get_activity_for_event (e);
             model.add_activity (activity);
         }
@@ -926,38 +933,37 @@ private class Journal.ActivityModel : Object {
         model.launch_composite_activity.connect ((activity) => {
                     this.launch_composite_activity (activity);
         });
-        return true;
+        return 0;
     }
     
     public void load_activities (DateTime start) {
         TimeVal tv;
+        TimeVal tv2;
         //add some days to the jump date, permitting the user to navigate more.
         // FIXME always 3? Something better?
-        DateTime larger_date = start.add_days (-3).to_utc ();
+        DateTime larger_date = start.add_days (-3);
         larger_date.to_timeval (out tv);
-        Date start_date = {};
-        start_date.set_time_val (tv);
+
         //FIXME how many days we should load? Same as above
-        Date end_date = {};
-        var tmp_date = start.add_days (3).to_utc ();
-        tmp_date.to_timeval (out tv);
-        end_date.set_time_val (tv);
-        
-        backend.load_events_for_date_range (start_date, end_date);
+        var tmp_date = start.add_days (3);
+        tmp_date.to_timeval (out tv2);
+        backend.load_events_for_date_range (tv, tv2);
+    
     }
     
     public void load_other_days (int num_days) {
         TimeVal tv;
-        DateTime larger_date = backend.last_loaded_date.add_days (-num_days).to_utc ();
+        TimeVal tv2;
+        DateTime larger_date = backend.last_loaded_date.add_days (-1);
+        DateTime finish_date = backend.last_loaded_date;
         larger_date.to_timeval (out tv);
-        Date start_date = {};
-        start_date.set_time_val (tv);
-        
-        Date end_date = {};
-        DateTime finish_date = backend.last_loaded_date.add_days (-1).to_utc ();
-        finish_date.to_timeval (out tv);
-        end_date.set_time_val (tv);
-
-        backend.load_events_for_date_range (start_date, end_date);
+        finish_date.to_timeval (out tv2);
+        for (int i = 0; i < num_days; i++) {
+            backend.load_events_for_date_range (tv, tv2);
+            finish_date = larger_date;
+            larger_date = larger_date.add_days (-1);
+            larger_date.to_timeval (out tv);
+            finish_date.to_timeval (out tv2);
+        }
     }
 }

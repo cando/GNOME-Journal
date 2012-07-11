@@ -201,14 +201,14 @@ private class Journal.VTL : Box {
             }
             model.load_activities (date);
             date_to_jump = date;
+            on_loading = true;
         }
     }
     
     private void on_scrollbar_scroll () {
         float y = (float)(scrollbar.adjustment.value);
         var limit = (int)scrollbar.adjustment.upper - 
-                         scrollbar.adjustment.page_size 
-                         - 300;
+                         scrollbar.adjustment.page_size;
         
         if (!on_loading && y >= limit) {
             //We can't scroll anymmore! Let's load another date range!
@@ -286,6 +286,8 @@ private class Journal.BubbleContainer : EventBox {
             main_vbox.reorder_child (al, index);
             main_vbox.reorder_child (main_hbox, index + 1);
         }
+        
+        turn = 0;
     }
     
     public void append_bubbles (Gee.List<GenericActivity> activity_list) {
@@ -303,8 +305,8 @@ private class Journal.BubbleContainer : EventBox {
         
         var spacing = Random.int_range (10, 30);
         if (turn % 2 == 0) {
-            var bubble = new ActivityBubble (activity);
-            bubble.get_style_context ().add_class ("round-button-right");
+            var bubble = new ActivityBubble (activity, Side.RIGHT);
+            bubble.get_style_context ().add_class ("round-bubble-right");
             var border = new Arrow (Side.RIGHT);
             bubble.enter_notify_event.connect ((ev) => {border.hover = true; border.queue_draw ();return false;});
             bubble.leave_notify_event.connect ((ev) => {border.hover = false; border.queue_draw ();return false;});
@@ -313,8 +315,8 @@ private class Journal.BubbleContainer : EventBox {
             this.left_c.pack_start (box, false, false, spacing);
         }
         else {
-            var bubble = new ActivityBubble (activity);
-            bubble.get_style_context ().add_class ("round-button-left");
+            var bubble = new ActivityBubble (activity, Side.LEFT);
+            bubble.get_style_context ().add_class ("round-bubble-left");
             var border = new Arrow (Side.LEFT);
             bubble.enter_notify_event.connect ((ev) => {border.hover = true; border.queue_draw ();return false;});
             bubble.leave_notify_event.connect ((ev) => {border.hover = false; border.queue_draw ();return false;});
@@ -509,19 +511,28 @@ private class Journal.ActivityBubbleHeader : HBox {
 }
 
 
-private class Journal.ActivityBubble : Button{
+private class Journal.ActivityBubble : EventBox {
     private const int DEFAULT_WIDTH = 400;
     
     public GenericActivity activity {
         get; private set;
     }
     
-    public ActivityBubble (GenericActivity activity) {
+    private Side side;
+    private bool hover;
+    
+    public ActivityBubble (GenericActivity activity, Side side) {
        this.activity = activity;
-//       this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
-//                         Gdk.EventMask.LEAVE_NOTIFY_MASK |
-//                         Gdk.EventMask.BUTTON_RELEASE_MASK);
+       this.side = side;
+       this.hover = false;
+       this.set_visible_window (false);
+       this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
+                         Gdk.EventMask.LEAVE_NOTIFY_MASK |
+                         Gdk.EventMask.BUTTON_RELEASE_MASK);
        this.button_release_event.connect ((ev) => {activity.launch (); return false;});
+       this.enter_notify_event.connect ((ev) => {hover = true; queue_draw (); return false;});
+       this.leave_notify_event.connect ((ev) => {hover = false; queue_draw (); return false;});
+
        setup_ui ();
     }
     
@@ -529,11 +540,38 @@ private class Journal.ActivityBubble : Button{
         var header = new ActivityBubbleHeader (activity);
         
         var container = new Box (Orientation.VERTICAL, 5);
-        container.pack_start (header, false, true, 2);
-        container.pack_start (activity.content, true, true, 9); 
+        container.pack_start (header, false, false, 2);
+        var al = new Alignment (0.5f, 0, 0, 0);
+        al.add (activity.content);
+        container.pack_start (al, true, true, 9); 
         
         this.add (container);
+        this.draw_as_css_box (this);
     }
+    
+    public void draw_as_css_box (Widget widget) {
+        widget.draw.connect ((cr) => {
+            var context = widget.get_style_context ();
+            Gtk.Allocation allocation;
+            widget.get_allocation (out allocation);
+            context.render_background (cr,
+                                       0, 0,
+                                       allocation.width, allocation.height);
+            var button = new Gtk.Button();
+            context = button.get_style_context ();
+            if (side == Side.RIGHT)
+                context.add_class("round-bubble-right");
+            else
+                context.add_class("round-bubble-left");
+            if (hover)
+                context.add_class ("round-bubble-hover");
+            context.render_frame (cr,
+                                  0, 0,
+                                  allocation.width, allocation.height);
+            return false;
+         });
+    }
+
 
     public override void get_preferred_width (out int minimum_width, out int natural_width) {
             minimum_width = natural_width = DEFAULT_WIDTH;

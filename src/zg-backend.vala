@@ -116,7 +116,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
         rs = yield zg_log.find_events (tr, (owned) ptr_arr,
                                        Zeitgeist.StorageState.ANY,
                                        -1,
-                                       Zeitgeist.ResultType.MOST_RECENT_EVENTS,
+                                       Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
                                        null);
 
         foreach (Zeitgeist.Event e in rs)
@@ -200,23 +200,23 @@ public class Journal.ZeitgeistBackend: GLib.Object
         load_events_for_timerange (tr);
     }
     
-    public void load_events_for_date_range (Date? start_date, Date? end_date) {
+    public void load_events_for_date_range (TimeVal? start_date, TimeVal? end_date) {
         int64 start;
         int64 end;
         Zeitgeist.TimeRange tr;
         if (start_date == null && end_date == null)
             tr = new Zeitgeist.TimeRange.anytime ();
         else if (start_date != null && end_date == null) {
-            start = Zeitgeist.Timestamp.from_date (start_date);
+            start = Zeitgeist.Timestamp.from_timeval (start_date);
             tr = new Zeitgeist.TimeRange (start, int64.MAX);
         }
         else if (start_date == null && end_date != null) {
-            end = Zeitgeist.Timestamp.from_date (end_date);
+            end = Zeitgeist.Timestamp.from_timeval (end_date);
             tr = new Zeitgeist.TimeRange (0, end);
         }
         else {
-            start = Zeitgeist.Timestamp.from_date (start_date);
-            end = Zeitgeist.Timestamp.from_date (end_date);
+            start = Zeitgeist.Timestamp.from_timeval (start_date);
+            end = Zeitgeist.Timestamp.from_timeval (end_date);
             tr = new Zeitgeist.TimeRange (start, end);
         }
         

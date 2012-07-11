@@ -14,7 +14,7 @@ GtkNotebook{
 * TESTING GTK STYLES
 *
 ******************************/
-.round-button-left {
+.round-bubble-left {
     background-image : -gtk-gradient(radial,
                                     center center, 0,
                                     center center, 6,
@@ -29,7 +29,7 @@ GtkNotebook{
      border-width: 2px 2px 2px 0px;
 }
 
-.round-button-right {
+.round-bubble-right {
     background-image : -gtk-gradient(radial,
                                     center center, 0,
                                     center center, 6,
@@ -44,11 +44,7 @@ GtkNotebook{
      border-width: 2px 0px 2px 2px;
 }
 
-.round-button-right:hover {
-     border-color: @journal_timeline_color;
-}
-
-.round-button-left:hover {
+.round-bubble-hover {
      border-color: @journal_timeline_color;
 }
 
@@ -240,5 +236,5 @@ GtkScale.mark {
 .frame {
     color: lighter (@theme_fg_color);
     border-style: none;
-    border-width: 0;
+    border-width: 3px;
 }
