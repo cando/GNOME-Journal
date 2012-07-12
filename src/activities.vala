@@ -954,16 +954,9 @@ private class Journal.ActivityModel : Object {
     public void load_other_days (int num_days) {
         TimeVal tv;
         TimeVal tv2;
-        DateTime larger_date = backend.last_loaded_date.add_days (-1);
-        DateTime finish_date = backend.last_loaded_date;
+        DateTime larger_date = backend.last_loaded_date.add_days (-num_days);
         larger_date.to_timeval (out tv);
-        finish_date.to_timeval (out tv2);
-        for (int i = 0; i < num_days; i++) {
-            backend.load_events_for_date_range (tv, tv2);
-            finish_date = larger_date;
-            larger_date = larger_date.add_days (-1);
-            larger_date.to_timeval (out tv);
-            finish_date.to_timeval (out tv2);
-        }
+        backend.last_loaded_date.to_timeval (out tv2);
+        backend.load_events_for_date_range (tv, tv2);
     }
 }

@@ -19,12 +19,13 @@
  *
  */
 
-//FIXME :
+//        FIXME :
 //        IMPORTANT!
-//        * Timeline circles not on timeline
 //        * Propagate Events
+//        * Better bubble's placing algorithm. Please maintain the time ordering.
 //        SECONDARY
 //        * Highlight timenavigator widget (Rewrite it!)
+//        * Divide events loading day by day.
 //        * Disable scrollbar on loading? On-loading message?
 using Gtk;
 using Cairo;
@@ -148,6 +149,8 @@ private class Journal.VTL : Box {
             bubble_c.append_bubbles (activity_list.composite_activities);
         }
         
+        bubble_c.show_all ();
+        
         if (date_to_jump != null)
             jump_to_day (date_to_jump);
     }
@@ -244,9 +247,10 @@ private class Journal.VTL : Box {
 }
 
 private class Journal.BubbleContainer : EventBox {
+    //The left side of the timeline
     private Box right_c;
+    //The right side of the timeline
     private Box left_c;
-    private Timeline center_c;
     
     private Box main_vbox;
 
@@ -268,15 +272,24 @@ private class Journal.BubbleContainer : EventBox {
         main_vbox.pack_start (al, false, false, 0);
         
         //Let's add the new day boxes!
-        center_c = new Timeline ();
+        var center_c = new Timeline ();
         right_c = new Box (Orientation.VERTICAL, 0);
         left_c = new Box (Orientation.VERTICAL, 0);
+
+        //FIXME Hack! Are we sure to use a Fixed? It seems to work pretty well
+        var main_hbox = new Fixed ();
+        // Start of the circle = 430 = 20 (arrow_width + spacing) in Arrow class
+        // Start of the circle + radius + line_width/2
+        main_hbox.put (center_c, 430 + 6 + 1, 0);
+        main_hbox.put (left_c, 0, 0);
+        main_hbox.put (right_c, 430, 0);
         
-        var main_hbox = new Box (Orientation.HORIZONTAL, 0);
-        
-        main_hbox.pack_start (left_c, false, true, 0);
-        main_hbox.pack_start (center_c, false, false, 0);
-        main_hbox.pack_start (right_c, false, true,  0);
+        main_hbox.size_allocate.connect ((alloc) => {
+            Idle.add (() => {
+                center_c.set_size_request (-1, alloc.height);
+                return false;
+            });
+        });
         
         right_c.margin_right = 20;
         
@@ -293,11 +306,6 @@ private class Journal.BubbleContainer : EventBox {
     public void append_bubbles (Gee.List<GenericActivity> activity_list) {
         foreach (GenericActivity activity in activity_list)
             this.append_bubble (activity);
-        
-        if (activity_list.size == 1)
-            this.append_invisible ();
-            
-        this.show_all ();
     }
     
     private void append_bubble (GenericActivity activity) {
@@ -308,8 +316,16 @@ private class Journal.BubbleContainer : EventBox {
             var bubble = new ActivityBubble (activity, Side.RIGHT);
             bubble.get_style_context ().add_class ("round-bubble-right");
             var border = new Arrow (Side.RIGHT);
-            bubble.enter_notify_event.connect ((ev) => {border.hover = true; border.queue_draw ();return false;});
-            bubble.leave_notify_event.connect ((ev) => {border.hover = false; border.queue_draw ();return false;});
+            bubble.enter_notify_event.connect ((ev) => {
+                border.hover = true; 
+                border.queue_draw ();
+                return false;
+            });
+            bubble.leave_notify_event.connect ((ev) => {
+                border.hover = false;
+                border.queue_draw ();
+                return false;
+            });
             box.pack_start (bubble, true, true, 0);
             box.pack_start (border, false, false, 0);
             this.left_c.pack_start (box, false, false, spacing);
@@ -318,21 +334,19 @@ private class Journal.BubbleContainer : EventBox {
             var bubble = new ActivityBubble (activity, Side.LEFT);
             bubble.get_style_context ().add_class ("round-bubble-left");
             var border = new Arrow (Side.LEFT);
-            bubble.enter_notify_event.connect ((ev) => {border.hover = true; border.queue_draw ();return false;});
-            bubble.leave_notify_event.connect ((ev) => {border.hover = false; border.queue_draw ();return false;});
+            bubble.enter_notify_event.connect ((ev) => {
+                border.hover = true; 
+                border.queue_draw ();
+                return false;
+            });
+            bubble.leave_notify_event.connect ((ev) => {
+                border.hover = false;
+                border.queue_draw ();
+                return false;
+            });
             box.pack_start (border, false, false, 0);
             box.pack_start (bubble, true, true, 0);
             this.right_c.pack_start (box, false, false, spacing);
-        }
-        turn++;
-    }
-    
-    private void append_invisible () {
-        if (turn % 2 == 0) {
-            this.left_c.pack_start (new Label (""), true, true, 0);
-        }
-        else {
-            this.right_c.pack_start (new Label (""), true, true, 0);
         }
         turn++;
     }
@@ -391,6 +405,7 @@ private class Journal.Arrow : DrawingArea {
                 cr.line_to (0, height / 2 + arrow_height);
                 cr.rel_line_to(0, - arrow_height * 2);
                 color = Utils.get_roundbox_border_color ();
+                //FIXME make this to be theme indipendent!
                 cr.set_source_rgba (1, 1, 1, 0.65);
                 cr.fill ();
                 cr.restore ();
@@ -504,7 +519,8 @@ private class Journal.ActivityBubbleHeader : HBox {
         var container = new Box (Orientation.VERTICAL, 5);
         if (activity.content != null) {
             container.pack_start (title, true, true, 0);
-            container.pack_start (new Gtk.HSeparator (), false, false, 0);
+            container.pack_start (new Gtk.Separator (Orientation.HORIZONTAL),
+                                                     false, false, 0);
         }
         this.pack_start (container, true, true, 0);
     }
@@ -530,8 +546,16 @@ private class Journal.ActivityBubble : EventBox {
                          Gdk.EventMask.LEAVE_NOTIFY_MASK |
                          Gdk.EventMask.BUTTON_RELEASE_MASK);
        this.button_release_event.connect ((ev) => {activity.launch (); return false;});
-       this.enter_notify_event.connect ((ev) => {hover = true; queue_draw (); return false;});
-       this.leave_notify_event.connect ((ev) => {hover = false; queue_draw (); return false;});
+       this.enter_notify_event.connect ((ev) => {
+            hover = true; 
+            queue_draw (); 
+            return false;
+       });
+       this.leave_notify_event.connect ((ev) => {
+            hover = false; 
+            queue_draw (); 
+            return false;
+       });
 
        setup_ui ();
     }

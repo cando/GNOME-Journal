@@ -103,29 +103,30 @@ private class Journal.ImageContent : EventBox {
          cr.line_to(radius, height);
          cr.curve_to(0, height, 0, height, 0, height - radius);
          cr.close_path();
-          
-         if (enter && highlight_items) {
-            var color = Utils.get_roundbox_border_color ();
-            Gdk.cairo_set_source_rgba (cr, color);
-            cr.set_line_width (3);
-            cr.stroke_preserve ();
-         }
+
          cr.clip();
          Gdk.cairo_set_source_pixbuf (cr, pixbuf, 0, 0);
          cr.paint ();
+         
+         if (enter && highlight_items) {
+            cr.set_operator (Cairo.Operator.SOFT_LIGHT);
+            cr.set_source_rgba (1, 1, 1, 1);
+            cr.paint ();
+         }
+         
          return true;
      }
      
      public override  bool enter_notify_event (Gdk.EventCrossing event) {
         enter = true;
         image.queue_draw ();
-        return true;
+        return false;
     }
     
     public override  bool leave_notify_event (Gdk.EventCrossing event) {
         enter = false;
         image.queue_draw ();
-        return false;
+        return false ;
     }
     
     public override  bool button_release_event (Gdk.EventButton event) {
@@ -171,6 +172,7 @@ private class Journal.VideoWidget : EventBox {
     private void on_realize() {
         this.xid = (ulong)Gdk.X11Window.get_xid (this.drawing_area.get_window());
         on_play ();
+        Idle.add (() => {on_stop ();return false;});
     }
     
     private void on_play () {
