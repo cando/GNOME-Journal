@@ -40,6 +40,10 @@ private abstract class Journal.GenericActivity : Object {
         get; protected set;
     }
     
+    public string date {
+        get; protected set;
+    }
+    
     public Pixbuf? icon {
         get; protected set;
     }
@@ -106,6 +110,8 @@ private class Journal.SingleActivity : GenericActivity {
             //Better way for handling this?
             intpr = Zeitgeist.NFO_DOCUMENT;
         this.interpretation = intpr;
+        var d = new DateTime.from_unix_utc (this.time_start / 1000).to_local ();
+        this.date = d.format ("%H:%M");
 
         updateActivityIcon ();
         create_content ();
@@ -353,10 +359,6 @@ private class Journal.CompositeActivity : GenericActivity {
     }
     
     public string[] uris {
-        get; private set;
-    }
-    
-    public string date {
         get; private set;
     }
     

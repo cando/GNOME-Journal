@@ -508,9 +508,8 @@ private class Journal.ActivityBubbleHeader : HBox {
     public ActivityBubbleHeader (GenericActivity activity) {
         this.title = new Label (activity.title);
         this.title.set_alignment (0, 1);
-        DateTime d = new DateTime.from_unix_utc (activity.time_start / 1000).to_local ();
-        string date = d.format ("%H:%M");
-        this.title.set_markup ("<b>%s</b>\n<span size='small'><i>%s</i></span>".printf(activity.title, date));
+        this.title.set_markup ("<b>%s</b>\n<span size='small'><i>%s</i></span>".
+                                printf(activity.title, activity.date));
         
         var pixbuf = activity.icon.scale_simple (32, 32, Gdk.InterpType.NEAREST);
         this.icon = new Gtk.Image.from_pixbuf (pixbuf);
