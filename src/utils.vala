@@ -195,6 +195,17 @@ private class Journal.Utils : Object{
     return result;
     }
     
+    public static bool is_search_event (Gdk.EventKey event) {
+        var keyval = event.keyval;
+        var state = event.state;
+        var retval =
+        (((keyval == Gdk.Key.f) &&
+          ((state & Gdk.ModifierType.CONTROL_MASK) != 0)) ||
+         ((keyval == Gdk.Key.s) &&
+          ((state & Gdk.ModifierType.CONTROL_MASK) != 0)));
+        return retval;
+    }
+    
     //DATE UTILS
     public static DateTime get_date_for_event (Zeitgeist.Event e) {
         int64 timestamp = e.get_timestamp () / 1000;

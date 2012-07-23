@@ -40,6 +40,7 @@ public class Journal.App: GLib.Object {
     private Gtk.Application application;
     private ActivityModel model;
     private VTL vtl;
+    private SearchWidget search_bar;
     private Gd.MainToolbar main_toolbar;
     private ActivityInfoPage activity_page;
 
@@ -150,6 +151,18 @@ public class Journal.App: GLib.Object {
             Utils.settings.set_boolean ("window-maximized", maximized);
             return false;
         });
+        
+        window.key_press_event.connect ((ev) => {
+            if (Utils.is_search_event (ev)) {
+                if (!search_bar.visible) {
+                    search_bar.show ();
+                    search_bar.entry.grab_focus ();
+                }
+                else
+                    search_bar.hide ();
+            }
+            return false;
+        });
 
         main_box = new Box (Orientation.VERTICAL, 0);
         window.add (main_box);
@@ -184,9 +197,16 @@ public class Journal.App: GLib.Object {
         window.delete_event.connect (() => { return quit (); });
         window.key_press_event.connect (on_key_pressed);
         
+        search_bar = new SearchWidget ();
+        search_bar.search.connect ((query) => {
+            model.search.begin (query);
+        });
         //VTL
         vtl = new VTL (this, model);
-        notebook.append_page (vtl, null);
+        var box = new Box (Orientation.VERTICAL, 0);
+        box.pack_start (search_bar, false, false, 10);
+        box.pack_start (vtl, true, true, 0);
+        notebook.append_page (box, null);
         
         //ACTIVITY PAGE
         activity_page = new ActivityInfoPage ();
@@ -202,6 +222,7 @@ public class Journal.App: GLib.Object {
         });
 
         window.show_all();
+        search_bar.hide ();
     }
 
     public bool quit () {

@@ -27,6 +27,7 @@
 //        * Highlight timenavigator widget (Rewrite it!)
 //        * Divide events loading day by day.
 //        * Disable scrollbar on loading? On-loading message?
+//       CHECK TODO file
 using Gtk;
 using Cairo;
 
@@ -43,6 +44,7 @@ private class Journal.VTL : Box {
     private App app;
     private Scrollbar scrollbar;
     private TimelineNavigator vnav;
+    private SearchWidget search_bar;
     
     public ScrolledWindow viewport;
     public Box container;
@@ -81,7 +83,7 @@ private class Journal.VTL : Box {
         vnav = new TimelineNavigator (Orientation.VERTICAL);
         vnav.go_to_date.connect ((date) => {this.jump_to_day (date);});
 
-        this.pack_start (new Gtk.Label(""), false, false, 32);
+        //this.pack_start (new Gtk.Label(""), false, false, 32);
         this.pack_start (viewport, true, true, 0);
         this.pack_start (vnav, false, false, 10);
        
@@ -502,13 +504,12 @@ private class Journal.Arrow : DrawingArea {
 
 private class Journal.ActivityBubbleHeader : HBox {
     private Label title;
-    private Label time;
     private Button option_button;
     private Image icon;
     public ActivityBubbleHeader (GenericActivity activity) {
         this.title = new Label (activity.title);
         this.title.set_alignment (0, 1);
-        this.title.set_markup ("<b>%s</b>\n<span size='small'><i>%s</i></span>".
+        this.title.set_markup ("<b>%s</b>\n<span size='small'>%s</span>".
                                 printf(activity.title, activity.date));
         
         var pixbuf = activity.icon.scale_simple (32, 32, Gdk.InterpType.NEAREST);
@@ -555,6 +556,21 @@ private class Journal.ActivityBubble : EventBox {
             queue_draw (); 
             return false;
        });
+       if (activity.content is GenericCompositeWidget) {
+           var content = activity.content as GenericCompositeWidget;
+           //FIXME Hack: Gtk doesn't propagate enter/leave_notify_event from child 
+           //to parent. So we sintetize a custom signal;
+           content.enter.connect ((e) => {
+               warning ("enter");
+               hover = true; 
+               queue_draw (); 
+           });
+           content.leave.connect ((e) => {
+            warning ("leave");
+               hover = false; 
+               queue_draw (); 
+           });
+       }
 
        setup_ui ();
     }
@@ -594,7 +610,6 @@ private class Journal.ActivityBubble : EventBox {
             return false;
          });
     }
-
 
     public override void get_preferred_width (out int minimum_width, out int natural_width) {
             minimum_width = natural_width = DEFAULT_WIDTH;

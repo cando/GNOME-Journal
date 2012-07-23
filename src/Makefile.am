@@ -34,6 +34,7 @@ gnome_journal_SOURCES =\
 	journal-activity-info-page.vala	\
 	journal-timeline-navigator.vala \
 	journal-media-actors.vala		\
+	journal-search.vala		\
 	main.vala						\
 	selectionbar.vala				\
 	timelineview.vala				\

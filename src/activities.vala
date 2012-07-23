@@ -848,6 +848,7 @@ private class Journal.DayActivityModel : Object {
 private class Journal.ActivityModel : Object {
 
     private ZeitgeistBackend backend;
+    private SearchManager search_manager;
     
     //Key: Date format YYYY-MM-DD
     public Gee.Map<string, DayActivityModel> activities {
@@ -860,10 +861,15 @@ private class Journal.ActivityModel : Object {
     public ActivityModel () {
         activities = new Gee.HashMap<string, DayActivityModel> ();
         backend = new ZeitgeistBackend ();
+        search_manager = new SearchManager ();
         
         backend.load_events_on_start ();
         backend.events_loaded.connect ((tr) => {
             on_events_loaded (tr);
+        });
+        
+        search_manager.search_finished.connect (() => {
+            on_search_finished ();
         });
     }
     
@@ -960,5 +966,13 @@ private class Journal.ActivityModel : Object {
         larger_date.to_timeval (out tv);
         backend.last_loaded_date.to_timeval (out tv2);
         backend.load_events_for_date_range (tv, tv2);
+    }
+    
+    public void on_search_finished () {
+    
+    }
+    
+    public async void search (string query) {
+        yield this.search_manager.search_simple (query);
     }
 }

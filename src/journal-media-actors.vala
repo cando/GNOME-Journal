@@ -117,7 +117,7 @@ private class Journal.ImageContent : EventBox {
          return true;
      }
      
-     public override  bool enter_notify_event (Gdk.EventCrossing event) {
+    public override  bool enter_notify_event (Gdk.EventCrossing event) {
         enter = true;
         image.queue_draw ();
         return false;
@@ -186,10 +186,32 @@ private class Journal.VideoWidget : EventBox {
     }
 }
 
-private class Journal.CompositeDocumentWidget : Box {
-    public CompositeDocumentWidget (Gdk.Pixbuf? pixbuf, string[] uris) {
-        GLib.Object (orientation:Orientation.HORIZONTAL, spacing:10);
+private class Journal.GenericCompositeWidget : EventBox {
+    public signal void enter ();
+    public signal void leave ();
+    
+    public GenericCompositeWidget () {
+        this.set_visible_window (false);
+        this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
+                         Gdk.EventMask.LEAVE_NOTIFY_MASK );
+    }
+    
+    //FIXME Hack: Gtk doesn't propagate enter/leave_notify_event. So we sintetize
+    // a custom signal;
+    public override  bool enter_notify_event (Gdk.EventCrossing event) {
+        enter ();
+        return false;
+    }
+    
+    public override  bool leave_notify_event (Gdk.EventCrossing event) {
+        leave ();
+        return false ;
+    }
+}
 
+private class Journal.CompositeDocumentWidget : GenericCompositeWidget {
+    public CompositeDocumentWidget (Gdk.Pixbuf? pixbuf, string[] uris) {
+        var hbox = new Box (Orientation.HORIZONTAL, 0);
         var vbox = new Box (Orientation.VERTICAL, 5);
         foreach (string uri in uris) {
             var l_uri = new Label (uri);
@@ -199,29 +221,30 @@ private class Journal.CompositeDocumentWidget : Box {
         }
         
         var _image = new Image.from_pixbuf (pixbuf);
-        this.pack_start(_image, true, true, 0);
-        this.pack_start(vbox, true, true, 0);
+        hbox.pack_start(_image, true, true, 0);
+        hbox.pack_start(vbox, true, true, 0);
+        
+        this.add (hbox);
     }
 }
 
-private class Journal.CompositeApplicationWidget : Box {
+private class Journal.CompositeApplicationWidget : GenericCompositeWidget {
     public CompositeApplicationWidget (ImageContent[] pixbufs) {
-        GLib.Object (orientation:Orientation.HORIZONTAL, spacing:10);
-
+        var hbox = new Box (Orientation.HORIZONTAL, 0);
         foreach (ImageContent image in pixbufs) {
             if (image == null)
                 continue;
-            this.pack_start (image, false, false, 0);
+            hbox.pack_start (image, false, false, 0);
         }
+        
+        this.add (hbox);
     }
 }
 
-private class Journal.CompositeImageWidget : Box {
+private class Journal.CompositeImageWidget : GenericCompositeWidget {
     private Widget image_box;
 
     public CompositeImageWidget (ImageContent[] pixbufs) {
-        GLib.Object (orientation:Orientation.HORIZONTAL, spacing:0);
-
         int z = 0;
         if (pixbufs.length > 3) {
             int num_row = pixbufs.length / 3 + 1;
