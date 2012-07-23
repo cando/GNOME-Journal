@@ -25,7 +25,6 @@
 //        * Better bubble's placing algorithm. Please maintain the time ordering.
 //        SECONDARY
 //        * Highlight timenavigator widget (Rewrite it!)
-//        * Divide events loading day by day.
 //        * Disable scrollbar on loading? On-loading message?
 //       CHECK TODO file
 using Gtk;
@@ -87,8 +86,8 @@ private class Journal.VTL : Box {
         this.pack_start (viewport, true, true, 0);
         this.pack_start (vnav, false, false, 10);
        
-        model.activities_loaded.connect ((dates_loaded)=> {
-             load_activities (dates_loaded);
+        model.activities_loaded.connect ((day_loaded)=> {
+             load_activities (day_loaded);
              //Check if the last date is effectely loaded--> mean inserted in the
              //GtkBox container
              string date = dates_added.get (dates_added.size - 1);
@@ -134,22 +133,22 @@ private class Journal.VTL : Box {
         return false;
     }
     
-    private void load_activities (Gee.ArrayList<string> dates_loaded) {
-        foreach (string date in dates_loaded) {
-            if (dates_added.contains (date) || date.has_prefix ("*"))
-              continue;
-            
-            int index;
-            get_child_index_for_date (date, out index);
-            string text = Utils.datetime_from_string (date).format (_("%A, %x"));
-            var d = new Button.with_label (text);
-            bubble_c.append_date_and_reorder (d, index);
-            dates_widget.set (date, d);
-            dates_added.add (date);
-  
-            var activity_list = model.activities.get (date);
-            bubble_c.append_bubbles (activity_list.composite_activities);
-        }
+    private void load_activities (string date) {
+        if (dates_added.contains (date))
+          return;
+        
+        int index;
+        get_child_index_for_date (date, out index);
+        string text = Utils.datetime_from_string (date).format (_("%A, %x"));
+        var d = new Button.with_label (text);
+        bubble_c.append_date_and_reorder (d, index);
+        dates_widget.set (date, d);
+        dates_added.add (date);
+
+        var activity_list = model.activities.get (date);
+        if (activity_list.activities.size == 0)
+            return;
+        bubble_c.append_bubbles (activity_list.activities);
         
         bubble_c.show_all ();
         
@@ -504,13 +503,12 @@ private class Journal.Arrow : DrawingArea {
 
 private class Journal.ActivityBubbleHeader : HBox {
     private Label title;
-    private Button option_button;
     private Image icon;
     public ActivityBubbleHeader (GenericActivity activity) {
         this.title = new Label (activity.title);
         this.title.set_alignment (0, 1);
         this.title.set_markup ("<b>%s</b>\n<span size='small'>%s</span>".
-                                printf(activity.title, activity.date));
+                                printf(activity.title, activity.part_of_the_day));
         
         var pixbuf = activity.icon.scale_simple (32, 32, Gdk.InterpType.NEAREST);
         this.icon = new Gtk.Image.from_pixbuf (pixbuf);

@@ -44,17 +44,6 @@ private class Journal.Utils : Object{
         return Path.build_filename (get_pkgdata (), "style", file_name);
     }
 
-    public static Clutter.Color gdk_rgba_to_clutter_color (Gdk.RGBA gdk_rgba) {
-        Clutter.Color color = {
-            (uint8) (gdk_rgba.red * 255).clamp (0, 255),
-            (uint8) (gdk_rgba.green * 255).clamp (0, 255),
-            (uint8) (gdk_rgba.blue * 255).clamp (0, 255),
-            (uint8) (gdk_rgba.alpha * 255).clamp (0, 255)
-        };
-
-        return color;
-    }
-
     public static Gdk.RGBA get_journal_bg_color () {
         var style = new Gtk.StyleContext ();
         var path = new Gtk.WidgetPath ();
@@ -209,19 +198,14 @@ private class Journal.Utils : Object{
     //DATE UTILS
     public static DateTime get_date_for_event (Zeitgeist.Event e) {
         int64 timestamp = e.get_timestamp () / 1000;
-        //TODO To localtime here? Zeitgeist uses UTC timestamp, right?
-        DateTime date = new DateTime.from_unix_utc (timestamp).to_local ();
+        DateTime date = new DateTime.from_unix_local (timestamp);
         return date;
     }
     
     public static DateTime get_start_of_the_day (int64 time) {
-        int64 timestamp = time / 1000;
-        //TODO To localtime here? Zeitgeist uses UTC timestamp, right?
-        DateTime date = new DateTime.from_unix_local (timestamp);
-        int day, month, year;
-        date.get_ymd (out year, out month, out day);
-        var start_of_day = new DateTime.local (year, month, day, 0, 0, 0);
-        return start_of_day;
+        int64 timestamp = Zeitgeist.Timestamp.prev_midnight (time);
+        DateTime date = new DateTime.from_unix_local (timestamp / 1000);
+        return date;
     }
     
     public static DateTime get_start_of_today () {

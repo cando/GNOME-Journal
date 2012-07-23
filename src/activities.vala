@@ -44,6 +44,10 @@ private abstract class Journal.GenericActivity : Object {
         get; protected set;
     }
     
+    public string part_of_the_day {
+        get; set;
+    }
+    
     public Pixbuf? icon {
         get; protected set;
     }
@@ -655,37 +659,23 @@ private class Journal.ActivityFactory : Object {
     
     private static Gee.Map<string, Type> interpretation_types;
     private static Gee.Map<string, Type> interpretation_types_comp;
+    private static Gee.Map<string, string> interpretation_parents;
     
     private static void init () {
         interpretation_types = new Gee.HashMap<string, Type> ();
         //Fill in all interpretations
         /****DOCUMENTS****/
         interpretation_types.set (Zeitgeist.NFO_DOCUMENT, typeof (DocumentActivity));
-        interpretation_types.set (Zeitgeist.NFO_PAGINATED_TEXT_DOCUMENT, typeof (DocumentActivity));
-        interpretation_types.set (Zeitgeist.NFO_PLAIN_TEXT_DOCUMENT, typeof (DocumentActivity));
-        interpretation_types.set (Zeitgeist.NFO_HTML_DOCUMENT, typeof (DocumentActivity));
-        interpretation_types.set (Zeitgeist.NFO_TEXT_DOCUMENT, typeof (DocumentActivity));
-        interpretation_types.set (Zeitgeist.NFO_SPREADSHEET, typeof (DocumentActivity));
-        interpretation_types.set (Zeitgeist.NFO_PRESENTATION, typeof (DocumentActivity));
         /****PROGRAMMING****/
         interpretation_types.set (Zeitgeist.NFO_SOURCE_CODE, typeof (DevelopmentActivity));
         /****IMAGES****/
         interpretation_types.set (Zeitgeist.NFO_IMAGE, typeof (ImageActivity));
-        interpretation_types.set (Zeitgeist.NFO_VECTOR_IMAGE, typeof (ImageActivity));
-        interpretation_types.set (Zeitgeist.NFO_RASTER_IMAGE, typeof (ImageActivity));
         /****AUDIO****/
         interpretation_types.set (Zeitgeist.NFO_AUDIO, typeof (AudioActivity));
-        interpretation_types.set (Zeitgeist.NMM_MUSIC_ALBUM, typeof (AudioActivity));
-        interpretation_types.set (Zeitgeist.NMM_MUSIC_PIECE, typeof (AudioActivity));
         /****VIDEOS****/
         interpretation_types.set (Zeitgeist.NFO_VIDEO, typeof (VideoActivity));
-        interpretation_types.set (Zeitgeist.NMM_MOVIE, typeof (VideoActivity));
-        interpretation_types.set (Zeitgeist.NMM_MUSIC_ALBUM, typeof (VideoActivity));
-        interpretation_types.set (Zeitgeist.NMM_TVSERIES, typeof (VideoActivity));
-        interpretation_types.set (Zeitgeist.NMM_TVSHOW ,typeof (VideoActivity));
         /****APPLICATIONS****/
         interpretation_types.set (Zeitgeist.NFO_APPLICATION ,typeof (ApplicationActivity));
-        interpretation_types.set (Zeitgeist.NFO_SOFTWARE ,typeof (ApplicationActivity));
         /****WEBSITE*******/
         interpretation_types.set (Zeitgeist.NFO_WEBSITE ,typeof (WebActivity));
         
@@ -694,33 +684,51 @@ private class Journal.ActivityFactory : Object {
         //Fill in all interpretations
         /****DOCUMENTS****/
         interpretation_types_comp.set (Zeitgeist.NFO_DOCUMENT, typeof (CompositeDocumentActivity));
-        interpretation_types_comp.set (Zeitgeist.NFO_PAGINATED_TEXT_DOCUMENT, typeof (CompositeDocumentActivity));
-        interpretation_types_comp.set (Zeitgeist.NFO_PLAIN_TEXT_DOCUMENT, typeof (CompositeDocumentActivity));
-        interpretation_types_comp.set (Zeitgeist.NFO_HTML_DOCUMENT, typeof (CompositeDocumentActivity));
-        interpretation_types_comp.set (Zeitgeist.NFO_TEXT_DOCUMENT, typeof (CompositeDocumentActivity));
-        interpretation_types_comp.set (Zeitgeist.NFO_SPREADSHEET, typeof (CompositeDocumentActivity));
-        interpretation_types_comp.set (Zeitgeist.NFO_PRESENTATION, typeof (CompositeDocumentActivity));
         /****PROGRAMMING****/
         interpretation_types_comp.set (Zeitgeist.NFO_SOURCE_CODE, typeof (CompositeDevelopmentActivity));
         /****IMAGES****/
         interpretation_types_comp.set (Zeitgeist.NFO_IMAGE, typeof (CompositeImageActivity));
-        interpretation_types_comp.set (Zeitgeist.NFO_VECTOR_IMAGE, typeof (CompositeImageActivity));
-        interpretation_types_comp.set (Zeitgeist.NFO_RASTER_IMAGE, typeof (CompositeImageActivity));
         /****AUDIO****/
         interpretation_types_comp.set (Zeitgeist.NFO_AUDIO, typeof (CompositeAudioActivity));
-        interpretation_types_comp.set (Zeitgeist.NMM_MUSIC_ALBUM, typeof (CompositeAudioActivity));
-        interpretation_types_comp.set (Zeitgeist.NMM_MUSIC_PIECE, typeof (CompositeAudioActivity));
         /****VIDEOS****/
         interpretation_types_comp.set (Zeitgeist.NFO_VIDEO, typeof (CompositeVideoActivity));
-        interpretation_types_comp.set (Zeitgeist.NMM_MOVIE, typeof (CompositeVideoActivity));
-        interpretation_types_comp.set (Zeitgeist.NMM_MUSIC_ALBUM, typeof (CompositeVideoActivity));
-        interpretation_types_comp.set (Zeitgeist.NMM_TVSERIES, typeof (CompositeVideoActivity));
-        interpretation_types_comp.set (Zeitgeist.NMM_TVSHOW ,typeof (CompositeVideoActivity));
         /****APPLICATIONS****/
         interpretation_types_comp.set (Zeitgeist.NFO_APPLICATION ,typeof (CompositeApplicationActivity));
-        interpretation_types_comp.set (Zeitgeist.NFO_SOFTWARE ,typeof (CompositeApplicationActivity));
         /****WEBSITE*******/
         interpretation_types_comp.set (Zeitgeist.NFO_WEBSITE ,typeof (CompositeWebActivity));
+        
+        /**********HIERARCHY OF INTERPRETATIONS*******/
+        interpretation_parents = new Gee.HashMap<string, string> ();
+        //Fill in all interpretations
+        /****DOCUMENTS****/
+        interpretation_parents.set (Zeitgeist.NFO_DOCUMENT, Zeitgeist.NFO_DOCUMENT);
+        interpretation_parents.set (Zeitgeist.NFO_PAGINATED_TEXT_DOCUMENT, Zeitgeist.NFO_DOCUMENT);
+        interpretation_parents.set (Zeitgeist.NFO_PLAIN_TEXT_DOCUMENT, Zeitgeist.NFO_DOCUMENT);
+        interpretation_parents.set (Zeitgeist.NFO_HTML_DOCUMENT, Zeitgeist.NFO_DOCUMENT);
+        interpretation_parents.set (Zeitgeist.NFO_TEXT_DOCUMENT, Zeitgeist.NFO_DOCUMENT);
+        interpretation_parents.set (Zeitgeist.NFO_SPREADSHEET, Zeitgeist.NFO_DOCUMENT);
+        interpretation_parents.set (Zeitgeist.NFO_PRESENTATION, Zeitgeist.NFO_DOCUMENT);
+        /****PROGRAMMING****/
+        interpretation_parents.set (Zeitgeist.NFO_SOURCE_CODE, Zeitgeist.NFO_SOURCE_CODE);
+        /****IMAGES****/
+        interpretation_parents.set (Zeitgeist.NFO_IMAGE, Zeitgeist.NFO_IMAGE);
+        interpretation_parents.set (Zeitgeist.NFO_VECTOR_IMAGE, Zeitgeist.NFO_IMAGE);
+        interpretation_parents.set (Zeitgeist.NFO_RASTER_IMAGE, Zeitgeist.NFO_IMAGE);
+        /****AUDIO****/
+        interpretation_parents.set (Zeitgeist.NFO_AUDIO, Zeitgeist.NFO_AUDIO);
+        interpretation_parents.set (Zeitgeist.NMM_MUSIC_ALBUM, Zeitgeist.NFO_AUDIO);
+        interpretation_parents.set (Zeitgeist.NMM_MUSIC_PIECE, Zeitgeist.NFO_AUDIO);
+        /****VIDEOS****/
+        interpretation_parents.set (Zeitgeist.NFO_VIDEO, Zeitgeist.NFO_VIDEO);
+        interpretation_parents.set (Zeitgeist.NMM_MOVIE, Zeitgeist.NFO_VIDEO);
+        interpretation_parents.set (Zeitgeist.NMM_MUSIC_ALBUM, Zeitgeist.NFO_VIDEO);
+        interpretation_parents.set (Zeitgeist.NMM_TVSERIES, Zeitgeist.NFO_VIDEO);
+        interpretation_parents.set (Zeitgeist.NMM_TVSHOW , Zeitgeist.NFO_VIDEO);
+        /****APPLICATIONS****/
+        interpretation_parents.set (Zeitgeist.NFO_APPLICATION, Zeitgeist.NFO_APPLICATION);
+        interpretation_parents.set (Zeitgeist.NFO_SOFTWARE, Zeitgeist.NFO_APPLICATION);
+        /****WEBSITE*******/
+        interpretation_parents.set (Zeitgeist.NFO_WEBSITE, Zeitgeist.NFO_WEBSITE);
     }
     
     /****PUBLIC METHODS****/
@@ -734,8 +742,9 @@ private class Journal.ActivityFactory : Object {
             //Better way for handling this?
             intpr = Zeitgeist.NFO_DOCUMENT;
 
-        if (interpretation_types.has_key (intpr)){
-            Type activity_class = interpretation_types.get (intpr);
+        string parent_intpr = get_parent_interpretation (intpr);
+        if (interpretation_types.has_key (parent_intpr)){
+            Type activity_class = interpretation_types.get (parent_intpr);
             SingleActivity activity = (SingleActivity) 
                                         Object.new (activity_class, event:event);
             return activity;
@@ -752,25 +761,29 @@ private class Journal.ActivityFactory : Object {
         if (intpr == null) 
             //Better way for handling this?
             intpr = Zeitgeist.NFO_DOCUMENT;
-        
-        if (interpretation_types_comp.has_key (intpr)){
-            Type activity_class = interpretation_types_comp.get (intpr);
+
+        string parent_intpr = get_parent_interpretation (intpr);
+        if (interpretation_types_comp.has_key (parent_intpr)){
+            Type activity_class = interpretation_types_comp.get (parent_intpr);
             CompositeActivity activity = (CompositeActivity) 
                                         Object.new (activity_class, activities:activities);
             return activity;
         }
         return new CompositeActivity (activities);
     }
+    
+    public static string? get_parent_interpretation (string intpr) {
+        if (interpretation_parents == null)
+            init ();
+        if (interpretation_parents.has_key (intpr))
+            return interpretation_parents.get (intpr);
+        else
+            return null;
+    }
 }
 
 private class Journal.DayActivityModel : Object {
-
-    //Key: Zeitgeist.Interpretation
-    public Gee.Map<string, Gee.List<SingleActivity>> activities {
-        get; private set;
-    }
-    
-    public Gee.List<GenericActivity> composite_activities {
+    public Gee.List<GenericActivity> activities {
         get; private set;
     }
     
@@ -778,84 +791,108 @@ private class Journal.DayActivityModel : Object {
         get; private set;
     }
     
-    public int num;
-    
     public signal void launch_composite_activity (CompositeActivity activity);
 
     public DayActivityModel (string day) {
-        activities = new Gee.HashMap<string, Gee.List<SingleActivity>> ();
-        composite_activities = new Gee.ArrayList<GenericActivity> ();
         this.day = day;
-        this.num = 0;
+        activities = new Gee.ArrayList<GenericActivity> ();
     }
     
-    public void add_activity (SingleActivity activity) {
+    private void add_activity (SingleActivity activity, 
+                               Gee.Map<string, Gee.List<SingleActivity>> map) {
         string interpretation = activity.interpretation;
-        if (!activities.has_key (interpretation))
-            activities.set (activity.interpretation, 
+        if (!map.has_key (interpretation))
+            map.set (activity.interpretation, 
                             new Gee.ArrayList<SingleActivity> ((a, b) => {
                                 SingleActivity first = (SingleActivity) a;
                                 SingleActivity second = (SingleActivity) b;
                                 return (first.uri == second.uri);
                             }));
                             
-        var list = activities.get (interpretation);
+        var list = map.get (interpretation);
         if (!list.contains (activity))
             list.add (activity);
     }
     
-    public void create_composite_activities () {
-            foreach (string intr in this.activities.keys) {
-                var list = this.activities.get (intr);
-                if (list.size > 1) {
-                    CompositeActivity c_activity = 
-                    ActivityFactory.get_composite_activity_for_interpretation (intr, 
-                                                        this.activities.get (intr));
-                    c_activity.launch_activity.connect ((activity) => {
-                        this.launch_composite_activity (activity as CompositeActivity);
-                    });
-                    composite_activities.add (c_activity);
-                }
-                else
-                    composite_activities.add (list.get (0));
+    private void create_composite_activities (Gee.Map<string, Gee.List<SingleActivity>> _in,
+                                              out Gee.List<GenericActivity> _out,
+                                              string part_of_the_day) {
+        _out = new Gee.ArrayList<GenericActivity> ();
+        foreach (string intr in _in.keys) {
+            var list = _in.get (intr);
+            if (list.size > 1) {
+                CompositeActivity c_activity = 
+                ActivityFactory.get_composite_activity_for_interpretation (intr, 
+                                                    _in.get (intr));
+                c_activity.part_of_the_day = part_of_the_day;
+                c_activity.launch_activity.connect ((activity) => {
+                    this.launch_composite_activity (activity as CompositeActivity);
+                });
+                _out.add (c_activity);
             }
-            
-            composite_activities.sort ( (a,b) =>{
-                    GenericActivity first = (GenericActivity)a;
-                    GenericActivity second = (GenericActivity)b;
-                    if (first.time_start > second.time_start)
-                        return -1;
-                    else if (first.time_start == second.time_start)
-                        return 0;
-                    else
-                        return 1;
-            });
+            else
+                _out.add (list.get (0));
+        }
     }
     
-/****One day will be useful...but not now!*********/
-//    public void remove_activity (SingleActivity activity) {
-//        string interpretation = activity.interpretation;
-//        if (!activities.has_key (interpretation))
-//            return;
-
-//        var list = activities.get (interpretation);
-//        list.remove (activity);
-//        if (list.size == 0)
-//            activities.unset (interpretation);
-//    }
+    public void add_activities (Gee.List<Zeitgeist.Event> event_list) {
+        var morning_map = new Gee.HashMap<string, Gee.List<SingleActivity>> ();
+        var afternoon_map = new Gee.HashMap<string, Gee.List<SingleActivity>> ();
+        var evening_map = new Gee.HashMap<string, Gee.List<SingleActivity>> ();
+        foreach (Zeitgeist.Event e in event_list) {
+            SingleActivity activity = ActivityFactory.get_activity_for_event (e);
+            int64 time = e.get_timestamp () / 1000;
+            var dt = new DateTime.from_unix_local (time);
+            var hour = dt.get_hour (); 
+            if (hour < 12) {
+                activity.part_of_the_day = _("Morning");
+                add_activity (activity, morning_map);
+            }
+            else if (hour < 18) {
+                activity.part_of_the_day = _("Afternoon");
+                add_activity (activity, afternoon_map);
+            }
+            else {
+                activity.part_of_the_day = _("Evening");
+                add_activity (activity, evening_map);
+            }
+        }
+        
+        Gee.List<GenericActivity> morning_activities;
+        Gee.List<GenericActivity> afternoon_activities;
+        Gee.List<GenericActivity> evening_activities;
+        create_composite_activities (morning_map, out morning_activities, _("Morning"));
+        create_composite_activities (afternoon_map, out afternoon_activities, _("Afternoon"));
+        create_composite_activities (evening_map, out evening_activities, _("Evening"));
+        
+        activities.add_all (morning_activities);
+        activities.add_all (afternoon_activities);
+        activities.add_all (evening_activities);
+        
+                
+        activities.sort ((a,b) =>{
+                GenericActivity first = (GenericActivity)a;
+                GenericActivity second = (GenericActivity)b;
+                if (first.time_start > second.time_start)
+                    return -1;
+                else if (first.time_start == second.time_start)
+                    return 0;
+                else
+                    return 1;
+        });
+    }
 }
 
 private class Journal.ActivityModel : Object {
-
     private ZeitgeistBackend backend;
     private SearchManager search_manager;
     
-    //Key: Date format YYYY-MM-DD
+    //Key: Date formatted YYYY-MM-DD
     public Gee.Map<string, DayActivityModel> activities {
         get; private set;
     }
     
-    public signal void activities_loaded (Gee.ArrayList<string> dates_loaded);
+    public signal void activities_loaded (string day);
     public signal void launch_composite_activity (CompositeActivity activity);
 
     public ActivityModel () {
@@ -864,8 +901,8 @@ private class Journal.ActivityModel : Object {
         search_manager = new SearchManager ();
         
         backend.load_events_on_start ();
-        backend.events_loaded.connect ((tr) => {
-            on_events_loaded (tr);
+        backend.events_loaded.connect ((day) => {
+            on_events_loaded (day);
         });
         
         search_manager.search_finished.connect (() => {
@@ -873,77 +910,21 @@ private class Journal.ActivityModel : Object {
         });
     }
     
-    private void on_events_loaded (Zeitgeist.TimeRange tr) {
-        int64 start = tr.get_start () / 1000;
-        int64 end = tr.get_end () / 1000;
-        DateTime start_date = new DateTime.from_unix_local (start);
-        DateTime end_date = new DateTime.from_unix_local (end);
-        
-        var dates_loaded = new Gee.ArrayList<string> ();
-        DateTime next_date = end_date;
-        string day = next_date.format("%Y-%m-%d");
-        if (add_day (day) == 0)
-            dates_loaded.add (day);
-        while (next_date.compare (start_date) != 0) {
-            next_date = next_date.add_days (-1);
-            day = next_date.format("%Y-%m-%d");
-            var res = add_day (day);
-            if (res == 0)
-                dates_loaded.add (day);
-            else if (res == 1) 
-                dates_loaded.add ("*"+day); //means day with 0 events.FIXME hack!
-        }
-        
-        //Sort for timestamp order
-        foreach (DayActivityModel day_model in activities.values) 
-            foreach (Gee.List<SingleActivity> list in day_model.activities.values)
-                list.sort ( (a,b) =>{
-                    SingleActivity first = (SingleActivity)a;
-                    SingleActivity second = (SingleActivity)b;
-                    if (first.time_start > second.time_start)
-                        return -1;
-                    else if (first.time_start == second.time_start)
-                        return 0;
-                    else
-                        return 1;
-                });
-        
-        var empty = true;
-        foreach (string d in dates_loaded) {
-            if (!d.has_prefix ("*")) {
-                empty = false;
-                break;
-            }
-        }
-        
-        if (empty) 
-            this.load_other_days (3);
-        else
-            activities_loaded (dates_loaded);
-    }
-    
-    private int add_day (string day) {
-        //Return 0 if everything is ok
-        //Return -1 if we have already loaded this day
-        //Return 1 if this day has no events
+    private void on_events_loaded (string day) {
         if (activities.has_key (day))
-            return -1;
+            return;
         var model = new DayActivityModel (day);
         Gee.List<Zeitgeist.Event> event_list = backend.get_events_for_date (day);
         if (event_list == null)
-                return 1;
-        foreach (Zeitgeist.Event e in event_list) {
-            SingleActivity activity = ActivityFactory.get_activity_for_event (e);
-            model.add_activity (activity);
-        }
-        model.create_composite_activities ();
+                return;
+        model.add_activities (event_list);
         activities.set (day, model);
         model.launch_composite_activity.connect ((activity) => {
                     this.launch_composite_activity (activity);
         });
-        return 0;
+        activities_loaded (day);
     }
-    
+
     public void load_activities (DateTime start) {
         TimeVal tv;
         TimeVal tv2;
