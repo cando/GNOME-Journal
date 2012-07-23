@@ -507,6 +507,7 @@ private class Journal.ActivityBubbleHeader : Box {
     public ActivityBubbleHeader (GenericActivity activity) {
         Object (orientation:Orientation.HORIZONTAL, spacing: 0);
         var evbox = new EventBox ();
+        evbox.set_visible_window (false);
         evbox.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
                          Gdk.EventMask.LEAVE_NOTIFY_MASK);
         this.title = new Label (activity.title);
