@@ -501,14 +501,30 @@ private class Journal.Arrow : DrawingArea {
         }
 }
 
-private class Journal.ActivityBubbleHeader : HBox {
+private class Journal.ActivityBubbleHeader : Box {
     private Label title;
     private Image icon;
     public ActivityBubbleHeader (GenericActivity activity) {
+        Object (orientation:Orientation.HORIZONTAL, spacing: 0);
+        var evbox = new EventBox ();
+        evbox.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
+                         Gdk.EventMask.LEAVE_NOTIFY_MASK);
         this.title = new Label (activity.title);
         this.title.set_alignment (0, 1);
         this.title.set_markup ("<b>%s</b>\n<span size='small'>%s</span>".
                                 printf(activity.title, activity.part_of_the_day));
+        evbox.add (this.title);
+        evbox.enter_notify_event.connect ((ev)=> {
+            this.title.set_markup ("<b>%s</b>\n<span size='small'>%s</span>".
+                                printf(activity.title, activity.date));
+            return false;
+        });
+        
+        evbox.leave_notify_event.connect ((ev)=> {
+            this.title.set_markup ("<b>%s</b>\n<span size='small'>%s</span>".
+                                printf(activity.title, activity.part_of_the_day));
+            return false;
+        });
         
         var pixbuf = activity.icon.scale_simple (32, 32, Gdk.InterpType.NEAREST);
         this.icon = new Gtk.Image.from_pixbuf (pixbuf);
@@ -516,7 +532,7 @@ private class Journal.ActivityBubbleHeader : HBox {
         this.pack_start (this.icon, false, true, 3);
         var container = new Box (Orientation.VERTICAL, 5);
         if (activity.content != null) {
-            container.pack_start (title, true, true, 0);
+            container.pack_start (evbox, true, true, 0);
             container.pack_start (new Gtk.Separator (Orientation.HORIZONTAL),
                                                      false, false, 0);
         }
