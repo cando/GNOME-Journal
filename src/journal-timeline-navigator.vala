@@ -59,7 +59,8 @@ private class Journal.TimelineNavigator : ButtonBox {
     public string current_highlighted;
     public int current_highlighted_index;
     
-    private Pango.AttrList attr_list;
+    private Pango.AttrList attr_list_selected;
+    private Pango.AttrList attr_list_normal;
     
     public signal void go_to_date (DateTime date);
 
@@ -119,9 +120,12 @@ private class Journal.TimelineNavigator : ButtonBox {
     }
     
     private void load_attributes () {
-        attr_list = new Pango.AttrList ();
-        attr_list.insert (Pango.attr_scale_new (Pango.Scale.MEDIUM));
-        attr_list.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
+        attr_list_selected = new Pango.AttrList ();
+        attr_list_selected.insert (Pango.attr_scale_new (Pango.Scale.SMALL));
+        attr_list_selected.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
+        
+        attr_list_normal = new Pango.AttrList ();
+        attr_list_normal.insert (Pango.attr_scale_new (Pango.Scale.SMALL));
     }
     
     private Gee.List<string> select_time_labels () {
@@ -192,22 +196,25 @@ private class Journal.TimelineNavigator : ButtonBox {
         load_attributes ();
         int i = 0;
         foreach(string s in select_time_labels ()) {
-            Button b = new Button.with_label (s);
+            var l = new Label (s);
+            l.attributes = attr_list_normal;
+            Button b = new Button();
+            b.add(l);
             b.set_alignment (0, 0);
             //Let's highlight Today.
             if (i == 0) {
                 Label label = (Label) b.get_child ();
-                label.attributes = attr_list;
+                label.attributes = attr_list_selected;
                 current_highlighted = jump_date.get(time_labels[0]).format ("%Y-%m-%d");
                 current_highlighted_index = 0;
            }
             b.clicked.connect (() => {
                 foreach (Widget w in this.get_children ()) {
                     Label other_label = (Label)((Button)w).get_child ();
-                    other_label.attributes = null;
+                    other_label.attributes = attr_list_normal;
                  }
                 Label label = (Label) b.get_child ();
-                label.attributes = attr_list;
+                label.attributes = attr_list_selected;
                 DateTime date = jump_date.get (label.label);
                 this.go_to_date (date);
             });
@@ -223,9 +230,9 @@ private class Journal.TimelineNavigator : ButtonBox {
         foreach (Widget w in this.get_children ()) {
             Label label = (Label)((Button)w).get_child ();
             if (i == index)
-                label.attributes = attr_list;
+                label.attributes = attr_list_selected;
             else
-                label.attributes = null;
+                label.attributes = attr_list_normal;
             i++;
         }
     }
@@ -236,9 +243,9 @@ private class Journal.TimelineNavigator : ButtonBox {
         foreach (Widget w in this.get_children ()) {
             Label label = (Label)((Button)w).get_child ();
             if (i == index)
-                label.attributes = attr_list;
+                label.attributes = attr_list_selected;
             else
-                label.attributes = null;
+                label.attributes = attr_list_normal;
             i++;
         }
     }
@@ -250,9 +257,9 @@ private class Journal.TimelineNavigator : ButtonBox {
                 foreach (Widget w in this.get_children ()) {
                     Label label = (Label)((Button)w).get_child ();
                     if (label.label == key)
-                        label.attributes = attr_list;
+                        label.attributes = attr_list_selected;
                     else
-                        label.attributes = null;
+                        label.attributes = attr_list_normal;
                 }
             }
         }

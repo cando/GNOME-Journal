@@ -778,7 +778,7 @@ private class Journal.ActivityFactory : Object {
         if (interpretation_parents.has_key (intpr))
             return interpretation_parents.get (intpr);
         else
-            return null;
+            return intpr;
     }
 }
 

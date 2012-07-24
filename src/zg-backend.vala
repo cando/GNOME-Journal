@@ -94,7 +94,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
         return;
       }
       
-      fill_days_map ();
+//      fill_days_map ();
     }
     
     private async void load_web_events (Zeitgeist.TimeRange tr)
@@ -164,6 +164,8 @@ public class Journal.ZeitgeistBackend: GLib.Object
       {
         warning ("%s", err.message);
       }
+      
+      fill_days_map ();
     }
     
     private async void fill_days_map () {

@@ -121,7 +121,7 @@ public class Journal.App: GLib.Object {
     private void setup_ui () {
         window = new Gtk.ApplicationWindow (application);
         window.show_menubar = false;
-        window.hide_titlebar_when_maximized = true;
+        //window.hide_titlebar_when_maximized = true;
         window.set_default_size (840, 680);
 
         // restore window geometry/position
@@ -133,8 +133,8 @@ public class Journal.App: GLib.Object {
             window.set_default_size (width, height);
         }
 
-        if (Utils.settings.get_boolean ("window-maximized"))
-            window.maximize ();
+//        if (Utils.settings.get_boolean ("window-maximized"))
+//            window.maximize ();
 
         var position = Utils.settings.get_value ("window-position");
         if (position.n_children () == 2) {
@@ -176,6 +176,7 @@ public class Journal.App: GLib.Object {
             notebook.prev_page ();
             main_toolbar.set_back_visible (false);
             main_toolbar.set_labels (_(""), null);
+            main_toolbar.hide ();
         });
         main_toolbar.selection_mode_request.connect ((mode) => {
                 if (mode) {
@@ -186,6 +187,7 @@ public class Journal.App: GLib.Object {
                     main_toolbar.set_mode (Gd.MainToolbarMode.OVERVIEW);
                     main_toolbar.set_labels (_(""), null);
                 }
+                main_toolbar.show ();
         });
         notebook = new Gtk.Notebook ();
         notebook.show_border = false;
@@ -219,10 +221,12 @@ public class Journal.App: GLib.Object {
             main_toolbar.set_labels (activity.title, 
                                      activity.uris.length.to_string ()
                                      + _(" items"));
+            main_toolbar.show ();
         });
 
         window.show_all();
         search_bar.hide ();
+        main_toolbar.hide ();
     }
 
     public bool quit () {

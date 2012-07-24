@@ -43,7 +43,6 @@ private class Journal.VTL : Box {
     private App app;
     private Scrollbar scrollbar;
     private TimelineNavigator vnav;
-    private SearchWidget search_bar;
     
     public ScrolledWindow viewport;
     public Box container;
@@ -82,9 +81,8 @@ private class Journal.VTL : Box {
         vnav = new TimelineNavigator (Orientation.VERTICAL);
         vnav.go_to_date.connect ((date) => {this.jump_to_day (date);});
 
-        //this.pack_start (new Gtk.Label(""), false, false, 32);
+        this.pack_start (vnav, false, false, 9);
         this.pack_start (viewport, true, true, 0);
-        this.pack_start (vnav, false, false, 10);
        
         model.activities_loaded.connect ((day_loaded)=> {
              load_activities (day_loaded);
@@ -141,6 +139,8 @@ private class Journal.VTL : Box {
         get_child_index_for_date (date, out index);
         string text = Utils.datetime_from_string (date).format (_("%A, %x"));
         var d = new Button.with_label (text);
+        d.set_relief(Gtk.ReliefStyle.NONE);
+        d.set_focus_on_click (false);
         bubble_c.append_date_and_reorder (d, index);
         dates_widget.set (date, d);
         dates_added.add (date);
@@ -355,8 +355,6 @@ private class Journal.BubbleContainer : EventBox {
 
 private class Journal.Timeline: DrawingArea {
      public override bool draw (Cairo.Context cr) {
-         var width = get_allocated_width ();
-         var height = get_allocated_height ();
          var color = Utils.get_timeline_bg_color ();
          Gdk.cairo_set_source_rgba (cr, color);
          cr.paint ();
@@ -374,7 +372,7 @@ private class Journal.Arrow : DrawingArea {
         private const int arrow_width = 20;
         private const int spacing = 10;
         private const int radius = 6;
-        private const int line_width = 2;
+        private const int line_width = 1;
         
         public bool hover {
             get; set;
@@ -390,13 +388,13 @@ private class Journal.Arrow : DrawingArea {
             var height = get_allocated_height ();
             
             var arrow_height = 15;
-            var border_radius = 5;
+            var border_radius = 0;
             
             var color = Utils.get_roundbox_border_color ();
             if (hover) 
                 color = Utils.get_roundbox_border_hover_color ();
             Gdk.cairo_set_source_rgba (cr, color);
-            cr.set_line_width (4);
+            cr.set_line_width (2);
             if (this.arrow_side == Side.RIGHT) {
                 //Draw and fill the arrow
                 cr.save ();
@@ -412,9 +410,9 @@ private class Journal.Arrow : DrawingArea {
                 cr.restore ();
                 
                 //Draw the border
-                cr.move_to (0, 0);
+                cr.move_to (0, 7);
                 cr.line_to (0, height / 2 - arrow_height);
-                cr.set_line_width (4);
+                cr.set_line_width (2);
                 cr.stroke ();
                 cr.move_to (0, height / 2 - arrow_height);
                 cr.set_line_width (2);
@@ -424,8 +422,8 @@ private class Journal.Arrow : DrawingArea {
                 cr.line_to (0, height / 2 + arrow_height);
                 cr.stroke ();
                 cr.move_to (0, height / 2 + arrow_height);
-                cr.line_to (0, height);
-                cr.set_line_width (4);
+                cr.line_to (0, height- 7 );
+                cr.set_line_width (2);
                 cr.stroke ();
                 
                 //Draw the Circle
@@ -434,13 +432,13 @@ private class Journal.Arrow : DrawingArea {
                 cr.set_line_width (line_width ); 
                 // Paint the border cirle to start with.
                 Gdk.cairo_set_source_rgba (cr, bg);
-                cr.arc (arrow_width + spacing + radius + line_width, 
+                cr.arc (arrow_width + spacing + radius + line_width + 1, 
                         height / 2 - arrow_height / 2 + radius + line_width - 1,
                         radius, 0, 2*Math.PI);
                 cr.stroke ();
                 // Paint the colored cirle to start with.
                 Gdk.cairo_set_source_rgba (cr, color);
-                cr.arc (arrow_width + spacing + radius + line_width, 
+                cr.arc (arrow_width + spacing + radius + line_width + 1, 
                         height / 2 - arrow_height / 2 + radius + line_width - 1,
                         radius - 1, 0, 2*Math.PI);
                 cr.fill ();
@@ -459,7 +457,7 @@ private class Journal.Arrow : DrawingArea {
                 cr.restore ();
                 
                 // Draw the border
-                cr.move_to (width, 0);
+                cr.move_to (width, 7);
                 cr.line_to (width, height / 2 - arrow_height);
                 cr.stroke ();
                 cr.move_to (width, height / 2 - arrow_height);
@@ -470,8 +468,8 @@ private class Journal.Arrow : DrawingArea {
                 cr.line_to (width, height / 2 + arrow_height);
                 cr.stroke ();
                 cr.move_to (width, height / 2 + arrow_height);
-                cr.line_to (width, height);
-                cr.set_line_width (4);
+                cr.line_to (width, height - 7);
+                cr.set_line_width (2);
                 cr.stroke ();
                 
                 //Draw the Circle
@@ -480,13 +478,13 @@ private class Journal.Arrow : DrawingArea {
                 cr.set_line_width (line_width ); 
                 // Paint the border cirle to start with.
                 Gdk.cairo_set_source_rgba (cr, bg);
-                cr.arc (radius + line_width, 
+                cr.arc (radius + line_width + 1, 
                         height / 2 - arrow_height / 2 + radius + line_width - 1,
                         radius, 0, 2*Math.PI);
                 cr.stroke ();
                 // Paint the colored cirle to start with.
                 Gdk.cairo_set_source_rgba (cr, color);
-                cr.arc (radius + line_width, 
+                cr.arc (radius + line_width + 1, 
                         height / 2 - arrow_height / 2 + radius + line_width - 1,
                         radius - 1, 0, 2*Math.PI);
                 cr.fill ();
@@ -497,7 +495,7 @@ private class Journal.Arrow : DrawingArea {
         
         public override void get_preferred_width (out int minimum_width, out int natural_width) {
             minimum_width = natural_width = arrow_width + spacing
-                                            + radius * 2 + line_width * 2;
+                                            + radius * 2 + line_width * 2 + 1;
         }
 }
 
@@ -512,26 +510,22 @@ private class Journal.ActivityBubbleHeader : Box {
                          Gdk.EventMask.LEAVE_NOTIFY_MASK);
         this.title = new Label (activity.title);
         this.title.set_alignment (0, 1);
-        this.title.set_markup ("<b>%s</b>\n<span size='small'>%s</span>".
+        this.title.set_markup ("<span><b>%s</b></span>\n<span color='grey'>%s</span>".
                                 printf(activity.title, activity.part_of_the_day));
         evbox.add (this.title);
         evbox.enter_notify_event.connect ((ev)=> {
-            this.title.set_markup ("<b>%s</b>\n<span size='small'>%s</span>".
+            this.title.set_markup ("<span><b>%s</b></span>\n<span color='grey'>%s</span>".
                                 printf(activity.title, activity.date));
             return false;
         });
         
         evbox.leave_notify_event.connect ((ev)=> {
-            this.title.set_markup ("<b>%s</b>\n<span size='small'>%s</span>".
+            this.title.set_markup ("<span><b>%s</b></span>\n<span color='grey'>%s</span>".
                                 printf(activity.title, activity.part_of_the_day));
             return false;
         });
         
-        var pixbuf = activity.icon.scale_simple (32, 32, Gdk.InterpType.NEAREST);
-        this.icon = new Gtk.Image.from_pixbuf (pixbuf);
-        
-        this.pack_start (this.icon, false, true, 3);
-        var container = new Box (Orientation.VERTICAL, 5);
+        var container = new Box (Orientation.VERTICAL, 0);
         if (activity.content != null) {
             container.pack_start (evbox, true, true, 0);
             container.pack_start (new Gtk.Separator (Orientation.HORIZONTAL),
@@ -571,21 +565,6 @@ private class Journal.ActivityBubble : EventBox {
             queue_draw (); 
             return false;
        });
-       if (activity.content is GenericCompositeWidget) {
-           var content = activity.content as GenericCompositeWidget;
-           //FIXME Hack: Gtk doesn't propagate enter/leave_notify_event from child 
-           //to parent. So we sintetize a custom signal;
-           content.enter.connect ((e) => {
-               warning ("enter");
-               hover = true; 
-               queue_draw (); 
-           });
-           content.leave.connect ((e) => {
-            warning ("leave");
-               hover = false; 
-               queue_draw (); 
-           });
-       }
 
        setup_ui ();
     }
@@ -593,11 +572,10 @@ private class Journal.ActivityBubble : EventBox {
     private void setup_ui () {
         var header = new ActivityBubbleHeader (activity);
         
-        var container = new Box (Orientation.VERTICAL, 5);
+        var container = new Box (Orientation.VERTICAL, 0);
+        container.set_border_width (24);
         container.pack_start (header, false, false, 2);
-        var al = new Alignment (0.5f, 0, 0, 0);
-        al.add (activity.content);
-        container.pack_start (al, true, true, 9); 
+        container.pack_start (activity.content, true, true, 9); 
         
         this.add (container);
         this.draw_as_css_box (this);
@@ -630,77 +608,4 @@ private class Journal.ActivityBubble : EventBox {
             minimum_width = natural_width = DEFAULT_WIDTH;
     }
 
-}
-
-private class Journal.HoleActor : Clutter.Actor {
-
-    private Clutter.Canvas canvas;
-
-    private Clutter.BinLayout box;
-    public HoleActor () {
-       this.reactive = true;
-       box = new Clutter.BinLayout (Clutter.BinAlignment.CENTER, 
-                                    Clutter.BinAlignment.CENTER);
-       set_layout_manager (box);
-       
-       this.canvas = new Clutter.Canvas ();
-       canvas.draw.connect ((cr, w, h) => { return paint_canvas (cr, w, h); });
-       var canvas_box = new Clutter.Actor ();
-       canvas_box.set_content (canvas);
-       this.allocation_changed.connect ((box, f) => {
-            Idle.add (()=>{
-                //see this http://www.mail-archive.com/clutter-app-devel-list@clutter-project.org/msg00116.html
-                canvas_box.set_size ((int)box.get_width (), (int) box.get_height ());
-                canvas.set_size ((int)box.get_width (), (int) box.get_height ());
-                return false;
-            });
-       });
-       this.add_child (canvas_box);
-    }
-
-    private bool paint_canvas (Cairo.Context ctx, int width, int height) {
-        var borderWidth = 3;
-        Clutter.Color backgroundColor = {192,192,192, 255};
-        Clutter.Color borderColor = {255, 255, 255, 255};
-
-        double boxHeight = height;
-        
-        var cr = ctx;
-        cr.save ();
-        cr.set_source_rgba (0.0, 0.0, 0.0, 0.0);
-        cr.set_operator (Cairo.Operator.SOURCE);
-        cr.paint ();
-        cr.restore ();
-        
-        cr.move_to (0, 0);
-        double step = 30;
-        double i = step;
-        double old_h = boxHeight/6;
-        cr.line_to (i, old_h);
-        for (i = step * 2; i <= step* 42; i += step) {
-            old_h = -old_h;
-            cr.rel_line_to (step, old_h);
-        }
-        
-        old_h = boxHeight/6;
-        if(old_h > 0)
-            cr.rel_line_to (0, boxHeight);
-        else
-            cr.rel_line_to (0, boxHeight - old_h);
-
-        for (i = 0; i <= step * 42; i += step ) {
-            old_h = -old_h;
-            cr.rel_line_to (-step, old_h);
-        }
-
-        cr.close_path ();
-        cr.set_line_join(Cairo.LineJoin.ROUND);
-        Clutter.cairo_set_source_color(cr, backgroundColor);
-        cr.fill_preserve();
-        Clutter.cairo_set_source_color(cr, borderColor);
-        cr.set_line_width(borderWidth);
-        cr.stroke();
-
-        return true;
-    }
 }
