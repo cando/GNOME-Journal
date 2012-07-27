@@ -186,6 +186,7 @@ public class Journal.App: GLib.Object {
                 else {
                     main_toolbar.set_mode (Gd.MainToolbarMode.OVERVIEW);
                     main_toolbar.set_labels (_(""), null);
+                    main_toolbar.set_back_visible (true);
                 }
                 main_toolbar.show ();
         });

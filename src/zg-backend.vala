@@ -51,7 +51,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
     {
       int64 end = Zeitgeist.Timestamp.next_midnight (Zeitgeist.Timestamp.now ());
       int64 start = end - Zeitgeist.Timestamp.DAY;
-      for (int i = 0 ; i < 2; i++) {
+      for (int i = 0 ; i < 3; i++) {
         var tr = new Zeitgeist.TimeRange (start, end);
         load_events_for_timerange (tr);
         end = start;
@@ -180,11 +180,9 @@ public class Journal.ZeitgeistBackend: GLib.Object
 
           days_map[key].add (e1);
         }
-        
         //OK, we have mapped the new events. Let's clear the list.
         new_events.clear ();
-        if (key != null)
-            events_loaded (key);
+        events_loaded (key);
     }
     
     private void load_events_for_timerange (Zeitgeist.TimeRange tr) {

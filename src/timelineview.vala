@@ -86,7 +86,7 @@ private class Journal.VTL : Box {
        
         model.activities_loaded.connect ((day_loaded)=> {
              load_activities (day_loaded);
-             //Check if the last date is effectely loaded--> mean inserted in the
+             //Check if the last date is effetely loaded--> mean inserted in the
              //GtkBox container
              string date = dates_added.get (dates_added.size - 1);
              check_finished_loading (date);
@@ -137,9 +137,9 @@ private class Journal.VTL : Box {
         
         int index;
         get_child_index_for_date (date, out index);
-        string text = Utils.datetime_from_string (date).format (_("%A, %x"));
+        string text = Utils.datetime_from_string (date).format (_("%A, %B %e"));
         var d = new Button.with_label (text);
-        d.set_relief(Gtk.ReliefStyle.NONE);
+        d.set_relief (Gtk.ReliefStyle.NONE);
         d.set_focus_on_click (false);
         bubble_c.append_date_and_reorder (d, index);
         dates_widget.set (date, d);
@@ -215,12 +215,12 @@ private class Journal.VTL : Box {
                          scrollbar.adjustment.page_size;
         
         if (!on_loading && y >= limit) {
-            //We can't scroll anymmore! Let's load another date range!
+            //We can't scroll anymore! Let's load another date range!
             model.load_other_days (3);
             on_loading = true;
         }
         
-        //We are moving so we should highligth the right TimelineNavigator's label
+        //We are moving so we should highlight the right TimelineNavigator's label
         //TODO
 //        int current_value;
 //        if (!dates_widget.has_key (vnav.current_highlighted)) {
@@ -312,7 +312,7 @@ private class Journal.BubbleContainer : EventBox {
     private void append_bubble (GenericActivity activity) {
         var box = new Box (Orientation.HORIZONTAL, 0);
         
-        var spacing = Random.int_range (10, 30);
+        var spacing = Random.int_range (20, 30);
         if (turn % 2 == 0) {
             var bubble = new ActivityBubble (activity, Side.RIGHT);
             bubble.get_style_context ().add_class ("round-bubble-right");
@@ -388,7 +388,6 @@ private class Journal.Arrow : DrawingArea {
             var height = get_allocated_height ();
             
             var arrow_height = 15;
-            var border_radius = 0;
             
             var color = Utils.get_roundbox_border_color ();
             if (hover) 
@@ -404,7 +403,7 @@ private class Journal.Arrow : DrawingArea {
                 cr.line_to (0, height / 2 + arrow_height);
                 cr.rel_line_to(0, - arrow_height * 2);
                 color = Utils.get_roundbox_border_color ();
-                //FIXME make this to be theme indipendent!
+                //FIXME make this to be theme independent!
                 cr.set_source_rgba (1, 1, 1, 0.65);
                 cr.fill ();
                 cr.restore ();
@@ -415,7 +414,7 @@ private class Journal.Arrow : DrawingArea {
                 cr.set_line_width (2);
                 cr.stroke ();
                 cr.move_to (0, height / 2 - arrow_height);
-                cr.set_line_width (2);
+                cr.set_line_width (1);
                 cr.line_to (arrow_width, height /2);
                 cr.stroke ();
                 cr.move_to (arrow_width, height /2);
@@ -430,13 +429,13 @@ private class Journal.Arrow : DrawingArea {
                 var bg =  Utils.get_timeline_bg_color ();
                 color = Utils.get_timeline_circle_color ();
                 cr.set_line_width (line_width ); 
-                // Paint the border cirle to start with.
+                // Paint the border circle to start with.
                 Gdk.cairo_set_source_rgba (cr, bg);
                 cr.arc (arrow_width + spacing + radius + line_width + 1, 
                         height / 2 - arrow_height / 2 + radius + line_width - 1,
                         radius, 0, 2*Math.PI);
                 cr.stroke ();
-                // Paint the colored cirle to start with.
+                // Paint the colored circle to start with.
                 Gdk.cairo_set_source_rgba (cr, color);
                 cr.arc (arrow_width + spacing + radius + line_width + 1, 
                         height / 2 - arrow_height / 2 + radius + line_width - 1,
@@ -462,7 +461,7 @@ private class Journal.Arrow : DrawingArea {
                 cr.stroke ();
                 cr.move_to (width, height / 2 - arrow_height);
                 cr.line_to (radius * 2 + line_width * 2 + spacing , height /2);
-                cr.set_line_width (2);
+                cr.set_line_width (1);
                 cr.stroke ();   
                 cr.move_to (radius * 2 + line_width * 2 + spacing , height /2);
                 cr.line_to (width, height / 2 + arrow_height);
@@ -476,13 +475,13 @@ private class Journal.Arrow : DrawingArea {
                 var bg =  Utils.get_timeline_bg_color ();
                 color = Utils.get_timeline_circle_color ();
                 cr.set_line_width (line_width ); 
-                // Paint the border cirle to start with.
+                // Paint the border circle to start with.
                 Gdk.cairo_set_source_rgba (cr, bg);
                 cr.arc (radius + line_width + 1, 
                         height / 2 - arrow_height / 2 + radius + line_width - 1,
                         radius, 0, 2*Math.PI);
                 cr.stroke ();
-                // Paint the colored cirle to start with.
+                // Paint the colored circle to start with.
                 Gdk.cairo_set_source_rgba (cr, color);
                 cr.arc (radius + line_width + 1, 
                         height / 2 - arrow_height / 2 + radius + line_width - 1,
