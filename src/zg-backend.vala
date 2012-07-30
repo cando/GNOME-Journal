@@ -33,7 +33,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
     }
 
     //Day is the day containing the events loaded
-    public signal void events_loaded (string day);
+    public signal void events_loaded (string? day);
 
     construct
     {
@@ -59,87 +59,51 @@ public class Journal.ZeitgeistBackend: GLib.Object
       }
     }
 
-    private async void load_application_events (Zeitgeist.TimeRange tr)
+    private async void load_gtg_events (Zeitgeist.TimeRange tr, 
+                                     bool show_applications=false)
     {
       var event = new Zeitgeist.Event ();
-      event.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
+      event.set_interpretation ("!" + Zeitgeist.ZG_DELETE_EVENT);
       var subject = new Zeitgeist.Subject ();
-      subject.set_interpretation (Zeitgeist.NFO_SOFTWARE);
-      subject.set_uri ("application://*");
+      subject.set_interpretation (Zeitgeist.NCAL_TODO);
       event.add_subject (subject);
-
       var ptr_arr = new PtrArray ();
       ptr_arr.add (event);
 
       Zeitgeist.ResultSet rs;
-
+      
       try
       {
+        /* Get popularity for file uris */
         rs = yield zg_log.find_events (tr, (owned) ptr_arr,
                                        Zeitgeist.StorageState.ANY,
                                        0,
                                        Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
                                        null);
 
-        foreach (Zeitgeist.Event e in rs)
+        foreach (Zeitgeist.Event e1 in rs)
         {
-          if (e.num_subjects () <= 0) continue;
-          all_app_events.add(e);
-          new_events.add(e);
+          if (e1.num_subjects () <= 0) continue;
+          new_events.add(e1);
         }
       }
       catch (Error err)
       {
         warning ("%s", err.message);
-        return;
       }
-      
-//      fill_days_map ();
     }
     
-    private async void load_web_events (Zeitgeist.TimeRange tr)
+    private async void load_events (Zeitgeist.TimeRange tr, 
+                                     bool show_applications=false)
     {
       var event = new Zeitgeist.Event ();
       event.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
       var subject = new Zeitgeist.Subject ();
-      subject.set_interpretation (Zeitgeist.NFO_WEBSITE);
+      if (!show_applications)
+        subject.set_interpretation ("!" + Zeitgeist.NFO_SOFTWARE);
+//      if (!show_websites)
+//        subject.set_interpretation ("!" + Zeitgeist.NFO_WEBSITE);
       event.add_subject (subject);
-
-      var ptr_arr = new PtrArray ();
-      ptr_arr.add (event);
-
-      Zeitgeist.ResultSet rs;
-
-      try
-      {
-        rs = yield zg_log.find_events (tr, (owned) ptr_arr,
-                                       Zeitgeist.StorageState.ANY,
-                                       0,
-                                       Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
-                                       null);
-
-        foreach (Zeitgeist.Event e in rs)
-        {
-          if (e.num_subjects () <= 0) continue;
-          new_events.add(e);
-        }
-      }
-      catch (Error err)
-      {
-        warning ("%s", err.message);
-        return;
-      }
-    }
-
-    private async void load_uri_events (Zeitgeist.TimeRange tr)
-    {
-      var event = new Zeitgeist.Event ();
-      event.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
-      var subject = new Zeitgeist.Subject ();
-      subject.set_interpretation ("!" + Zeitgeist.NFO_SOFTWARE);
-      subject.set_uri ("file://*");
-      event.add_subject (subject);
-
       var ptr_arr = new PtrArray ();
       ptr_arr.add (event);
 
@@ -168,7 +132,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
       fill_days_map ();
     }
     
-    private async void fill_days_map () {
+    private void fill_days_map () {
         string key = null;
         foreach (Zeitgeist.Event e1 in new_events)
         {
@@ -186,9 +150,8 @@ public class Journal.ZeitgeistBackend: GLib.Object
     }
     
     private void load_events_for_timerange (Zeitgeist.TimeRange tr) {
-        load_uri_events.begin (tr);
-        load_web_events.begin (tr);
-        load_application_events.begin (tr);
+        load_gtg_events.begin(tr);
+        load_events.begin (tr);
         
         last_loaded_date = Utils.get_start_of_the_day (tr.get_start ());
     }

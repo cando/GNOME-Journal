@@ -56,7 +56,7 @@ private abstract class Journal.GenericActivity : Object {
     
     public abstract void create_content ();
     
-    public abstract Gee.List<Zeitgeist.Event> get_events ();
+    public abstract Gee.List<uint> get_events_id ();
     
 }
 
@@ -265,9 +265,9 @@ private class Journal.SingleActivity : GenericActivity {
         }
     }
     
-    public override Gee.List<Zeitgeist.Event> get_events () {
-        var list = new Gee.ArrayList<Zeitgeist.Event> ();
-        list.add (event);
+    public override Gee.List<uint> get_events_id () {
+        var list = new Gee.ArrayList<uint> ();
+        list.add (event.get_id ());
         return list;
     }
 }
@@ -350,6 +350,33 @@ private class Journal.WebActivity : SingleActivity {
 private class Journal.DownloadActivity : SingleActivity {
     public DownloadActivity (Zeitgeist.Event event) {
         Object (event:event);
+    }
+}
+
+private class Journal.TodoActivity : ApplicationActivity {
+    public TodoActivity (Zeitgeist.Event event) {
+        Object (event:event);
+    }
+    
+    protected override async void updateActivityIcon () {
+        var info = new  DesktopAppInfo (this.
+                                        event.get_actor ().split("://")[1]);
+        if (info == null) {
+             this.icon = Utils.load_pixbuf_from_name ("application-x-executable");
+             this.thumb_icon = this.icon;
+             return;
+        }
+        Gdk.Pixbuf pixbuf = Utils.load_pixbuf_from_icon (info.get_icon ());
+        this.icon = this.thumb_icon = pixbuf;
+    }
+    
+    public override void launch (){
+        try {
+            var command = display_uri.split (".desktop")[0];
+            Process.spawn_command_line_async (command);
+        } catch (Error e) {
+            warning ("Impossible to launch " + display_uri);
+        }
     }
 }
 
@@ -439,10 +466,10 @@ private class Journal.CompositeActivity : GenericActivity {
         this.launch_activity (this);
     }
     
-    public override Gee.List<Zeitgeist.Event> get_events () {
-        var list = new Gee.ArrayList<Zeitgeist.Event> ();
+    public override Gee.List<uint> get_events_id () {
+        var list = new Gee.ArrayList<uint> ();
         foreach (SingleActivity activity in activities) {
-            list.add (activity.event);
+            list.add (activity.event.get_id ());
         }
         return list;
     }
@@ -655,6 +682,26 @@ private class Journal.CompositeWebActivity : CompositeActivity {
     }
 }
 
+private class Journal.CompositeTodoActivity : CompositeActivity {
+    public CompositeTodoActivity (Gee.List<SingleActivity> activities) {
+        Object (activities:activities);
+    }
+    
+    public override string create_title () {
+        return _("Worked with TODOs");
+    }
+    
+    public override Gdk.Pixbuf? create_icon () {
+        var info = new  DesktopAppInfo (activities.get (0).
+                                        event.get_actor ().split("://")[1]);
+        if (info == null) {
+             return Utils.load_pixbuf_from_name ("application-x-executable");
+        }
+        Gdk.Pixbuf pixbuf = Utils.load_pixbuf_from_icon (info.get_icon ());
+        return pixbuf;
+    }
+}
+
 private class Journal.ActivityFactory : Object {
     
     private static Gee.Map<string, Type> interpretation_types;
@@ -678,6 +725,8 @@ private class Journal.ActivityFactory : Object {
         interpretation_types.set (Zeitgeist.NFO_APPLICATION ,typeof (ApplicationActivity));
         /****WEBSITE*******/
         interpretation_types.set (Zeitgeist.NFO_WEBSITE ,typeof (WebActivity));
+        /****TODOs****/
+        interpretation_types.set (Zeitgeist.NCAL_TODO ,typeof (TodoActivity));
         
         /**************COMPOSITE ACTIVITIES*********/
         interpretation_types_comp = new Gee.HashMap<string, Type> ();
@@ -696,6 +745,8 @@ private class Journal.ActivityFactory : Object {
         interpretation_types_comp.set (Zeitgeist.NFO_APPLICATION ,typeof (CompositeApplicationActivity));
         /****WEBSITE*******/
         interpretation_types_comp.set (Zeitgeist.NFO_WEBSITE ,typeof (CompositeWebActivity));
+        /****TODOs*******/
+        interpretation_types_comp.set (Zeitgeist.NCAL_TODO ,typeof (CompositeTodoActivity));
         
         /**********HIERARCHY OF INTERPRETATIONS*******/
         interpretation_parents = new Gee.HashMap<string, string> ();
@@ -729,6 +780,8 @@ private class Journal.ActivityFactory : Object {
         interpretation_parents.set (Zeitgeist.NFO_SOFTWARE, Zeitgeist.NFO_APPLICATION);
         /****WEBSITE*******/
         interpretation_parents.set (Zeitgeist.NFO_WEBSITE, Zeitgeist.NFO_WEBSITE);
+        /****TODOs*******/
+        interpretation_parents.set (Zeitgeist.NCAL_TODO ,Zeitgeist.NCAL_TODO);
     }
     
     /****PUBLIC METHODS****/
@@ -894,6 +947,7 @@ private class Journal.ActivityModel : Object {
     
     public signal void activities_loaded (string day);
     public signal void launch_composite_activity (CompositeActivity activity);
+    public signal void search_finished (Gee.List<uint> searched_events);
 
     public ActivityModel () {
         activities = new Gee.HashMap<string, DayActivityModel> ();
@@ -906,13 +960,15 @@ private class Journal.ActivityModel : Object {
         });
         
         search_manager.search_finished.connect (() => {
-            on_search_finished ();
+            search_finished (search_manager.searched_events);
         });
     }
     
     private void on_events_loaded (string? day) {
-        if (day == null)
+        if (day == null) {
             load_other_days (1);
+            return;
+        }
         if (activities.has_key (day))
             return;
         var model = new DayActivityModel (day);
@@ -937,7 +993,6 @@ private class Journal.ActivityModel : Object {
         var tmp_date = start.add_days (3);
         tmp_date.to_timeval (out tv2);
         backend.load_events_for_date_range (tv, tv2);
-    
     }
     
     public void load_other_days (int num_days) {
@@ -947,10 +1002,6 @@ private class Journal.ActivityModel : Object {
         larger_date.to_timeval (out tv);
         backend.last_loaded_date.to_timeval (out tv2);
         backend.load_events_for_date_range (tv, tv2);
-    }
-    
-    public void on_search_finished () {
-    
     }
     
     public async void search (string query) {

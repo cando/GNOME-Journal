@@ -21,7 +21,6 @@
  
 using Gtk;
 
-//TODO Add maximum number of time labels??
 [DBus (name = "org.gnome.zeitgeist.Histogram")]
 interface Histogram : Object {
     [DBus (signature = "a(xu)")]
@@ -33,23 +32,9 @@ private class Journal.TimelineNavigator : ButtonBox {
     public static string[] time_labels = {
       _("Today"),
       _("Yesterday"),
-      _("2 Days Ago"),
-      _("3 Days Ago"),
-      _("A Week Ago"),
-      _("Two Weeks Ago"),
-      _("Three Weeks Ago"),
-      _("A Month Ago"),
-      _("2 Month Ago"),
-      _("3 Month Ago"),
-      _("4 Month Ago"),
-      _("5 Month Ago"),
-      _("6 Month Ago"),
-      _("7 Month Ago"),
-      _("8 Month Ago"),
-      _("9 Month Ago"),
-      _("10 Month Ago"),
-      _("11 Month Ago"),
-      _("Last year")
+      _("This Week"),
+      _("This Month"),
+      _("This year")
     };
     
     private Histogram histogram_proxy;
@@ -73,23 +58,7 @@ private class Journal.TimelineNavigator : ButtonBox {
 
         jump_date.set (time_labels[0], today);
         jump_date.set (time_labels[1], today.add_days (-1));
-        jump_date.set (time_labels[2], today.add_days (-2));
-        jump_date.set (time_labels[3], today.add_days (-3));
-        jump_date.set (time_labels[4], today.add_days (-7));
-        jump_date.set (time_labels[5], today.add_days (-7*2));
-        jump_date.set (time_labels[6], today.add_days (-7*3));
-        jump_date.set (time_labels[7], today.add_days (-30));
-        jump_date.set (time_labels[8], today.add_days (-30*2));
-        jump_date.set (time_labels[9], today.add_days (-30*3));
-        jump_date.set (time_labels[10], today.add_days (-30*4));
-        jump_date.set (time_labels[11], today.add_days (-30*5));
-        jump_date.set (time_labels[12], today.add_days (-30*6));
-        jump_date.set (time_labels[13], today.add_days (-30*7));
-        jump_date.set (time_labels[14], today.add_days (-30*8));
-        jump_date.set (time_labels[15], today.add_days (-30*9));
-        jump_date.set (time_labels[16], today.add_days (-30*10));
-        jump_date.set (time_labels[17], today.add_days (-30*11));
-        jump_date.set (time_labels[18], today.add_days (-365));
+        jump_date.set (time_labels[2], today.add_days (-7));
         
         /**********HISTOGRAM DBUS STUFF****************************/
         try {
@@ -105,7 +74,7 @@ private class Journal.TimelineNavigator : ButtonBox {
             
             for (size_t j =0; j <n; j++) {
                 data.get_child (j, "(xu)", &time, &count);
-                DateTime date = new DateTime.from_unix_utc (time).to_local ();
+                DateTime date = new DateTime.from_unix_local (time);
                 count_map.set (date, count);
             }
         } catch (Error e) {
@@ -132,56 +101,54 @@ private class Journal.TimelineNavigator : ButtonBox {
         Gee.List<string> result = new Gee.ArrayList<string> ();
         var today = Utils.get_start_of_today ();
         foreach (DateTime key in count_map.keys) {
-            //TODO use count for a better selection of label basing on importance
-            //of days-->number of events.
-            //uint count = count_map.get (key);
-            //Difference (in days) with today.
             int diff_days = (int)Math.round(((double)(today.difference (key)) / 
                                              (double)TimeSpan.DAY));
             //Give more importance to "near" days
-            if (diff_days <= 3)
-                result.add (time_labels[diff_days]);
-            else {
-                //Start from "This week" label
-                int choosen_label = 0;
-                for(int i = 4 ; i < time_labels.length; i++) {
-                    DateTime possible_date = jump_date.get (time_labels[i]);
-                    int diff = (int)Math.round(((double)
-                                    (possible_date.difference (key)) / 
-                                     (double)TimeSpan.DAY));
-                    int abs_diff = diff.abs ();
-                    //Stupid algorithm that try to find the nearest time_label
-                    //in respect to a certain DateTime.
-                    if (i >= 4 && i <= 6) {
-                        //We are in the week's labels
-                        if (abs_diff < 4) { //4 = half week
-                            choosen_label = i;
-                            break;
-                         }
-                    }
-                    else if (i > 6 && i < 18) {
-                        //We are in the month's labels
-                        if (abs_diff < 15) { //15 = half month
-                            choosen_label = i;
-                            break;
-                         }
-                    }
-                    else if (i == 18){
-                        if (abs_diff > 30) {
-                            //Last Year label
-                            choosen_label = i;
-                            break;
-                         }
-                    }
-                    //else continue with next possible date
+            if (diff_days < 8) {
+                switch (diff_days){
+                    case 0: 
+                        if (result.index_of (time_labels[0]) == -1)
+                            result.add (time_labels[0]); 
+                        break;
+                    case 1:
+                        if (result.index_of (time_labels[1]) == -1)
+                            result.add (time_labels[1]); 
+                        break;
+                    case 2: case 3: case 4: case 5: case 6: case 7:
+                        if (result.index_of (time_labels[2]) == -1)
+                            result.add (time_labels[2]); 
+                        break;
                 }
-                
-                string label = time_labels[choosen_label];
-                if (!result.contains (label))
-                    result.add (label);
-                    continue;
+            }
+            else if (diff_days < 31) {//This month
+                var this_month = today.add_days (-today.get_day_of_month() + 1);
+                if (result.index_of (time_labels[3]) == -1) {
+                    result.add (time_labels[3]);
+                    jump_date.set (time_labels[3], this_month);
+                }
+            }
+            else if (diff_days < 62 && today.get_month() != 1) {//Last month
+                var last_month = today.add_months (-1);
+                var text = last_month.format("%B");
+                if (result.index_of (text) == -1) {
+                    result.add (text);
+                    jump_date.set (text, last_month);
+                }
+            }
+            else if (key.get_year () == today.get_year ()) {//This year
+                var text = _("This year");
+                jump_date.set (text, today.add_days(-diff_days));
+                if (result.index_of (text) == -1 )
+                    result.add (text);
+            }
+            else { //Other years
+                var text = key.get_year ().to_string ();
+                jump_date.set (text, today.add_days(-diff_days));
+                if (result.index_of (text) == -1)
+                    result.add (text);
             }
         }
+        
         result.sort ( (a,b) => {
             string first_s = (string) a;
             string second_s = (string) b;

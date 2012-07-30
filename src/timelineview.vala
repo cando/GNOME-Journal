@@ -92,6 +92,10 @@ private class Journal.VTL : Box {
              check_finished_loading (date);
         });
         
+        model.search_finished.connect ((events)=> {
+             bubble_c.filter_events (events);
+        });
+        
         old_y = -1;
     }
     
@@ -253,11 +257,13 @@ private class Journal.BubbleContainer : EventBox {
     //The right side of the timeline
     private Box left_c;
     
+    private Gee.Map<Gee.List<uint>, Widget> bubbles;
+    
     private Box main_vbox;
-
     private int turn;
     
     public BubbleContainer () {
+        bubbles = new Gee.HashMap<Gee.ArrayList<uint>, Widget> ();
         main_vbox = new Box (Orientation.VERTICAL, 0);
         var al = new Alignment (0.5f, 0, 0, 0);
         al.add (main_vbox);
@@ -311,10 +317,10 @@ private class Journal.BubbleContainer : EventBox {
     
     private void append_bubble (GenericActivity activity) {
         var box = new Box (Orientation.HORIZONTAL, 0);
-        
+        ActivityBubble bubble;
         var spacing = Random.int_range (20, 30);
         if (turn % 2 == 0) {
-            var bubble = new ActivityBubble (activity, Side.RIGHT);
+            bubble = new ActivityBubble (activity, Side.RIGHT);
             bubble.get_style_context ().add_class ("round-bubble-right");
             var border = new Arrow (Side.RIGHT);
             bubble.enter_notify_event.connect ((ev) => {
@@ -332,7 +338,7 @@ private class Journal.BubbleContainer : EventBox {
             this.left_c.pack_start (box, false, false, spacing);
         }
         else {
-            var bubble = new ActivityBubble (activity, Side.LEFT);
+            bubble = new ActivityBubble (activity, Side.LEFT);
             bubble.get_style_context ().add_class ("round-bubble-left");
             var border = new Arrow (Side.LEFT);
             bubble.enter_notify_event.connect ((ev) => {
@@ -349,7 +355,17 @@ private class Journal.BubbleContainer : EventBox {
             box.pack_start (bubble, true, true, 0);
             this.right_c.pack_start (box, false, false, spacing);
         }
+        
+        bubbles.set (activity.get_events_id (), bubble);
         turn++;
+    }
+
+    public void filter_events (Gee.List<uint> events) {
+        foreach (uint id in events) {
+            foreach (Gee.List<uint> bubble_ids in bubbles.keys)
+                if (bubble_ids.index_of (id) == -1)
+                    bubbles.get (bubble_ids).hide ();
+        }
     }
 } 
 

@@ -188,7 +188,7 @@ private class Journal.VideoWidget : EventBox {
 
 private class Journal.CompositeDocumentWidget : Box {
     public CompositeDocumentWidget (Gdk.Pixbuf? pixbuf, string[] uris) {
-        var hbox = new Box (Orientation.HORIZONTAL, 0);
+        var hbox = new Box (Orientation.HORIZONTAL, 10);
         var vbox = new Box (Orientation.VERTICAL, 6);
         foreach (string uri in uris) {
             var l_uri = new Label (uri);
