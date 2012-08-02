@@ -104,7 +104,7 @@ private class Journal.TimelineNavigator : ButtonBox {
             int diff_days = (int)Math.round(((double)(today.difference (key)) / 
                                              (double)TimeSpan.DAY));
             //Give more importance to "near" days
-            if (diff_days < 8) {
+            if (diff_days < 15) {
                 switch (diff_days){
                     case 0: 
                         if (result.index_of (time_labels[0]) == -1)
@@ -126,9 +126,10 @@ private class Journal.TimelineNavigator : ButtonBox {
                         if (result.index_of (time_labels[2]) == -1)
                             result.add (time_labels[2]); 
                         break;
+                    default: break;
                 }
             }
-            else if (diff_days < 31) {//This month
+            else if (diff_days < 31 && today.get_day_of_month() > 15) {//This month
                 var this_month = today.add_days (-today.get_day_of_month() + 1);
                 if (result.index_of (time_labels[3]) == -1) {
                     result.add (time_labels[3]);
