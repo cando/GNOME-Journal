@@ -605,6 +605,7 @@ private class Journal.ActivityBubble : EventBox {
         var more_button = new Gtk.Button();
         more_button.set_label ("...");
         more_button.set_relief (Gtk.ReliefStyle.NONE);
+        more_button.set_focus_on_click (false);
         more_button.clicked.connect (() => {activity.launch ();});
         if (activity.show_more)
             container.pack_start (more_button, false, false, 0);
