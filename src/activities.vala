@@ -419,9 +419,8 @@ private class Journal.CompositeActivity : GenericActivity {
         this.uris = new string[int.min (MAXIMUM_ITEMS + 1, activities.size)];
         int i = 0;
         foreach (SingleActivity activity in activities) {
-            if (i >= MAXIMUM_ITEMS) {
+            if (i == MAXIMUM_ITEMS - 1) {
                 this.show_more = true;
-//                this.uris[i] = _("...");
                 break;
             }
             this.uris[i] = activity.title;
