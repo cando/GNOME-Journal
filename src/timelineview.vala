@@ -590,7 +590,14 @@ private class Journal.ActivityBubble : EventBox {
         var container = new Box (Orientation.VERTICAL, 0);
         container.set_border_width (24);
         container.pack_start (header, false, false, 2);
-        container.pack_start (activity.content, true, true, 9); 
+        container.pack_start (activity.content, true, true, 9);
+        
+        var more_button = new Gtk.Button();
+        more_button.set_label ("...");
+        more_button.set_relief (Gtk.ReliefStyle.NONE);
+        more_button.clicked.connect (() => {activity.launch ();});
+        if (activity.show_more)
+            container.pack_start (more_button, false, false, 0);
         
         this.add (container);
         this.draw_as_css_box (this);

@@ -52,6 +52,11 @@ private abstract class Journal.GenericActivity : Object {
         get; protected set;
     }
     
+    /*Used to discrimante bubbles in which the "..." button should be showed*/
+    public bool show_more {
+        get; protected set;
+    }
+    
     public abstract void launch ();
     
     public abstract void create_content ();
@@ -409,7 +414,8 @@ private class Journal.CompositeActivity : GenericActivity {
         int i = 0;
         foreach (SingleActivity activity in activities) {
             if (i >= MAXIMUM_ITEMS) {
-                this.uris[i] = "...";
+                this.show_more = true;
+//                this.uris[i] = _("...");
                 break;
             }
             this.uris[i] = activity.title;

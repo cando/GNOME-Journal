@@ -223,9 +223,6 @@ private class Journal.CompositeImageWidget : Box {
     public CompositeImageWidget (ImageContent[] pixbufs) {
         GLib.Object (orientation:Orientation.VERTICAL, spacing:0);
 
-        var more_button = new Gtk.Button();
-        more_button.set_label ("More");
-        more_button.set_relief (Gtk.ReliefStyle.NONE);
         int z = 0;
         if (pixbufs.length > 2) {
             int num_row = pixbufs.length / 2 + 1;
@@ -243,8 +240,6 @@ private class Journal.CompositeImageWidget : Box {
         }
         
         this.pack_start (image_box, true, true, 0);
-        if (pixbufs.length > 4)
-            this.pack_start (more_button, false, false, 0);
     }
 }
 
