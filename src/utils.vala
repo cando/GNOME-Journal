@@ -195,6 +195,18 @@ private class Journal.Utils : Object{
         return retval;
     }
     
+    public static bool is_go_back_event (Gdk.EventKey event) {
+        var keyval = event.keyval;
+        var state = event.state;
+        var retval =
+        ((keyval == Gdk.Key.BackSpace) ||
+         ((keyval == Gdk.Key.Left) &&
+          ((state & Gdk.ModifierType.MOD1_MASK) != 0)) ||
+         ((keyval == Gdk.Key.Left) &&
+          ((state & Gdk.ModifierType.CONTROL_MASK) != 0)));
+        return retval;
+    }
+    
     //DATE UTILS
     public static DateTime get_date_for_event (Zeitgeist.Event e) {
         int64 timestamp = e.get_timestamp () / 1000;

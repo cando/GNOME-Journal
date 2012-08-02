@@ -161,6 +161,8 @@ public class Journal.App: GLib.Object {
                 else
                     search_bar.hide ();
             }
+            else if (Utils.is_go_back_event (ev) && notebook.page == 1)
+                    main_toolbar.go_back_request ();
             return false;
         });
 

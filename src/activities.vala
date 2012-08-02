@@ -121,6 +121,7 @@ private class Journal.SingleActivity : GenericActivity {
         this.interpretation = intpr;
         var d = new DateTime.from_unix_utc (this.time_start / 1000).to_local ();
         this.date = d.format ("%H:%M");
+        this.show_more = false;
 
         updateActivityIcon ();
         create_content ();
@@ -672,7 +673,7 @@ private class Journal.CompositeWebActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Surfed the web");
+        return _("Surfed the Web");
     }
     
     public override Gdk.Pixbuf? create_icon () {
@@ -694,7 +695,7 @@ private class Journal.CompositeTodoActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Worked with TODOs");
+        return _("Worked with Tasks");
     }
     
     public override Gdk.Pixbuf? create_icon () {
