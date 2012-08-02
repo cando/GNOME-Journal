@@ -733,6 +733,30 @@ private class Journal.CompositeTodoActivity : CompositeActivity {
     }
 }
 
+private class Journal.CompositeArchiveActivity : CompositeActivity {
+    public CompositeArchiveActivity (Gee.List<SingleActivity> activities) {
+        Object (activities:activities);
+    }
+    
+    public override string create_title () {
+        this.title = _("Worked with Archives");
+        var text = _("Worked with %d Archives");
+        return text.printf (activities.size);
+    }
+    
+    public override Gdk.Pixbuf? create_icon () {
+        try {
+        return Gtk.IconTheme.get_default().load_icon ("package-x-generic", Utils.getIconSize (),
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
+        } catch (Error e) {
+            debug ("Unable to load pixbuf: " + e.message);
+        }
+        
+        return null;
+    }
+}
+
 private class Journal.ActivityFactory : Object {
     
     private static Gee.Map<string, Type> interpretation_types;
@@ -758,6 +782,8 @@ private class Journal.ActivityFactory : Object {
         interpretation_types.set (Zeitgeist.NFO_WEBSITE ,typeof (WebActivity));
         /****TODOs****/
         interpretation_types.set (Zeitgeist.NCAL_TODO ,typeof (TodoActivity));
+        /****ARCHIVES****/
+        interpretation_types.set (Zeitgeist.NFO_ARCHIVE ,typeof (DocumentActivity));
         
         /**************COMPOSITE ACTIVITIES*********/
         interpretation_types_comp = new Gee.HashMap<string, Type> ();
@@ -778,6 +804,8 @@ private class Journal.ActivityFactory : Object {
         interpretation_types_comp.set (Zeitgeist.NFO_WEBSITE ,typeof (CompositeWebActivity));
         /****TODOs*******/
         interpretation_types_comp.set (Zeitgeist.NCAL_TODO ,typeof (CompositeTodoActivity));
+        /****ARCHIVES****/
+        interpretation_types_comp.set (Zeitgeist.NFO_ARCHIVE ,typeof (CompositeArchiveActivity));
         
         /**********HIERARCHY OF INTERPRETATIONS*******/
         interpretation_parents = new Gee.HashMap<string, string> ();
@@ -812,7 +840,9 @@ private class Journal.ActivityFactory : Object {
         /****WEBSITE*******/
         interpretation_parents.set (Zeitgeist.NFO_WEBSITE, Zeitgeist.NFO_WEBSITE);
         /****TODOs*******/
-        interpretation_parents.set (Zeitgeist.NCAL_TODO ,Zeitgeist.NCAL_TODO);
+        interpretation_parents.set (Zeitgeist.NCAL_TODO, Zeitgeist.NCAL_TODO);
+        /****ARCHIVES****/
+        interpretation_parents.set (Zeitgeist.NFO_ARCHIVE, Zeitgeist.NFO_ARCHIVE);
     }
     
     /****PUBLIC METHODS****/
