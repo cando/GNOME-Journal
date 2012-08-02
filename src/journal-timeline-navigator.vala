@@ -114,7 +114,15 @@ private class Journal.TimelineNavigator : ButtonBox {
                         if (result.index_of (time_labels[1]) == -1)
                             result.add (time_labels[1]); 
                         break;
-                    case 2: case 3: case 4: case 5: case 6: case 7:
+                    case 2:
+                        var bef_yesterday = today.add_days (-2);
+                        var text = bef_yesterday.format("%A");
+                        if (result.index_of (text) == -1) {
+                            result.add (text);
+                            jump_date.set (text, bef_yesterday); 
+                        }
+                        break;
+                    case 3: case 4: case 5: case 6: case 7:
                         if (result.index_of (time_labels[2]) == -1)
                             result.add (time_labels[2]); 
                         break;

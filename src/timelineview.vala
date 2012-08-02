@@ -69,6 +69,8 @@ private class Journal.VTL : Box {
         
         viewport = new ScrolledWindow (null, null);
         viewport.set_policy (PolicyType.NEVER, PolicyType.AUTOMATIC);
+        viewport.set_kinetic_scrolling (true);
+        viewport.set_capture_button_press (true);
         scrollbar = (Scrollbar)viewport.get_vscrollbar ();
         scrollbar.value_changed.connect (() => { on_scrollbar_scroll ();});
         

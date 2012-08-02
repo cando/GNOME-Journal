@@ -39,7 +39,7 @@ private class Journal.ActivityInfoPage : Box {
         this.model.set_sort_column_id (Gd.MainColumns.TIME, 
                                        SortType.DESCENDING);
                                        
-        view = new Gd.MainView (Gd.MainViewType.LIST);
+        view = new Gd.MainView (Gd.MainViewType.ICON);
         
         scrolled_window = new ScrolledWindow (null, null);
         scrolled_window.set_policy (PolicyType.AUTOMATIC, PolicyType.AUTOMATIC);

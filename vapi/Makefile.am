@@ -1,8 +1,8 @@
 noinst_DATA = \
 	config.vapi				\
 	custom.vapi	\
-	clutter-1.0.vapi\
-	clutter-1.0.deps\
+	gtk+-3.0.vapi\
+	gtk+-3.0.deps\
 	Gd-1.0.vapi	\
 	$(NULL)
 
