@@ -96,6 +96,14 @@ private class Journal.VTL : Box {
              bubble_c.filter_events (events);
         });
         
+        this.key_press_event.connect ((ev) => {
+            if (ev.keyval == Gdk.Key.Up)
+                this.scrollbar.move_slider (ScrollType.STEP_BACKWARD);
+            else if (ev.keyval == Gdk.Key.Down) 
+                this.scrollbar.move_slider (ScrollType.STEP_FORWARD);
+            return false;
+        });
+        
         old_y = -1;
     }
     
