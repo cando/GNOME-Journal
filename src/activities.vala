@@ -757,6 +757,30 @@ private class Journal.CompositeArchiveActivity : CompositeActivity {
     }
 }
 
+private class Journal.CompositeFolderActivity : CompositeActivity {
+    public CompositeFolderActivity (Gee.List<SingleActivity> activities) {
+        Object (activities:activities);
+    }
+    
+    public override string create_title () {
+        this.title = _("Visited Places");
+        var text = _("Visited %d Places");
+        return text.printf (activities.size);
+    }
+    
+    public override Gdk.Pixbuf? create_icon () {
+        try {
+        return Gtk.IconTheme.get_default().load_icon ("folder", Utils.getIconSize (),
+                                            IconLookupFlags.FORCE_SVG | 
+                                            IconLookupFlags.GENERIC_FALLBACK);
+        } catch (Error e) {
+            debug ("Unable to load pixbuf: " + e.message);
+        }
+        
+        return null;
+    }
+}
+
 private class Journal.ActivityFactory : Object {
     
     private static Gee.Map<string, Type> interpretation_types;
@@ -784,6 +808,8 @@ private class Journal.ActivityFactory : Object {
         interpretation_types.set (Zeitgeist.NCAL_TODO ,typeof (TodoActivity));
         /****ARCHIVES****/
         interpretation_types.set (Zeitgeist.NFO_ARCHIVE ,typeof (DocumentActivity));
+        /****FOLDERS****/
+        interpretation_types.set (Zeitgeist.NFO_FOLDER, typeof (DocumentActivity));
         
         /**************COMPOSITE ACTIVITIES*********/
         interpretation_types_comp = new Gee.HashMap<string, Type> ();
@@ -803,9 +829,11 @@ private class Journal.ActivityFactory : Object {
         /****WEBSITE*******/
         interpretation_types_comp.set (Zeitgeist.NFO_WEBSITE ,typeof (CompositeWebActivity));
         /****TODOs*******/
-        interpretation_types_comp.set (Zeitgeist.NCAL_TODO ,typeof (CompositeTodoActivity));
+        interpretation_types_comp.set (Zeitgeist.NCAL_TODO, typeof (CompositeTodoActivity));
         /****ARCHIVES****/
-        interpretation_types_comp.set (Zeitgeist.NFO_ARCHIVE ,typeof (CompositeArchiveActivity));
+        interpretation_types_comp.set (Zeitgeist.NFO_ARCHIVE, typeof (CompositeArchiveActivity));
+        /****FOLDERS****/
+        interpretation_types_comp.set (Zeitgeist.NFO_FOLDER, typeof (CompositeFolderActivity));
         
         /**********HIERARCHY OF INTERPRETATIONS*******/
         interpretation_parents = new Gee.HashMap<string, string> ();
@@ -843,6 +871,8 @@ private class Journal.ActivityFactory : Object {
         interpretation_parents.set (Zeitgeist.NCAL_TODO, Zeitgeist.NCAL_TODO);
         /****ARCHIVES****/
         interpretation_parents.set (Zeitgeist.NFO_ARCHIVE, Zeitgeist.NFO_ARCHIVE);
+        /****FOLDERS****/
+        interpretation_parents.set (Zeitgeist.NFO_FOLDER, Zeitgeist.NFO_FOLDER);
     }
     
     /****PUBLIC METHODS****/
