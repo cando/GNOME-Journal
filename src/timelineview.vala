@@ -531,20 +531,22 @@ private class Journal.ActivityBubbleHeader : Box {
         evbox.set_visible_window (false);
         evbox.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
                          Gdk.EventMask.LEAVE_NOTIFY_MASK);
-        this.title = new Label (activity.title);
+        var title_text = activity.num_activities_title == null ? 
+                         activity.title : activity.num_activities_title;
+        this.title = new Label (title_text);
         this.title.set_alignment (0, 1);
         this.title.set_markup ("<span><b>%s</b></span>\n<span color='grey'>%s</span>".
-                                printf(activity.title, activity.part_of_the_day));
+                                printf(title_text, activity.part_of_the_day));
         evbox.add (this.title);
         evbox.enter_notify_event.connect ((ev)=> {
             this.title.set_markup ("<span><b>%s</b></span>\n<span color='grey'>%s</span>".
-                                printf(activity.title, activity.date));
+                                printf(title_text, activity.date));
             return false;
         });
         
         evbox.leave_notify_event.connect ((ev)=> {
             this.title.set_markup ("<span><b>%s</b></span>\n<span color='grey'>%s</span>".
-                                printf(activity.title, activity.part_of_the_day));
+                                printf(title_text, activity.part_of_the_day));
             return false;
         });
         

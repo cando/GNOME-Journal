@@ -40,6 +40,10 @@ private abstract class Journal.GenericActivity : Object {
         get; protected set;
     }
     
+    public string num_activities_title {
+        get; protected set;
+    }
+    
     public string date {
         get; protected set;
     }
@@ -111,6 +115,7 @@ private class Journal.SingleActivity : GenericActivity {
         this.display_uri = create_display_uri ();
         this.title = subject.get_text () == null ? 
                      this.display_uri : subject.get_text ();
+        this.num_activities_title = null;
         this.time_start = this.time_end = event.get_timestamp ();
         this.selected = false;
         this.mimetype = subject.get_mimetype ();
@@ -424,7 +429,7 @@ private class Journal.CompositeActivity : GenericActivity {
         }
         this.icon = create_icon ();
         //Subclasses will modify this.
-        this.title = create_title ();
+        this.num_activities_title = create_title ();
         //First activity timestamp? FIXME
         int64 min_start_t = activities.get(0).time_start;
         int64 max_end_t = 0;
@@ -457,7 +462,9 @@ private class Journal.CompositeActivity : GenericActivity {
     }
     
     public virtual string create_title () {
-        return _("Various activities");
+        this.title = _("Various activities");
+        var text = _("Various activities (%d)");
+        return text.printf (activities.size);
     }
     
     public virtual Gdk.Pixbuf? create_icon () {
@@ -488,7 +495,9 @@ private class Journal.CompositeDocumentActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Worked with Documents");
+        this.title = _("Worked with Documents");
+        var text = _("Worked with %d Documents");
+        return text.printf (activities.size);
     }
     
     public override Gdk.Pixbuf? create_icon () {
@@ -510,7 +519,9 @@ private class Journal.CompositeAudioActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Listened to Music");
+        this.title = _("Listened to Music");
+        var text = _("Listened to Music (%d)");
+        return text.printf (activities.size);
     }
     
     public override Gdk.Pixbuf? create_icon () {
@@ -532,7 +543,9 @@ private class Journal.CompositeDevelopmentActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Hacked on some Code");
+        this.title = _("Hacked on some Code");
+        var text = _("Hacked on some Code (%d)");
+        return text.printf (activities.size);
     }
     
     public override Gdk.Pixbuf? create_icon () {
@@ -554,7 +567,9 @@ private class Journal.CompositeImageActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Worked with Images");
+        this.title = _("Worked with Images");
+        var text = _("Worked with %d Images");
+        return text.printf (activities.size);
     }
     
     public override Gdk.Pixbuf? create_icon () {
@@ -592,7 +607,9 @@ private class Journal.CompositeVideoActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Videos watched");
+        this.title = _("Watched Videos");
+        var text = _("Watched %d Videos");
+        return text.printf (activities.size);
     }
     
     public override Gdk.Pixbuf? create_icon () {
@@ -614,7 +631,9 @@ private class Journal.CompositeApplicationActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Applications Used");
+        this.title = _("Used Applications");
+        var text = _("Used %d Applications");
+        return text.printf (activities.size);
     }
     
     public override Gdk.Pixbuf? create_icon () {
@@ -651,7 +670,9 @@ private class Journal.CompositeDownloadActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Downloads");
+        this.title = _("Downloads");
+        var text = _("Downloads (%d)");
+        return text.printf (activities.size);
     }
     
     public override Gdk.Pixbuf? create_icon () {
@@ -673,7 +694,9 @@ private class Journal.CompositeWebActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Surfed the Web");
+        this.title = _("Surfed the Web");
+        var text = _("Surfed the Web (%d)");
+        return text.printf (activities.size);
     }
     
     public override Gdk.Pixbuf? create_icon () {
@@ -695,7 +718,9 @@ private class Journal.CompositeTodoActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        return _("Worked with Tasks");
+        this.title = _("Worked with Tasks");
+        var text = _("Worked with %d Tasks");
+        return text.printf (activities.size);
     }
     
     public override Gdk.Pixbuf? create_icon () {

@@ -222,7 +222,7 @@ public class Journal.App: GLib.Object {
             notebook.next_page ();
             main_toolbar.set_back_visible (true);
             main_toolbar.set_labels (activity.title, 
-                                     activity.uris.length.to_string ()
+                                     activity.activities.size.to_string ()
                                      + _(" items"));
             main_toolbar.show ();
         });
