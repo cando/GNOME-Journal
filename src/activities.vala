@@ -419,11 +419,11 @@ private class Journal.CompositeActivity : GenericActivity {
         this.uris = new string[int.min (MAXIMUM_ITEMS + 1, activities.size)];
         int i = 0;
         foreach (SingleActivity activity in activities) {
+            this.uris[i] = activity.title;
             if (i == MAXIMUM_ITEMS - 1) {
                 this.show_more = true;
                 break;
             }
-            this.uris[i] = activity.title;
             i++;
         }
         this.icon = create_icon ();
