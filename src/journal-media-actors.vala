@@ -172,17 +172,19 @@ private class Journal.VideoWidget : EventBox {
     private Element src;
     private Element sink;
     private ulong xid;
+    
+    private Button play_button;
+    private Image play_image;
+    private Image stop_image;
+    private bool playing;
 
     public VideoWidget (string uri) {
         GLib.Object ();
+        this.set_visible_window (false);
         this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
                          Gdk.EventMask.LEAVE_NOTIFY_MASK |
                          Gdk.EventMask.BUTTON_RELEASE_MASK);
-        this.drawing_area = new DrawingArea ();
-        this.drawing_area.realize.connect(on_realize);
-        this.drawing_area.set_size_request (400, 300);
-
-        add (drawing_area);
+        create_widgets ();
         
         this.src = ElementFactory.make ("playbin", "player");
         this.src.set_property("uri", uri);
@@ -191,29 +193,51 @@ private class Journal.VideoWidget : EventBox {
         
         this.src.set_property("video-sink", sink);
         
-        this.enter_notify_event.connect ((e) => {
-            on_play ();
-            return false;
+        playing = false;
+    }
+    
+    private void create_widgets () {
+        var vbox = new Box (Orientation.VERTICAL, 0);
+        this.drawing_area = new DrawingArea ();
+        this.drawing_area.realize.connect(on_realize);
+        this.drawing_area.set_size_request (400, 300);
+        vbox.pack_start (this.drawing_area, true, true, 0);
+        
+        play_image = new Image.from_pixbuf (
+                         Utils.load_pixbuf_from_name ("media-playback-start"));
+        stop_image = new Image.from_pixbuf (
+                         Utils.load_pixbuf_from_name ("media-playback-stop"));
+        play_button = new Button ();
+        play_button.image = play_image;
+        play_button.clicked.connect (() => {
+            if (playing)
+                on_stop ();
+            else
+                on_play ();
         });
-        this.leave_notify_event.connect ((e) => {
-            on_stop ();
-            return false;
-        });
+
+        var bb = new ButtonBox (Orientation.HORIZONTAL);
+        bb.add (play_button);
+        vbox.pack_start (bb, false, false, 5);
+
+        add (vbox);
     }
     
     private void on_realize() {
         this.xid = (ulong)Gdk.X11Window.get_xid (this.drawing_area.get_window());
-        on_play ();
-        Idle.add (() => {on_stop ();return false;});
     }
     
     private void on_play () {
+        playing = true;
+        play_button.image = stop_image;
         var xoverlay = (XOverlay)this.sink;
         xoverlay.set_xwindow_id (this.xid);
         this.src.set_state (State.PLAYING);
     }
 
     private void on_stop () {
+        playing = false;
+        play_button.image = play_image;
         this.src.set_state (State.READY);
     }
 }

@@ -525,7 +525,6 @@ private class Journal.Arrow : DrawingArea {
 
 private class Journal.ActivityBubbleHeader : Box {
     private Label title;
-    private Image icon;
     public ActivityBubbleHeader (GenericActivity activity) {
         Object (orientation:Orientation.HORIZONTAL, spacing: 0);
         var evbox = new EventBox ();
