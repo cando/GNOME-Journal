@@ -36,8 +36,9 @@ private class Journal.ActivityInfoPage : Box {
                                    typeof (string), // DISPLAY_URI
                                    typeof (int64),  // TIME
                                    typeof (bool)); // SELECTED
-        this.model.set_sort_column_id (Gd.MainColumns.TIME, 
-                                       SortType.DESCENDING);
+//        N.B. At the moment we sort by most-used order.
+//        this.model.set_sort_column_id (Gd.MainColumns.TIME, 
+//                                       SortType.DESCENDING);
                                        
         view = new Gd.MainView (Gd.MainViewType.ICON);
         

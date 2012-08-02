@@ -78,7 +78,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
         rs = yield zg_log.find_events (tr, (owned) ptr_arr,
                                        Zeitgeist.StorageState.ANY,
                                        0,
-                                       Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
+                                       Zeitgeist.ResultType.MOST_POPULAR_SUBJECTS,
                                        null);
 
         foreach (Zeitgeist.Event e1 in rs)
@@ -115,7 +115,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
         rs = yield zg_log.find_events (tr, (owned) ptr_arr,
                                        Zeitgeist.StorageState.ANY,
                                        0,
-                                       Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
+                                       Zeitgeist.ResultType.MOST_POPULAR_SUBJECTS,
                                        null);
 
         foreach (Zeitgeist.Event e1 in rs)
