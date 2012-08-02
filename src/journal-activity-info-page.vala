@@ -41,6 +41,10 @@ private class Journal.ActivityInfoPage : Box {
                                        
         view = new Gd.MainView (Gd.MainViewType.ICON);
         
+        view.item_activated.connect ((o, path) => { 
+            this.launch_item (path);
+        });
+        
         scrolled_window = new ScrolledWindow (null, null);
         scrolled_window.set_policy (PolicyType.AUTOMATIC, PolicyType.AUTOMATIC);
         scrolled_window.add_with_viewport(view);
@@ -49,7 +53,7 @@ private class Journal.ActivityInfoPage : Box {
     }
     
     public void set_activity (CompositeActivity activity) {
-        model.clear ();
+        this.model.clear ();
         TreeIter iter;
         foreach (SingleActivity act in activity.activities) {
             this.model.append (out iter);
@@ -66,9 +70,6 @@ private class Journal.ActivityInfoPage : Box {
             });
         }
         view.set_model (model);
-        view.item_activated.connect ((o, path) => {
-            this.launch_item (path);
-        });
         
         this.show_all ();
     }
@@ -99,7 +100,7 @@ private class Journal.ActivityInfoPage : Box {
                         string exec = app.get_executable ();
                         Process.spawn_command_line_async (exec);
                     }
-                    else
+                    else 
                         AppInfo.launch_default_for_uri (uri.get_string (), null);
                 } catch (Error e) {
                     warning ("Error in launching: "+ uri.get_string ());
