@@ -22,11 +22,43 @@
 using Gtk;
 using Gst;
 
+private class Journal.ClickableLabel : EventBox {
+    public Label label {
+        get; private set;
+    }
+
+    public signal void clicked ();
+    
+    public ClickableLabel (string text) {
+        this.set_visible_window (false);
+        this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
+                         Gdk.EventMask.LEAVE_NOTIFY_MASK |
+                         Gdk.EventMask.BUTTON_RELEASE_MASK);
+        
+        label = new Label (text);
+        this.add (label);
+    }
+     
+    public override  bool enter_notify_event (Gdk.EventCrossing event) {
+        label.set_markup ("<u>" + label.get_text () + "</u>");
+        return false;
+    }
+    
+    public override  bool leave_notify_event (Gdk.EventCrossing event) {
+        label.set_markup (label.get_text ());
+        return false ;
+    }
+    
+    public override  bool button_release_event (Gdk.EventButton event) {
+        clicked ();
+        return true;
+    }
+}
+
 private class Journal.ImageContent : EventBox {
 
     private Image image;
     private Gdk.Pixbuf pixbuf;
-    private int border_width = 4;
     
     //Used for highlight the border on mouse over
     private bool enter;
@@ -187,14 +219,13 @@ private class Journal.VideoWidget : EventBox {
 }
 
 private class Journal.CompositeDocumentWidget : Box {
-    public CompositeDocumentWidget (Gdk.Pixbuf? pixbuf, string[] uris) {
+    public CompositeDocumentWidget (Gdk.Pixbuf? pixbuf, ClickableLabel[] uris) {
         var hbox = new Box (Orientation.HORIZONTAL, 10);
         var vbox = new Box (Orientation.VERTICAL, 6);
-        foreach (string uri in uris) {
-            var l_uri = new Label (uri);
-            l_uri.set_ellipsize (Pango.EllipsizeMode.END);
-            l_uri.halign = Align.START;
-            l_uri.set_alignment (0, 1/2);
+        foreach (ClickableLabel l_uri in uris) {
+            l_uri.label.set_ellipsize (Pango.EllipsizeMode.END);
+            l_uri.label.halign = Align.START;
+            l_uri.label.set_alignment (0, 1/2);
             vbox.pack_start (l_uri, false, false, 0);
         }
         

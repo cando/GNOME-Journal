@@ -400,10 +400,6 @@ private class Journal.CompositeActivity : GenericActivity {
         get; construct set;
     }
     
-    public string[] uris {
-        get; private set;
-    }
-    
     public bool selected {
         get; set;
     }
@@ -415,17 +411,6 @@ private class Journal.CompositeActivity : GenericActivity {
     }
     
     construct {
-            
-        this.uris = new string[int.min (MAXIMUM_ITEMS + 1, activities.size)];
-        int i = 0;
-        foreach (SingleActivity activity in activities) {
-            this.uris[i] = activity.title;
-            if (i == MAXIMUM_ITEMS - 1) {
-                this.show_more = true;
-                break;
-            }
-            i++;
-        }
         this.icon = create_icon ();
         //Subclasses will modify this.
         this.num_activities_title = create_title ();
@@ -442,6 +427,7 @@ private class Journal.CompositeActivity : GenericActivity {
         this.time_end = max_end_t;
         this.date = create_date ();
         this.selected = false;
+        this.show_more = activities.size > MAXIMUM_ITEMS - 1;
         
         create_content ();
     }
@@ -472,7 +458,15 @@ private class Journal.CompositeActivity : GenericActivity {
     }
     
     public override void create_content () {
-        content = new CompositeDocumentWidget (this.icon, this.uris);
+        int num = int.min (MAXIMUM_ITEMS, activities.size);
+        ClickableLabel[] uris = new ClickableLabel[num];
+        for (int i = 0; i < num; i++){
+            var activity = activities.get (i);
+            var content = new ClickableLabel (activity.title);
+            content.clicked.connect (() => {activity.launch ();});
+            uris[i] = content;
+        }
+        content = new CompositeDocumentWidget (this.icon, uris);
     }
     
     public override void launch (){
