@@ -549,9 +549,16 @@ private class Journal.ActivityBubbleHeader : Box {
         }
         else {
             var act = activity as CompositeActivity;
+            var num_act = act.activities.size;
             if (act.num_inacessible_activities > 0) {
-                var t = act.num_inacessible_activities.to_string () + _(" inaccessible");
-                inacessible_text = "\t<span color='grey'>%s</span>".printf (t);
+                if (num_act == act.num_inacessible_activities) {
+                    var t = _("All inaccessible");
+                    inacessible_text = "\t<span color='grey'>%s</span>".printf (t);
+                }
+                else {
+                    var t = act.num_inacessible_activities.to_string () + _(" inaccessible");
+                    inacessible_text = "\t<span color='grey'>%s</span>".printf (t);
+                }
             }
         }
                 
