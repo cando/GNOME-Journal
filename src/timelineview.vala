@@ -565,17 +565,27 @@ private class Journal.ActivityBubbleHeader : Box {
         this.title = new Label (title_text);
         this.title.set_ellipsize (Pango.EllipsizeMode.END);
         this.title.set_alignment (0, 1);
-        this.title.set_markup (("<span><b>%s</b></span>"+ inacessible_text + "\n<span color='grey'>%s</span>").
+        this.title.set_markup (("<span><b>%s</b></span>\n<span color='grey'>%s</span>").
                                 printf(title_text, activity.part_of_the_day));
-        evbox.add (this.title);
+        
+        var inaccessible_label = new Label (inacessible_text);
+        inaccessible_label.set_ellipsize (Pango.EllipsizeMode.END);
+        inaccessible_label.set_alignment (1, 0);
+        inaccessible_label.set_markup (inacessible_text);
+        
+        var hbox = new Box (Orientation.HORIZONTAL, 10);
+        hbox.pack_start (this.title, true, true, 0);
+        hbox.pack_end (inaccessible_label, true, true, 0);
+        
+        evbox.add (hbox);
         evbox.enter_notify_event.connect ((ev)=> {
-            this.title.set_markup (("<span><b>%s</b></span>" + inacessible_text + "\n<span color='grey'>%s</span>").
+            this.title.set_markup (("<span><b>%s</b></span>\n<span color='grey'>%s</span>").
                                 printf(title_text, activity.date));
             return false;
         });
         
         evbox.leave_notify_event.connect ((ev)=> {
-            this.title.set_markup (("<span><b>%s</b></span>" + inacessible_text + "\n<span color='grey'>%s</span>").
+            this.title.set_markup (("<span><b>%s</b></span>\n<span color='grey'>%s</span>").
                                 printf(title_text, activity.part_of_the_day));
             return false;
         });
