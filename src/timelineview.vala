@@ -541,19 +541,34 @@ private class Journal.ActivityBubbleHeader : Box {
                          Gdk.EventMask.LEAVE_NOTIFY_MASK);
         var title_text = activity.num_activities_title == null ? 
                          activity.title : activity.num_activities_title;
+        var inacessible_text = "";
+        if (activity is SingleActivity) {
+            var act = activity as SingleActivity;
+            if (!act.exists)
+                inacessible_text = "\t<span color='grey'>%s</span>".printf (_("inaccessible"));
+        }
+        else {
+            var act = activity as CompositeActivity;
+            if (act.num_inacessible_activities > 0) {
+                var t = act.num_inacessible_activities.to_string () + _(" inaccessible");
+                inacessible_text = "\t<span color='grey'>%s</span>".printf (t);
+            }
+        }
+                
         this.title = new Label (title_text);
+        this.title.set_ellipsize (Pango.EllipsizeMode.END);
         this.title.set_alignment (0, 1);
-        this.title.set_markup ("<span><b>%s</b></span>\n<span color='grey'>%s</span>".
+        this.title.set_markup (("<span><b>%s</b></span>"+ inacessible_text + "\n<span color='grey'>%s</span>").
                                 printf(title_text, activity.part_of_the_day));
         evbox.add (this.title);
         evbox.enter_notify_event.connect ((ev)=> {
-            this.title.set_markup ("<span><b>%s</b></span>\n<span color='grey'>%s</span>".
+            this.title.set_markup (("<span><b>%s</b></span>" + inacessible_text + "\n<span color='grey'>%s</span>").
                                 printf(title_text, activity.date));
             return false;
         });
         
         evbox.leave_notify_event.connect ((ev)=> {
-            this.title.set_markup ("<span><b>%s</b></span>\n<span color='grey'>%s</span>".
+            this.title.set_markup (("<span><b>%s</b></span>" + inacessible_text + "\n<span color='grey'>%s</span>").
                                 printf(title_text, activity.part_of_the_day));
             return false;
         });
