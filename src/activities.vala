@@ -60,6 +60,10 @@ private abstract class Journal.GenericActivity : Object {
     public bool show_more {
         get; protected set;
     }
+
+    public bool selected {
+        get; set;
+    }
     
     public abstract void launch ();
     
@@ -85,10 +89,6 @@ private class Journal.SingleActivity : GenericActivity {
     
     public string display_uri {
         get; private set;
-    }
-    
-    public bool selected {
-        get; set;
     }
     
     public string mimetype {
@@ -416,8 +416,8 @@ private class Journal.CompositeActivity : GenericActivity {
         get; construct set;
     }
     
-    public bool selected {
-        get; set;
+    public int num_inacessible_activities {
+        get; private set;
     }
     
     public signal void launch_activity (CompositeActivity activity);
@@ -433,11 +433,15 @@ private class Journal.CompositeActivity : GenericActivity {
         //First activity timestamp? FIXME
         int64 min_start_t = activities.get(0).time_start;
         int64 max_end_t = 0;
+        int num_inacessible_activities = 0;
         foreach (SingleActivity activity in activities) {
             if (activity.time_start < min_start_t)
                 min_start_t = activity.time_start;
             else if (activity.time_start > max_end_t )
                 max_end_t = activity.time_start;
+            
+            if (!activity.exists)
+                this.num_inacessible_activities++;
         }
         this.time_start = min_start_t;
         this.time_end = max_end_t;
@@ -474,13 +478,19 @@ private class Journal.CompositeActivity : GenericActivity {
     }
     
     public override void create_content () {
-        int num = int.min (MAXIMUM_ITEMS, activities.size);
+        int num = int.min (MAXIMUM_ITEMS, activities.size - num_inacessible_activities);
         ClickableLabel[] uris = new ClickableLabel[num];
-        for (int i = 0; i < num; i++){
+        int i = 0;
+        int j = 0;
+        while (j < num) {
             var activity = activities.get (i);
-            var content = new ClickableLabel (activity.title);
-            content.clicked.connect (() => {activity.launch ();});
-            uris[i] = content;
+            if (activity.exists) {
+                var content = new ClickableLabel (activity.title);
+                content.clicked.connect (() => {activity.launch ();});
+                uris[j] = content;
+                j++;
+            }
+            i++;
         }
         content = new CompositeDocumentWidget (this.icon, uris);
     }
@@ -594,17 +604,23 @@ private class Journal.CompositeImageActivity : CompositeActivity {
     }
     
     public override void create_content () {
-        int num = int.min (9, activities.size);
+        int num = int.min (9, activities.size - num_inacessible_activities);
         ImageContent[] pixbufs = new ImageContent[num];
-        for (int i = 0; i < num; i++){
+        int i = 0;
+        int j = 0;
+        while (j < num){
             var activity = activities.get (i);
-            var content = new ImageContent.from_pixbuf (activity.icon);
-            content.highlight_items = true;
-            content.clicked.connect (() => {activity.launch ();});
-            activity.thumb_loaded.connect (() => {
-                content.set_from_pixbuf (activity.thumb_icon);
-            });
-            pixbufs[i] = content;
+            if (activity.exists) {
+                var content = new ImageContent.from_pixbuf (activity.icon);
+                content.highlight_items = true;
+                content.clicked.connect (() => {activity.launch ();});
+                activity.thumb_loaded.connect (() => {
+                    content.set_from_pixbuf (activity.thumb_icon);
+                });
+                pixbufs[j] = content;
+                j++;
+             }
+             i++;
         }
         content = new CompositeImageWidget (pixbufs);
     }
@@ -658,16 +674,22 @@ private class Journal.CompositeApplicationActivity : CompositeActivity {
     }
     
     public override void create_content () {
-        int num = int.min (6, activities.size);
+        int num = int.min (6, activities.size - num_inacessible_activities);
         ImageContent[] pixbufs = new ImageContent[num];
-        for (int i = 0; i < num; i++){
+        int i = 0;
+        int j = 0;
+        while (j < num){
             var activity = activities.get (i);
-            var content = new ImageContent.from_pixbuf (activity.icon);
-            content.highlight_items = true;
-            content.clicked.connect ((ev) => {
-                activity.launch ();
-            });
-            pixbufs[i] = content;
+            if (activity.exists) {
+                var content = new ImageContent.from_pixbuf (activity.icon);
+                content.highlight_items = true;
+                content.clicked.connect ((ev) => {
+                    activity.launch ();
+                });
+                pixbufs[j] = content;
+                j++;
+            }
+            i++;
         }
         content = new CompositeApplicationWidget (pixbufs);
     }
