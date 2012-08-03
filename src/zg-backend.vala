@@ -49,6 +49,8 @@ public class Journal.ZeitgeistBackend: GLib.Object
       var event = new Zeitgeist.Event ();
       event.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
       var subject = new Zeitgeist.Subject ();
+      //TODO add a configuration value?
+      subject.set_interpretation ("!" + Zeitgeist.NFO_SOFTWARE);
       event.add_subject (subject);
       var ptr_arr = new PtrArray ();
       ptr_arr.add (event);

@@ -721,6 +721,7 @@ private class Journal.CompositeWebActivity : CompositeActivity {
     }
 }
 
+//TODO launch tasks!
 private class Journal.CompositeTodoActivity : CompositeActivity {
     public CompositeTodoActivity (Gee.List<SingleActivity> activities) {
         Object (activities:activities);
