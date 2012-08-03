@@ -14,6 +14,8 @@ styledir         = $(datadir)/gnome-journal/style
 style_DATA       = gtk-style.css
 
 iconsdir = $(pkgdatadir)/icons
+dist_icons_DATA = \
+    no-item.png
 
 
 EXTRA_DIST =					\

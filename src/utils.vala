@@ -43,6 +43,10 @@ private class Journal.Utils : Object{
     public static string get_style (string? file_name = null) {
         return Path.build_filename (get_pkgdata (), "style", file_name);
     }
+    
+    public static string get_icon (string? file_name = null) {
+        return Path.build_filename (get_pkgdata (), "icons", file_name);
+    }
 
     public static Gdk.RGBA get_journal_bg_color () {
         var style = new Gtk.StyleContext ();
@@ -119,6 +123,16 @@ private class Journal.Utils : Object{
             }
         }
         return null;
+    }
+    
+    public static Gdk.Pixbuf? load_innacessible_item_icon (int size = 48) {
+        Gdk.Pixbuf? pixbuf = null;
+        try {
+            pixbuf = new Gdk.Pixbuf.from_file (Utils.get_icon("no-item.png"));
+        } catch (Error e) {
+             warning ("Unable to load pixbuf: " + e.message);
+        } 
+        return pixbuf;
     }
     
     public static Gdk.Pixbuf? load_pixbuf_from_icon (Icon icon, int size = 48) {

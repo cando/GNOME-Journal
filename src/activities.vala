@@ -99,6 +99,11 @@ private class Journal.SingleActivity : GenericActivity {
         get; private set;
     }
     
+    /* Indicated if this activity still exists (useful for file://*)*/
+    public bool exists {
+        get; set;
+    }
+    
     private Zeitgeist.Subject subject;
     private string thumb_path;
     
@@ -127,6 +132,14 @@ private class Journal.SingleActivity : GenericActivity {
         var d = new DateTime.from_unix_utc (this.time_start / 1000).to_local ();
         this.date = d.format ("%H:%M");
         this.show_more = false;
+        
+        //FIXME Make this query async?
+        if (this.uri.has_prefix ("file://")) {
+            var file = File.new_for_uri (this.uri);
+            this.exists = file.query_exists ();
+        }
+        else
+            this.exists = true;
 
         updateActivityIcon ();
         create_content ();
@@ -165,8 +178,10 @@ private class Journal.SingleActivity : GenericActivity {
 
         //Let's try to find the thumb
         var file = File.new_for_uri (this.uri);
-        if(!file.query_exists ())
+        if(!this.exists) {
+            this.thumb_icon = Utils.load_innacessible_item_icon ();
             return;
+        }
 
         FileInfo info = null;
         try {
@@ -236,7 +251,8 @@ private class Journal.SingleActivity : GenericActivity {
                 try {
                     this.icon = icon_info.load_icon();
                     //Let's use this for the moment.
-                    this.thumb_icon = this.icon;
+                    if(this.exists)
+                        this.thumb_icon = this.icon;
                 } catch (Error e) {
                     debug ("Unable to load pixbuf: " + e.message);
                 }

@@ -72,6 +72,11 @@ private class Journal.ImageContent : EventBox {
         }
     }
     
+    //If an item doesn't exists should be greyed out.
+    public bool greyed {
+        get; set;
+    }
+    
     public signal void clicked ();
 
     private ImageContent (bool highlight_items=false) {
@@ -82,6 +87,7 @@ private class Journal.ImageContent : EventBox {
                          Gdk.EventMask.BUTTON_RELEASE_MASK);
         
         enter = false;
+        greyed = false;
         this.highlight_items = highlight_items;
     }
     
@@ -143,6 +149,12 @@ private class Journal.ImageContent : EventBox {
          if (enter && highlight_items) {
             cr.set_operator (Cairo.Operator.SOFT_LIGHT);
             cr.set_source_rgba (1, 1, 1, 1);
+            cr.paint ();
+         }
+         
+         if (this.greyed) {
+            cr.set_operator (Cairo.Operator.OVER);
+            cr.set_source_rgba (0.5, 0.5, 0.5, 0.5);
             cr.paint ();
          }
          
@@ -280,18 +292,17 @@ private class Journal.CompositeImageWidget : Box {
 
         int z = 0;
         if (pixbufs.length > 2) {
-            int num_row = pixbufs.length / 2 + 1;
-            image_box = new Table (num_row, 2, false); 
-            ((Table)image_box).column_spacing = 5;
-            ((Table)image_box).row_spacing = 5;
+            image_box = new Grid (); 
+            ((Grid)image_box).column_spacing = 50;
+            ((Grid)image_box).row_spacing = 50;
             for (int i = 0; i < 2; i++)
                 for (int j = 0; j < 2 && z < pixbufs.length; j++, z++)
-                   ((Table)image_box).attach_defaults (pixbufs[z], j, j+1, i, i+1);
+                   ((Grid)image_box).attach (pixbufs[z], j, i, j+1, 1);
         }
         else{
             image_box = new Box (Orientation.HORIZONTAL, 5);
             for (int i = 0; i < pixbufs.length; i++)
-                ((Box)image_box).pack_start (pixbufs[i], true, true, 0);
+                ((Box)image_box).pack_start (pixbufs[i], true, false, 0);
         }
         
         this.pack_start (image_box, true, true, 0);
