@@ -1071,13 +1071,13 @@ private class Journal.ActivityModel : Object {
             return;
         }
         if (activities.has_key (day))
-            return;
+            activities.unset (day);
         var model = new DayActivityModel (day);
         Gee.List<Zeitgeist.Event> event_list = backend.get_events_for_date (day);
         model.add_activities (event_list);
         activities.set (day, model);
         model.launch_composite_activity.connect ((activity) => {
-                    this.launch_composite_activity (activity);
+            this.launch_composite_activity (activity);
         });
         activities_loaded (day);
     }

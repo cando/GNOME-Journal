@@ -23,6 +23,7 @@
 public class Journal.ZeitgeistBackend: GLib.Object
 {
     private Zeitgeist.Log zg_log;
+    private Zeitgeist.Monitor zg_monitor;
     //Events that need to be classified (divided day by day)
     private Gee.ArrayList<Zeitgeist.Event> new_events;
     private Gee.ArrayList<Zeitgeist.Event> all_app_events;
@@ -41,10 +42,27 @@ public class Journal.ZeitgeistBackend: GLib.Object
       
       new_events = new Gee.ArrayList<Zeitgeist.Event> ();
       all_app_events = new Gee.ArrayList<Zeitgeist.Event> ();
-      
       days_map = new Gee.HashMap<string, Gee.ArrayList<Zeitgeist.Event>> ();
       
-      //TODO Add a monitor for new events here
+      //Initialize Monitor
+      var tr = new Zeitgeist.TimeRange.from_now ();
+      var event = new Zeitgeist.Event ();
+      event.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
+      var subject = new Zeitgeist.Subject ();
+      event.add_subject (subject);
+      var ptr_arr = new PtrArray ();
+      ptr_arr.add (event);
+      zg_monitor = new Zeitgeist.Monitor (tr, (owned)ptr_arr);
+      zg_monitor.events_inserted.connect ((tr, rs) => {
+          foreach (Zeitgeist.Event e1 in rs)
+          {
+              if (e1.num_subjects () <= 0) continue;
+              new_events.add(e1);
+          }
+          fill_days_map ();
+      });
+      
+      zg_log.install_monitor (zg_monitor);
     }
     
     public void load_events_on_start ()
