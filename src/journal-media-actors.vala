@@ -294,7 +294,7 @@ private class Journal.CompositeImageWidget : Box {
         if (pixbufs.length > 2) {
             image_box = new Grid (); 
             ((Grid)image_box).column_spacing = 50;
-            ((Grid)image_box).row_spacing = 50;
+            ((Grid)image_box).row_spacing = 10;
             for (int i = 0; i < 2; i++)
                 for (int j = 0; j < 2 && z < pixbufs.length; j++, z++)
                    ((Grid)image_box).attach (pixbufs[z], j, i, j+1, 1);

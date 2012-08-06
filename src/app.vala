@@ -40,6 +40,7 @@ public class Journal.App: GLib.Object {
     private Gtk.Application application;
     private ActivityModel model;
     private VTL vtl;
+    private VTL vtl_s;
     private SearchWidget search_bar;
     private Gd.MainToolbar main_toolbar;
     private ActivityInfoPage activity_page;
@@ -195,9 +196,6 @@ public class Journal.App: GLib.Object {
         notebook = new Gtk.Notebook ();
         notebook.show_border = false;
         notebook.show_tabs = false;
-        
-        main_box.pack_start (main_toolbar, false, false, 0);
-        main_box.pack_start (notebook, true, true, 0);
 
         window.delete_event.connect (() => { return quit (); });
         window.key_press_event.connect (on_key_pressed);
@@ -207,11 +205,15 @@ public class Journal.App: GLib.Object {
             model.search.begin (query);
         });
         //VTL
-        vtl = new VTL (this, model);
+        vtl = new VTL (this, model, VTLType.NORMAL);
         var box = new Box (Orientation.VERTICAL, 0);
-        box.pack_start (search_bar, false, false, 10);
         box.pack_start (vtl, true, true, 0);
         notebook.append_page (box, null);
+        //SEARCH VTL
+        vtl_s = new VTL (this, model, VTLType.SEARCH);
+        var box_s = new Box (Orientation.VERTICAL, 0);
+        box_s.pack_start (vtl_s, true, true, 0);
+        notebook.append_page (box_s, null);
         
         //ACTIVITY PAGE
         activity_page = new ActivityInfoPage ();
@@ -226,6 +228,10 @@ public class Journal.App: GLib.Object {
                                      + _(" items"));
             main_toolbar.show ();
         });
+        
+        main_box.pack_start (main_toolbar, false, false, 0);
+        main_box.pack_start (search_bar, false, false, 10);
+        main_box.pack_start (notebook, true, true, 0);
 
         window.show_all();
         search_bar.hide ();

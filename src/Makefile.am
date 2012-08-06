@@ -28,16 +28,14 @@ AM_VALAFLAGS =						\
 bin_PROGRAMS = gnome-journal
 
 gnome_journal_SOURCES =\
-	activities.vala					\
+	journal-activities.vala			\
 	app.vala						\
-	loading.vala					\
 	journal-activity-info-page.vala	\
 	journal-timeline-navigator.vala \
 	journal-media-actors.vala		\
-	journal-search.vala		\
+	journal-search.vala				\
 	main.vala						\
-	selectionbar.vala				\
-	timelineview.vala				\
+	journal-timelineview.vala		\
 	utils.vala						\
 	zg-backend.vala					\
 	$(NULL)

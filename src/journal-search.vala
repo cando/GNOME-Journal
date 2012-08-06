@@ -23,7 +23,9 @@ using Gtk;
 private class Journal.SearchManager : Object {
     private Zeitgeist.Index search_proxy;
     
-    public Gee.List<uint> searched_events {
+    private Gee.List<Zeitgeist.Event> searched_events;
+    
+    public Gee.Map<string, Gee.List<Zeitgeist.Event>> days_map{
         get; private set;
     }
     
@@ -31,65 +33,89 @@ private class Journal.SearchManager : Object {
     
     public SearchManager () {
         Object ();
-        searched_events = new Gee.ArrayList <uint> ();
+        searched_events = new Gee.ArrayList <Zeitgeist.Event> ();
+        days_map = new Gee.HashMap<string, Gee.ArrayList<Zeitgeist.Event>> ();
         search_proxy = new Zeitgeist.Index ();
     }
     
     public async void search_simple (string text) {
-         var tr = new Zeitgeist.TimeRange.anytime ();
-         var ptr_arr = new PtrArray ();
-         
-         Zeitgeist.ResultSet rs;
-         try {
-            rs = yield search_proxy.search (text,
-                                            tr, 
-                                            (owned) ptr_arr,
-                                            0,
-                                            100,
-                                            Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
-                                            null);
+        days_map.clear ();
+        var tr = new Zeitgeist.TimeRange.anytime ();
+        var ptr_arr = new PtrArray ();
+        
+        Zeitgeist.ResultSet rs;
+        try {
+           rs = yield search_proxy.search (text,
+                                           tr, 
+                                           (owned) ptr_arr,
+                                           0,
+                                           100,
+                                           Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
+                                           null);
             
-            warning("%u",rs.size());
-            foreach (Zeitgeist.Event e in rs)
-            {
-                if (e.num_subjects () <= 0) continue;
-                searched_events.add(e.get_id ());
-                warning(e.get_subject(0).get_uri());
-            }
+           foreach (Zeitgeist.Event e in rs)
+           {
+               if (e.num_subjects () <= 0) continue;
+               searched_events.add (e);
+           }
         
-        } catch (Error e) {
-            warning ("%s", e.message);
+       } catch (Error e) {
+           warning ("%s", e.message);
+       }
+        
+       fill_days_map ();
+   }
+    
+    public async void search_with_relevancies (string text, out double[] relevancies) {
+        days_map.clear ();
+        var tr = new Zeitgeist.TimeRange.anytime ();
+        var event = new Zeitgeist.Event ();
+        var ptr_arr = new PtrArray ();
+        ptr_arr.add (event);
+        
+        Zeitgeist.ResultSet rs;
+        try {
+            rs = yield search_proxy.search_with_relevancies (text,
+                                                             tr,
+                                                             (owned) ptr_arr, 
+                                                             Zeitgeist.StorageState.ANY,
+                                                             0,
+                                                             -1,
+                                                             Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
+                                                             null,
+                                                             out relevancies);
+           foreach (Zeitgeist.Event e in rs)
+           {
+             if (e.num_subjects () <= 0) continue;
+             searched_events.add (e);
+           }
+         } catch (Error e) {
+           warning ("%s", e.message);
+         }
+         fill_days_map ();
+    }
+    
+    private void fill_days_map () {
+        string key = null;
+        foreach (Zeitgeist.Event e1 in searched_events)
+        {
+          if (e1.num_subjects () <= 0) continue;
+          DateTime date = Utils.get_date_for_event (e1);
+          key = date.format("%Y-%m-%d");
+          if (days_map.has_key (key) == false)
+            days_map[key] = new Gee.ArrayList<Zeitgeist.Event> ();
+
+          days_map[key].add (e1);
         }
-        
+        //OK, we have mapped the new events. Let's clear the list.
+        searched_events.clear ();
         search_finished ();
     }
     
-    public async void search_with_relevancies (string text, out double[] relevancies) {
-         var tr = new Zeitgeist.TimeRange.anytime ();
-         var event = new Zeitgeist.Event ();
-         var ptr_arr = new PtrArray ();
-         ptr_arr.add (event);
-         
-         Zeitgeist.ResultSet rs;
-         try {
-             rs = yield search_proxy.search_with_relevancies (text,
-                                                              tr,
-                                                              (owned) ptr_arr, 
-                                                              Zeitgeist.StorageState.ANY,
-                                                              0,
-                                                              -1,
-                                                              Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
-                                                              null,
-                                                              out relevancies);
-            foreach (Zeitgeist.Event e in rs)
-            {
-              if (e.num_subjects () <= 0) continue;
-              searched_events.add(e.get_id ());
-            }
-          } catch (Error e) {
-            warning ("%s", e.message);
-          }
-          search_finished ();
+    public Gee.List<Zeitgeist.Event>? get_events_for_date (string ymd) {
+        if (days_map.has_key (ymd))
+            return days_map[ymd];
+        return null;
     }
 }
 
