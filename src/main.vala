@@ -33,8 +33,6 @@
 //    opt_context.set_ignore_unknown_options (true);
 //    opt_context.add_main_entries (options, null);
 //    opt_context.add_group (Gtk.get_option_group (true));
-//    opt_context.add_group (Clutter.get_option_group_without_init ());
-//    opt_context.add_group (GtkClutter.get_option_group ());
 
 //    try {
 //        opt_context.parse (ref args);
@@ -58,10 +56,6 @@ public int main (string[] args) {
     GLib.Environment.set_application_name (_("Journal"));
 
 //    parse_args (ref args);
-
-    var res = GtkClutter.init (ref args);
-    if (res != Clutter.InitError.SUCCESS) 
-        error ("Can't init clutter-gtk");
         
     Gst.init (ref args);
 

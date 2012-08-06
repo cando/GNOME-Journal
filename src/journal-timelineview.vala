@@ -54,8 +54,7 @@ private class Journal.VTL : Box {
     public ScrolledWindow viewport;
     public Box container;
     private BubbleContainer bubble_c;
-    
-    private Gee.Map<string, Clutter.Actor> y_positions;
+
     private Gee.List<string> dates_added;
     private Gee.Map<string, Widget?> dates_widget;
 
@@ -70,8 +69,7 @@ private class Journal.VTL : Box {
         this.model = model;
         this.app = app;
         this.type = type;
-        
-        y_positions = new Gee.HashMap <string, Clutter.Actor> ();
+
         dates_widget = new Gee.HashMap <string, Widget?> ();
         dates_added = new Gee.ArrayList <string> ();
         
