@@ -24,7 +24,6 @@
 //        * Propagate Events
 //        * Better bubble's placing algorithm. Please maintain the time ordering.
 //        SECONDARY
-//        * Highlight timenavigator widget (Rewrite it!)
 //        * Disable scrollbar on loading? On-loading message?
 //       CHECK TODO file
 using Gtk;
@@ -100,9 +99,11 @@ private class Journal.VTL : Box {
                  check_finished_loading (date);
             });
         else
+            model.new_search_query.connect (() => {
+                clear_activities ();
+            });
             model.searched_activities_loaded.connect ((days_loaded)=> {
-                 clear_activities ();
-                 if (days_loaded.size == 0)
+                 if (days_loaded.size == 0 && dates_added.size == 0)
                     //NO RESULTS!
                     bubble_c.show_no_results ();
                  foreach (string day in days_loaded) {
@@ -259,7 +260,10 @@ private class Journal.VTL : Box {
         
         if (!on_loading && y >= limit) {
             //We can't scroll anymore! Let's load another date range!
-            model.load_other_days (3);
+            if (type == VTLType.NORMAL)
+                model.load_other_days (3);
+            else
+                model.load_other_results.begin ();
             on_loading = true;
         }
         
@@ -321,7 +325,6 @@ private class Journal.BubbleContainer : EventBox {
         right_c = new Box (Orientation.VERTICAL, 0);
         left_c = new Box (Orientation.VERTICAL, 0);
 
-        //FIXME Hack! Are we sure to use a Fixed? It seems to work pretty well
         var main_hbox = new Fixed ();
         // Start of the circle = 430 = 20 (arrow_width + spacing) in Arrow class
         // Start of the circle + radius + line_width/2
@@ -364,7 +367,15 @@ private class Journal.BubbleContainer : EventBox {
             this.append_bubble (activity);
     }
     
-    private void append_bubble (GenericActivity activity) {
+    public void show_no_results () {
+        this.clear ();
+        no_results_label = new Label (_("Sorry...no results found :("));
+        no_results_label.get_style_context ().add_class ("no-results");
+        this.main_vbox.pack_start (no_results_label, true, true);
+        this.show_all ();
+    }
+    
+        private void append_bubble (GenericActivity activity) {
         var box = new Box (Orientation.HORIZONTAL, 0);
         ActivityBubble bubble;
         var spacing = Random.int_range (20, 30);
@@ -405,14 +416,6 @@ private class Journal.BubbleContainer : EventBox {
             this.right_c.pack_start (box, false, false, spacing);
         }
         turn++;
-    }
-    
-    public void show_no_results () {
-        this.clear ();
-        no_results_label = new Label (_("Sorry...no results found :("));
-        no_results_label.get_style_context ().add_class ("no-results");
-        this.main_vbox.pack_start (no_results_label, true, true);
-        this.show_all ();
     }
 } 
 

@@ -1069,9 +1069,13 @@ private class Journal.ActivityModel : Object {
         get; private set;
     }
     
+    string last_search_query;
+    int last_search_offset;
+    
     public signal void activities_loaded (string day);
     public signal void launch_composite_activity (CompositeActivity activity);
     public signal void searched_activities_loaded (Gee.Set<string> days_loaded);
+    public signal void new_search_query ();
 
     public ActivityModel () {
         activities = new Gee.HashMap<string, DayActivityModel> ();
@@ -1087,6 +1091,9 @@ private class Journal.ActivityModel : Object {
         search_manager.search_finished.connect (() => {
             on_search_finished ();
         });
+        
+        last_search_query = "";
+        last_search_offset = 0;
     }
     
     private void on_events_loaded (string? day) {
@@ -1142,8 +1149,16 @@ private class Journal.ActivityModel : Object {
         backend.load_events_for_date_range (tv, tv2);
     }
     
+    public async void load_other_results () {
+        last_search_offset = yield 
+            this.search_manager.search_simple (last_search_query, 
+                                               last_search_offset);
+    }
+    
     public async void search (string query) {
-        //FIXME use the offset for obtaining more results!
-        int offset = yield this.search_manager.search_simple (query, 0);
+        new_search_query ();
+        last_search_query = query;
+        last_search_offset = 0;
+        last_search_offset = yield this.search_manager.search_simple (query, 0);
     }
 }

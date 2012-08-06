@@ -21,7 +21,7 @@
 using Gtk;
 
 private class Journal.SearchManager : Object {
-    private const int MAX_NUM_RESULTS = 100;
+    private const int MAX_NUM_RESULTS = 30;
     private Zeitgeist.Index search_proxy;
     
     private Gee.List<Zeitgeist.Event> searched_events;
@@ -171,7 +171,6 @@ private class Journal.SearchWidget : Toolbar {
         
         this.entry.activate.connect(() => {
             var text_l = this.entry.get_text ().down ();
-            warning("ioooo "+ text_l);
             if (text_l != null && text_l != "")
                 search (text_l);
         });
