@@ -159,10 +159,12 @@ public class Journal.App: GLib.Object {
                     search_bar.show ();
                     search_bar.entry.grab_focus ();
                 }
-                else
+                else {
                     search_bar.hide ();
+                    notebook.set_current_page (0);
+                }
             }
-            else if (Utils.is_go_back_event (ev) && notebook.page == 1)
+            else if (Utils.is_go_back_event (ev) && notebook.page == 2)
                     main_toolbar.go_back_request ();
             return false;
         });
@@ -203,6 +205,7 @@ public class Journal.App: GLib.Object {
         search_bar = new SearchWidget ();
         search_bar.search.connect ((query) => {
             model.search.begin (query);
+            notebook.set_current_page (1);
         });
         //VTL
         vtl = new VTL (this, model, VTLType.NORMAL);

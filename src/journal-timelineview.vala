@@ -100,12 +100,18 @@ private class Journal.VTL : Box {
                  check_finished_loading (date);
             });
         else
-            model.searched_activities_loaded.connect ((day_loaded)=> {
-                 load_activities (day_loaded);
-                 //Check if the last date is effetely loaded--> mean inserted in the
-                 //GtkBox container
-                 string date = dates_added.get (dates_added.size - 1);
-                 check_finished_loading (date);
+            model.searched_activities_loaded.connect ((days_loaded)=> {
+                 clear_activities ();
+                 if (days_loaded.size == 0)
+                    //NO RESULTS!
+                    bubble_c.show_no_results ();
+                 foreach (string day in days_loaded) {
+                     load_activities (day);
+                     //Check if the last date is effetely loaded--> mean inserted in the
+                     //GtkBox container
+                     string date = dates_added.get (dates_added.size - 1);
+                     check_finished_loading (date);
+                 }
             });
         
         this.key_press_event.connect ((ev) => {
@@ -155,6 +161,12 @@ private class Journal.VTL : Box {
         return false;
     }
     
+    private void clear_activities () {
+        dates_added.clear ();
+        dates_widget.clear ();
+        bubble_c.clear ();
+    }
+    
     private void load_activities (string date) {
         if (dates_added.contains (date))
           //we are receving new events from the monitor
@@ -176,7 +188,8 @@ private class Journal.VTL : Box {
             activity_list = model.activities.get (date);
         else
             activity_list = model.searched_activities.get (date);
-        if (activity_list.activities.size == 0)
+
+        if (activity_list == null || activity_list.activities.size == 0)
             return;
         bubble_c.append_bubbles (activity_list.activities);
         
@@ -283,6 +296,8 @@ private class Journal.BubbleContainer : EventBox {
     //The right side of the timeline
     private Box left_c;
     
+    private Label no_results_label;
+    
     private Box main_vbox;
     private int turn;
     
@@ -331,6 +346,11 @@ private class Journal.BubbleContainer : EventBox {
         }
         
         turn = 0;
+    }
+    
+    public void clear () {
+        foreach (Widget w in main_vbox.get_children ())
+            w.destroy ();
     }
     
     public void remove_last_day () {
@@ -385,6 +405,14 @@ private class Journal.BubbleContainer : EventBox {
             this.right_c.pack_start (box, false, false, spacing);
         }
         turn++;
+    }
+    
+    public void show_no_results () {
+        this.clear ();
+        no_results_label = new Label (_("Sorry...no results found :("));
+        no_results_label.get_style_context ().add_class ("no-results");
+        this.main_vbox.pack_start (no_results_label, true, true);
+        this.show_all ();
     }
 } 
 

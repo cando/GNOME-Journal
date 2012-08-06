@@ -21,11 +21,11 @@
 using Gtk;
 
 private class Journal.SearchManager : Object {
+    private const int MAX_NUM_RESULTS = 100;
     private Zeitgeist.Index search_proxy;
     
     private Gee.List<Zeitgeist.Event> searched_events;
-    
-    public Gee.Map<string, Gee.List<Zeitgeist.Event>> days_map{
+    public Gee.Map<string, Gee.ArrayList<Zeitgeist.Event>> days_map{
         get; private set;
     }
     
@@ -38,7 +38,7 @@ private class Journal.SearchManager : Object {
         search_proxy = new Zeitgeist.Index ();
     }
     
-    public async void search_simple (string text) {
+    public async int search_simple (string text, int offset) {
         days_map.clear ();
         var tr = new Zeitgeist.TimeRange.anytime ();
         var ptr_arr = new PtrArray ();
@@ -48,8 +48,8 @@ private class Journal.SearchManager : Object {
            rs = yield search_proxy.search (text,
                                            tr, 
                                            (owned) ptr_arr,
-                                           0,
-                                           100,
+                                           offset,
+                                           MAX_NUM_RESULTS,
                                            Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
                                            null);
             
@@ -62,11 +62,14 @@ private class Journal.SearchManager : Object {
        } catch (Error e) {
            warning ("%s", e.message);
        }
-        
+
        fill_days_map ();
+       return offset + MAX_NUM_RESULTS;
    }
     
-    public async void search_with_relevancies (string text, out double[] relevancies) {
+    public async int search_with_relevancies (string text, 
+                                              out double[] relevancies,
+                                              int offset) {
         days_map.clear ();
         var tr = new Zeitgeist.TimeRange.anytime ();
         var event = new Zeitgeist.Event ();
@@ -79,8 +82,8 @@ private class Journal.SearchManager : Object {
                                                              tr,
                                                              (owned) ptr_arr, 
                                                              Zeitgeist.StorageState.ANY,
-                                                             0,
-                                                             -1,
+                                                             offset,
+                                                             MAX_NUM_RESULTS,
                                                              Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
                                                              null,
                                                              out relevancies);
@@ -92,7 +95,9 @@ private class Journal.SearchManager : Object {
          } catch (Error e) {
            warning ("%s", e.message);
          }
+
          fill_days_map ();
+         return offset + MAX_NUM_RESULTS;
     }
     
     private void fill_days_map () {
@@ -158,9 +163,17 @@ private class Journal.SearchWidget : Toolbar {
             this.search_timeout = Timeout.add (TIMEOUT_SEARCH, () => {
                 this.search_timeout = 0;
                 var text_l = this.entry.get_text ().down ();
-                search (text_l);
+                if (text != null && text != "")
+                    search (text_l);
                 return false;
             });
+        });
+        
+        this.entry.activate.connect(() => {
+            var text_l = this.entry.get_text ().down ();
+            warning("ioooo "+ text_l);
+            if (text_l != null && text_l != "")
+                search (text_l);
         });
         
         this.entry.icon_release.connect (() => {

@@ -56,7 +56,7 @@ public int main (string[] args) {
     GLib.Environment.set_application_name (_("Journal"));
 
 //    parse_args (ref args);
-        
+    Gtk.init (ref args);
     Gst.init (ref args);
 
     Gtk.Window.set_default_icon_name ("Journal");

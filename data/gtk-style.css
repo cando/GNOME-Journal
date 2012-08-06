@@ -10,10 +10,6 @@ GtkNotebook{
     background-color: alpha(#000, 0.0);
 }
 
-/*****************************
-* TESTING GTK STYLES
-*
-******************************/
 .round-bubble-left {
     background-image : -gtk-gradient(radial,
                                     center center, 0,
@@ -59,33 +55,6 @@ GtkNotebook{
     background-color: alpha(#000, 0.0);
 }
 
-/*LOADING Label*/
-.loading {
-}
-
-.loading GtkLabel{
-    font-size: 40;
-    font-weight: bold;
-}
-
-
-/* DAY VIEW STYLE */
-.dayview {
-    background-color: @journal_label_color;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-    border-image: none;
-    background-image: none;
-}
-
-@define-color label shade (@journal_label_color, 0.4);
-#dayview-label {
-    font-weight: bold;
-    color: @label;
-
-    padding-top: 6px;
-    padding-bottom: 6px;
-}
 /* TIMELINE STYLE */
 .roundbox {
     background-color: @journal_roundbox_bg_color;
@@ -93,16 +62,11 @@ GtkNotebook{
 }
 
 .timeline-gtk {
-    color: @journal_timeline_color;
-    border-color: @journal_roundbox_bg_color;
-}
-
-.timeline-clutter {
     background-color: @journal_timeline_color;
     color: @journal_roundbox_bg_color;
 }
 
-/*TIMELINE FILTER*/
+/*TIMEBAR BUTTONS*/
 
 GtkScale.mark {
     color: @theme_fg_color;
@@ -130,6 +94,12 @@ GtkScale.mark {
 .vtimenav GtkButton:hover,
 .htimenav GtkButton:hover{
     background-color: @journal_label_hover_color;
+}
+
+/* SEARCH */
+.no-results {
+    font-weight: bold; 
+    font-size: 13;
 }
 
 /* OSD STYLE */

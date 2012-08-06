@@ -1071,10 +1071,11 @@ private class Journal.ActivityModel : Object {
     
     public signal void activities_loaded (string day);
     public signal void launch_composite_activity (CompositeActivity activity);
-    public signal void searched_activities_loaded (string day);
+    public signal void searched_activities_loaded (Gee.Set<string> days_loaded);
 
     public ActivityModel () {
         activities = new Gee.HashMap<string, DayActivityModel> ();
+        searched_activities = new Gee.HashMap<string, DayActivityModel> ();
         backend = new ZeitgeistBackend ();
         search_manager = new SearchManager ();
         
@@ -1084,8 +1085,7 @@ private class Journal.ActivityModel : Object {
         });
         
         search_manager.search_finished.connect (() => {
-            foreach (string day in search_manager.days_map.keys)
-                on_search_finished (day);
+            on_search_finished ();
         });
     }
     
@@ -1106,15 +1106,17 @@ private class Journal.ActivityModel : Object {
         activities_loaded (day);
     }
     
-    private void on_search_finished (string? day) {
-        var model = new DayActivityModel (day);
-        Gee.List<Zeitgeist.Event> event_list = search_manager.get_events_for_date (day);
-        model.add_activities (event_list);
-        searched_activities.set (day, model);
-        model.launch_composite_activity.connect ((activity) => {
-            this.launch_composite_activity (activity);
-        });
-        searched_activities_loaded (day);
+    private void on_search_finished () {
+        foreach (string day in search_manager.days_map.keys) {
+            var model = new DayActivityModel (day);
+            Gee.List<Zeitgeist.Event> event_list = search_manager.get_events_for_date (day);
+            model.add_activities (event_list);
+            searched_activities.set (day, model);
+            model.launch_composite_activity.connect ((activity) => {
+                this.launch_composite_activity (activity);
+            });
+        }
+        searched_activities_loaded (search_manager.days_map.keys);
     }
 
     public void load_activities (DateTime start) {
@@ -1141,6 +1143,7 @@ private class Journal.ActivityModel : Object {
     }
     
     public async void search (string query) {
-        yield this.search_manager.search_simple (query);
+        //FIXME use the offset for obtaining more results!
+        int offset = yield this.search_manager.search_simple (query, 0);
     }
 }
