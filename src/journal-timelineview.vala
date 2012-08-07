@@ -321,7 +321,7 @@ private class Journal.BubbleContainer : EventBox {
         al.add (main_vbox);
         this.add (al);
         
-        turn = 0;
+        turn = 1;
         last_day = new Widget[2];
     }
     
