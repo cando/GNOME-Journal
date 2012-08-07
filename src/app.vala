@@ -178,7 +178,10 @@ public class Journal.App: GLib.Object {
         main_toolbar.set_mode (Gd.MainToolbarMode.OVERVIEW);
         main_toolbar.set_labels (_(""), null);
         main_toolbar.go_back_request.connect (() => {
-            notebook.prev_page ();
+            if (search_bar.visible)
+                notebook.set_current_page (1);
+            else
+                 notebook.set_current_page (0);
             main_toolbar.set_back_visible (false);
             main_toolbar.set_labels (_(""), null);
             main_toolbar.hide ();
@@ -224,7 +227,7 @@ public class Journal.App: GLib.Object {
         
         model.launch_composite_activity.connect ((activity) => {
             activity_page.set_activity (activity);
-            notebook.next_page ();
+            notebook.set_current_page (2);
             main_toolbar.set_back_visible (true);
             main_toolbar.set_labels (activity.title, 
                                      activity.activities.size.to_string ()
