@@ -491,7 +491,7 @@ private class Journal.Timeline: DrawingArea {
         else {
             var p = new Cairo.Pattern.linear (0, 0, height, height);
             p.add_color_stop_rgba (0.0, color.red, color.green, color.blue, color.alpha);
-            p.add_color_stop_rgba (1.0, 1.0, 1.0, 1.0, 0.0);
+            p.add_color_stop_rgba (0.8, 1.0, 1.0, 1.0, 0.0);
             cr.set_source (p);
         }
         cr.paint ();
