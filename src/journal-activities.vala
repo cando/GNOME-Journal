@@ -1074,7 +1074,7 @@ private class Journal.ActivityModel : Object {
     
     public signal void activities_loaded (string day);
     public signal void launch_composite_activity (CompositeActivity activity);
-    public signal void searched_activities_loaded (Gee.Set<string> days_loaded);
+    public signal void searched_activities_loaded (Gee.List<string> days_loaded);
     public signal void new_search_query ();
 
     public ActivityModel () {
@@ -1127,7 +1127,17 @@ private class Journal.ActivityModel : Object {
                 this.launch_composite_activity (activity);
             });
         }
-        searched_activities_loaded (search_manager.days_map.keys);
+        //Sort the dates and the fire the signal
+        var sorted_dates = new Gee.ArrayList<string> ();
+        foreach (string d in search_manager.days_map.keys)
+            sorted_dates.add (d);
+        
+        sorted_dates.sort ( (first, second) => {
+            var a = Utils.datetime_from_string ((string) first);
+            var b = Utils.datetime_from_string ((string) second);
+            return -a.compare (b);
+        });
+        searched_activities_loaded (sorted_dates);
     }
 
     public void load_activities (DateTime start) {

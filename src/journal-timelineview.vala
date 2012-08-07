@@ -313,6 +313,7 @@ private class Journal.BubbleContainer : EventBox {
     
     private Box main_vbox;
     private int turn;
+    private Widget[] last_day;
     
     public BubbleContainer () {
         main_vbox = new Box (Orientation.VERTICAL, 0);
@@ -321,6 +322,7 @@ private class Journal.BubbleContainer : EventBox {
         this.add (al);
         
         turn = 0;
+        last_day = new Widget[2];
     }
     
     public void append_date_and_reorder (Widget date, int index) {
@@ -357,6 +359,8 @@ private class Journal.BubbleContainer : EventBox {
             main_vbox.reorder_child (main_hbox, index + 1);
         }
         
+        last_day[0] = date;
+        last_day[1] = main_hbox;
 //        turn = 0;
     }
     
@@ -372,9 +376,8 @@ private class Journal.BubbleContainer : EventBox {
     }
     
     public void remove_last_day () {
-        var list = main_vbox.get_children ();
-        list.nth_data (list.length ()).destroy ();
-        list.last ().data.destroy ();
+        last_day[0].destroy ();
+        last_day[1].destroy ();
     }
     
     public void append_bubbles (Gee.List<GenericActivity> activity_list) {
