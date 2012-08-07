@@ -578,8 +578,8 @@ private class Journal.CompositeImageActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        this.title = _("Worked with Images");
-        var text = _("Worked with %d Images");
+        this.title = _("Worked with Pictures");
+        var text = _("Worked with %d Pictures");
         return text.printf (activities.size);
     }
     
@@ -619,7 +619,7 @@ private class Journal.CompositeImageActivity : CompositeActivity {
     }
 }
 
-private class Journal.CompositeVideoActivity : CompositeActivity {
+private class Journal.CompositeVideoActivity : CompositeImageActivity {
     public CompositeVideoActivity (Gee.List<SingleActivity> activities) {
         Object (activities:activities);
     }
