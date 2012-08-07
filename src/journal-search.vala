@@ -41,7 +41,13 @@ private class Journal.SearchManager : Object {
     public async int search_simple (string text, int offset) {
         days_map.clear ();
         var tr = new Zeitgeist.TimeRange.anytime ();
+        var event = new Zeitgeist.Event ();
+        event.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
+        var subject = new Zeitgeist.Subject ();
+        subject.set_interpretation ("!" + Zeitgeist.NFO_SOFTWARE);
+        event.add_subject (subject);
         var ptr_arr = new PtrArray ();
+        ptr_arr.add (event);
         
         Zeitgeist.ResultSet rs;
         try {
