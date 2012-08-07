@@ -76,7 +76,7 @@ private class Journal.VTL : Box {
         viewport.set_policy (PolicyType.NEVER, PolicyType.AUTOMATIC);
         viewport.set_kinetic_scrolling (true);
         scrollbar = (Scrollbar)viewport.get_vscrollbar ();
-        scrollbar.value_changed.connect (() => { on_scrollbar_scroll ();});
+        scrollbar.value_changed.connect (() => {on_scrollbar_scroll ();});
         
         container = new Box (Orientation.VERTICAL, 0);
         viewport.add_with_viewport (container);
@@ -109,8 +109,10 @@ private class Journal.VTL : Box {
                         bubble_c.show_no_results ();
                     return;
                  }
-                 else if (dates_added.size == 0)
+                 else if (dates_added.size == 0) {
                     clear_activities ();
+                 }
+                    
                  foreach (string day in days_loaded) {
                      load_activities (day);
                      string date = dates_added.get (dates_added.size - 1);
@@ -308,6 +310,8 @@ private class Journal.BubbleContainer : EventBox {
     //The right side of the timeline
     private Box left_c;
     
+    private Fixed fading_timeline;
+    
     private Label no_results_label;
     private Label searching_label;
     
@@ -323,6 +327,26 @@ private class Journal.BubbleContainer : EventBox {
         
         turn = 1;
         last_day = new Widget[2];
+        
+        create_fading_timeline ();
+    }
+    
+    private void create_fading_timeline () {
+        var center_c = new Timeline ();
+        center_c.fade_out = true;
+        center_c.set_size_request (-1, 200);
+        var right_c = new Box (Orientation.VERTICAL, 0);
+        var left_c = new Box (Orientation.VERTICAL, 0);
+
+        fading_timeline = new Fixed ();
+        // Start of the circle = 430 = 20 (arrow_width + spacing) in Arrow class
+        // Start of the circle + radius + line_width/2
+        fading_timeline.put (center_c, 430 + 6 + 1, 0);
+        fading_timeline.put (left_c, 0, 0);
+        fading_timeline.put (right_c, 430, 0);
+        
+        right_c.margin_right = 20;
+        main_vbox.pack_start (fading_timeline, false, false, 0);
     }
     
     public void append_date_and_reorder (Widget date, int index) {
@@ -361,12 +385,16 @@ private class Journal.BubbleContainer : EventBox {
         
         last_day[0] = date;
         last_day[1] = main_hbox;
-//        turn = 0;
+//        turn = 1;
     }
     
-    public void clear () {
+    public void clear (bool all = false) {
+        turn = 1;
         foreach (Widget w in main_vbox.get_children ())
             w.destroy ();
+        //Recreate the fading timeline
+        if (!all)
+            create_fading_timeline ();
     }
     
     public void remove_first_day () {
@@ -383,10 +411,13 @@ private class Journal.BubbleContainer : EventBox {
     public void append_bubbles (Gee.List<GenericActivity> activity_list) {
         foreach (GenericActivity activity in activity_list)
             this.append_bubble (activity);
+            
+        //Move the fading timeline to the end
+        main_vbox.reorder_child (fading_timeline, -1);
     }
     
     public void show_no_results () {
-        this.clear ();
+        this.clear (true);
         no_results_label = new Label (_("Sorry...no results found :("));
         no_results_label.get_style_context ().add_class ("search-labels");
         this.main_vbox.pack_start (no_results_label, true, true);
@@ -394,7 +425,7 @@ private class Journal.BubbleContainer : EventBox {
     }
     
     public void show_searching () {
-        this.clear ();
+        this.clear (true);
         searching_label = new Label (_("Searching..."));
         searching_label.get_style_context ().add_class ("search-labels");
         this.main_vbox.pack_start (searching_label, true, true);
@@ -446,16 +477,30 @@ private class Journal.BubbleContainer : EventBox {
 } 
 
 private class Journal.Timeline: DrawingArea {
-     public override bool draw (Cairo.Context cr) {
-         var color = Utils.get_timeline_bg_color ();
-         Gdk.cairo_set_source_rgba (cr, color);
-         cr.paint ();
-         return false;
-     }
+
+    public bool fade_out {
+        get; set; default = false;
+    }
+    
+    public override bool draw (Cairo.Context cr) {
+        var height = get_allocated_height ();
+        var color = Utils.get_timeline_bg_color ();
+        if (!fade_out) {
+            Gdk.cairo_set_source_rgba (cr, color);
+        }
+        else {
+            var p = new Cairo.Pattern.linear (0, 0, height, height);
+            p.add_color_stop_rgba (0.0, color.red, color.green, color.blue, color.alpha);
+            p.add_color_stop_rgba (1.0, 1.0, 1.0, 1.0, 0.0);
+            cr.set_source (p);
+        }
+        cr.paint ();
+        return false;
+    }
      
-     public override void get_preferred_width (out int minimum_width, out int natural_width) {
-          minimum_width = natural_width = 2;
-     }
+    public override void get_preferred_width (out int minimum_width, out int natural_width) {
+         minimum_width = natural_width = 2;
+    }
 }
 
 private class Journal.Arrow : DrawingArea {
