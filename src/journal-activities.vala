@@ -97,7 +97,7 @@ private class Journal.SingleActivity : GenericActivity {
         get; private set;
     }
     
-    /* Indicated if this activity still exists (useful for file://*)*/
+    /* Indicates if this activity still exists (useful for file://*)*/
     public bool exists {
         get; set;
     }
@@ -1115,6 +1115,8 @@ private class Journal.ActivityModel : Object {
     
     private void on_search_finished () {
         foreach (string day in search_manager.days_map.keys) {
+            if (searched_activities.has_key (day))
+                searched_activities.unset (day);
             var model = new DayActivityModel (day);
             Gee.List<Zeitgeist.Event> event_list = search_manager.get_events_for_date (day);
             model.add_activities (event_list);

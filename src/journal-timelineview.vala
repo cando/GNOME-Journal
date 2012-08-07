@@ -98,22 +98,26 @@ private class Journal.VTL : Box {
                  string date = dates_added.get (dates_added.size - 1);
                  check_finished_loading (date);
             });
-        else
+        else {
             model.new_search_query.connect (() => {
                 clear_activities ();
+                bubble_c.show_searching ();
             });
             model.searched_activities_loaded.connect ((days_loaded)=> {
-                 if (days_loaded.size == 0 && dates_added.size == 0)
-                    //NO RESULTS!
-                    bubble_c.show_no_results ();
+                 if (days_loaded.size == 0) {
+                    if (dates_added.size == 0)
+                        bubble_c.show_no_results ();
+                    return;
+                 }
+                 else if (dates_added.size == 0)
+                    clear_activities ();
                  foreach (string day in days_loaded) {
                      load_activities (day);
-                     //Check if the last date is effetely loaded--> mean inserted in the
-                     //GtkBox container
                      string date = dates_added.get (dates_added.size - 1);
                      check_finished_loading (date);
                  }
             });
+        }
         
         this.key_press_event.connect ((ev) => {
             if (ev.keyval == Gdk.Key.Up)
@@ -301,6 +305,7 @@ private class Journal.BubbleContainer : EventBox {
     private Box left_c;
     
     private Label no_results_label;
+    private Label searching_label;
     
     private Box main_vbox;
     private int turn;
@@ -348,7 +353,7 @@ private class Journal.BubbleContainer : EventBox {
             main_vbox.reorder_child (main_hbox, index + 1);
         }
         
-        turn = 0;
+//        turn = 0;
     }
     
     public void clear () {
@@ -370,12 +375,20 @@ private class Journal.BubbleContainer : EventBox {
     public void show_no_results () {
         this.clear ();
         no_results_label = new Label (_("Sorry...no results found :("));
-        no_results_label.get_style_context ().add_class ("no-results");
+        no_results_label.get_style_context ().add_class ("search-labels");
         this.main_vbox.pack_start (no_results_label, true, true);
         this.show_all ();
     }
     
-        private void append_bubble (GenericActivity activity) {
+    public void show_searching () {
+        this.clear ();
+        searching_label = new Label (_("Searching..."));
+        searching_label.get_style_context ().add_class ("search-labels");
+        this.main_vbox.pack_start (searching_label, true, true);
+        this.show_all ();
+    }
+    
+    private void append_bubble (GenericActivity activity) {
         var box = new Box (Orientation.HORIZONTAL, 0);
         ActivityBubble bubble;
         var spacing = Random.int_range (20, 30);

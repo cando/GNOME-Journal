@@ -97,7 +97,7 @@ GtkScale.mark {
 }
 
 /* SEARCH */
-.no-results {
+.search-labels {
     font-weight: bold; 
     font-size: 13;
 }
