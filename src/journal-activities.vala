@@ -275,11 +275,15 @@ private class Journal.SingleActivity : GenericActivity {
     }
     
     public override void create_content () {
-        this.content = new Image.from_pixbuf (this.icon);
+        var al = new Alignment (0, 0, 0, 0);
+        var image = new Image.from_pixbuf (this.icon);
+        al.add (image);
+        this.content = al;
     }
     
     public virtual void update_icon () {
-        ((Image)content).set_from_pixbuf (this.thumb_icon);
+        var c = content as Bin;
+        ((Image)c.get_child ()).set_from_pixbuf (this.thumb_icon);
     }
     
     public override void launch (){
