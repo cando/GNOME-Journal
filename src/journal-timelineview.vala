@@ -592,6 +592,8 @@ private class Journal.Arrow : DrawingArea {
 
 private class Journal.ActivityBubbleHeader : Box {
     private Label title;
+    private Label date;
+    
     public ActivityBubbleHeader (GenericActivity activity) {
         Object (orientation:Orientation.HORIZONTAL, spacing: 0);
         var evbox = new EventBox ();
@@ -624,8 +626,13 @@ private class Journal.ActivityBubbleHeader : Box {
         this.title = new Label (title_text);
         this.title.set_ellipsize (Pango.EllipsizeMode.END);
         this.title.set_alignment (0, 1);
-        this.title.set_markup (("<span><b>%s</b></span>\n<span color='grey'>%s</span>").
-                                printf(title_text, activity.part_of_the_day));
+        this.title.set_markup (("<span><b>%s</b></span>").printf(title_text));
+                                
+        this.date = new Label (null);
+        this.date.set_ellipsize (Pango.EllipsizeMode.END);
+        this.date.set_alignment (0, 1);
+        this.date.set_markup (("<span color='grey'>%s</span>").
+                                printf(activity.part_of_the_day));
         
         var inaccessible_label = new Label (inacessible_text);
         inaccessible_label.set_ellipsize (Pango.EllipsizeMode.END);
@@ -636,16 +643,20 @@ private class Journal.ActivityBubbleHeader : Box {
         hbox.pack_start (this.title, true, true, 0);
         hbox.pack_end (inaccessible_label, true, true, 0);
         
-        evbox.add (hbox);
+        var vbox = new Box (Orientation.VERTICAL, 0);
+        vbox.pack_start (hbox, false, false, 0);
+        vbox.pack_start (this.date, false, false, 0);
+        
+        evbox.add (vbox);
         evbox.enter_notify_event.connect ((ev)=> {
-            this.title.set_markup (("<span><b>%s</b></span>\n<span color='grey'>%s</span>").
-                                printf(title_text, activity.date));
+            this.date.set_markup (("<span color='grey'>%s</span>").
+                                printf(activity.date));
             return false;
         });
         
         evbox.leave_notify_event.connect ((ev)=> {
-            this.title.set_markup (("<span><b>%s</b></span>\n<span color='grey'>%s</span>").
-                                printf(title_text, activity.part_of_the_day));
+            this.date.set_markup (("<span color='grey'>%s</span>").
+                                printf(activity.part_of_the_day));
             return false;
         });
         
