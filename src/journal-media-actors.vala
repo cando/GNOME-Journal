@@ -82,6 +82,7 @@ private class Journal.ImageContent : EventBox {
     private ImageContent (bool highlight_items=false) {
         GLib.Object ();
         this.name = "image-box";
+        this.set_size_request (Utils.ICON_VIEW_SIZE, Utils.ICON_VIEW_SIZE);
         this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
                          Gdk.EventMask.LEAVE_NOTIFY_MASK |
                          Gdk.EventMask.BUTTON_RELEASE_MASK);
@@ -289,7 +290,11 @@ private class Journal.CompositeImageWidget : Box {
 
     public CompositeImageWidget (ImageContent[] pixbufs) {
         GLib.Object (orientation:Orientation.VERTICAL, spacing:0);
-
+        
+        setup_ui (pixbufs);
+    }
+    
+    public void setup_ui (ImageContent[] pixbufs ) {
         int z = 0;
         if (pixbufs.length > 2) {
             image_box = new Grid (); 

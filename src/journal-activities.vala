@@ -223,7 +223,7 @@ private class Journal.SingleActivity : GenericActivity {
 
         if (_icon != null)
             icon_info = 
-                Gtk.IconTheme.get_default().lookup_by_gicon (_icon, Utils.getIconSize (),
+                Gtk.IconTheme.get_default().lookup_by_gicon (_icon, Utils.LIST_VIEW_SIZE,
                                             IconLookupFlags.FORCE_SVG | 
                                             IconLookupFlags.GENERIC_FALLBACK);
         if (icon_info != null) {
@@ -242,7 +242,7 @@ private class Journal.SingleActivity : GenericActivity {
 
             if (_icon != null)
                 icon_info = 
-                    Gtk.IconTheme.get_default().lookup_by_gicon (_icon, Utils.getIconSize (),
+                    Gtk.IconTheme.get_default().lookup_by_gicon (_icon, Utils.LIST_VIEW_SIZE,
                                             IconLookupFlags.FORCE_SVG | 
                                             IconLookupFlags.GENERIC_FALLBACK);
             if (icon_info != null) {
