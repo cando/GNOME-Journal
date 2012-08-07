@@ -173,10 +173,14 @@ private class Journal.VTL : Box {
     }
     
     private void load_activities (string date) {
-        if (dates_added.contains (date))
-          //we are receving new events from the monitor
-          //Let's delete the last day
-          bubble_c.remove_last_day ();
+        if (dates_added.contains (date)) {
+            //we are receving new events from the monitor
+            //Let's delete the last day
+            if (type == VTLType.SEARCH)
+                bubble_c.remove_last_day ();
+            else
+                bubble_c.remove_first_day ();
+        }
         
         int index;
         get_child_index_for_date (date, out index);
@@ -361,10 +365,16 @@ private class Journal.BubbleContainer : EventBox {
             w.destroy ();
     }
     
-    public void remove_last_day () {
+    public void remove_first_day () {
         var list = main_vbox.get_children ();
         list.first ().data.destroy ();
         list.nth_data (1).destroy ();
+    }
+    
+    public void remove_last_day () {
+        var list = main_vbox.get_children ();
+        list.nth_data (list.length ()).destroy ();
+        list.last ().data.destroy ();
     }
     
     public void append_bubbles (Gee.List<GenericActivity> activity_list) {

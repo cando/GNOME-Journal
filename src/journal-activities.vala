@@ -1114,10 +1114,12 @@ private class Journal.ActivityModel : Object {
     }
     
     private void on_search_finished () {
+        DayActivityModel model;
         foreach (string day in search_manager.days_map.keys) {
             if (searched_activities.has_key (day))
-                searched_activities.unset (day);
-            var model = new DayActivityModel (day);
+                model = searched_activities.get (day);
+            else
+                model = new DayActivityModel (day);
             Gee.List<Zeitgeist.Event> event_list = search_manager.get_events_for_date (day);
             model.add_activities (event_list);
             searched_activities.set (day, model);
@@ -1159,6 +1161,7 @@ private class Journal.ActivityModel : Object {
     
     public async void search (string query) {
         new_search_query ();
+        searched_activities.clear ();
         last_search_query = query;
         last_search_offset = 0;
         last_search_offset = yield this.search_manager.search_simple (query, 0);

@@ -64,7 +64,7 @@ private class Journal.SearchManager : Object {
        }
 
        fill_days_map ();
-       return offset + MAX_NUM_RESULTS;
+       return offset + MAX_NUM_RESULTS + 1;
    }
     
     public async int search_with_relevancies (string text, 
@@ -97,7 +97,7 @@ private class Journal.SearchManager : Object {
          }
 
          fill_days_map ();
-         return offset + MAX_NUM_RESULTS;
+         return offset + MAX_NUM_RESULTS + 1;
     }
     
     private void fill_days_map () {
