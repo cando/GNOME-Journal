@@ -211,8 +211,8 @@ public class Journal.App: GLib.Object {
         window.key_press_event.connect (on_key_pressed);
         
         search_bar = new SearchWidget ();
-        search_bar.search.connect ((query) => {
-            model.search.begin (query);
+        search_bar.search.connect ((query, filter) => {
+            model.search.begin (query, filter);
             notebook.set_current_page (1);
         });
         //VTL

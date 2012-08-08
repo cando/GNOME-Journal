@@ -82,6 +82,9 @@ private class Journal.VTL : Box {
         viewport.add_with_viewport (container);
         
         bubble_c = new BubbleContainer ();
+        bubble_c.load_more_results.connect (() => {
+            model.load_other_results.begin ();
+        });
         container.pack_start (bubble_c, true, true, 0);
         
         vnav = new TimelineNavigator (Orientation.VERTICAL);
@@ -120,6 +123,8 @@ private class Journal.VTL : Box {
                      string date = dates_added.get (dates_added.size - 1);
                      check_finished_loading (date);
                  }
+                 
+                 bubble_c.show_load_more ();
             });
         }
         
@@ -274,8 +279,10 @@ private class Journal.VTL : Box {
             //We can't scroll anymore! Let's load another date range!
             if (type == VTLType.NORMAL)
                 model.load_other_days (3);
-            else
+            else {
+                bubble_c.show_searching (false);
                 model.load_other_results.begin ();
+            }
             on_loading = true;
         }
         
@@ -316,10 +323,13 @@ private class Journal.BubbleContainer : EventBox {
     
     private Label no_results_label;
     private Label searching_label;
+    private Button more_results_button;
     
     private Box main_vbox;
     private int turn;
     private Widget[] last_day;
+    
+    public signal void load_more_results ();
     
     public BubbleContainer () {
         main_vbox = new Box (Orientation.VERTICAL, 0);
@@ -408,6 +418,7 @@ private class Journal.BubbleContainer : EventBox {
     public void remove_last_day () {
         last_day[0].destroy ();
         last_day[1].destroy ();
+        more_results_button.destroy ();
     }
     
     public void append_bubbles (Gee.List<GenericActivity> activity_list) {
@@ -426,17 +437,40 @@ private class Journal.BubbleContainer : EventBox {
         this.show_all ();
     }
     public void show_no_more_results () {
+        this.more_results_button.destroy ();
         no_results_label = new Label (_("No more results found :("));
         no_results_label.get_style_context ().add_class ("search-labels");
-        this.main_vbox.pack_end (no_results_label, true, true);
+        this.main_vbox.pack_end (no_results_label, false, false);
         this.show_all ();
     }
     
-    public void show_searching () {
-        this.clear (true);
-        searching_label = new Label (_("Searching..."));
-        searching_label.get_style_context ().add_class ("search-labels");
-        this.main_vbox.pack_start (searching_label, true, true);
+    public void show_load_more () {
+        more_results_button = new Button.with_label (_("Load more results..."));
+        more_results_button.get_style_context ().add_class ("timeline-date");
+        more_results_button.set_relief (Gtk.ReliefStyle.NONE);
+        more_results_button.set_focus_on_click (false);
+        var al = new Alignment (0.49f, 0, 0, 0);
+        al.add (more_results_button);
+        more_results_button.clicked.connect (() => {
+            more_results_button.set_label ("Searching...");
+            load_more_results ();
+        });
+        this.main_vbox.pack_end (al, false, false);
+        this.show_all ();
+    }
+    
+    public void show_searching (bool first_time=true) {
+        if (first_time) {
+            this.clear (true);
+            searching_label = new Label (_("Searching..."));
+            searching_label.get_style_context ().add_class ("search-labels");
+            this.main_vbox.pack_start (searching_label, false, false);
+        }
+        else {
+            if (more_results_button == null)
+                show_load_more ();
+            more_results_button.set_label (_("Searching..."));
+        }
         this.show_all ();
     }
     

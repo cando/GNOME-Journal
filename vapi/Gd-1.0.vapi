@@ -57,9 +57,9 @@ namespace Gd {
 		[CCode (has_construct_function = false)]
 		public MarginContainer ();
 		[NoAccessorMethod]
-		public int max_margin { get; set construct; }
+		public int max_margin { get; set; }
 		[NoAccessorMethod]
-		public int min_margin { get; set construct; }
+		public int min_margin { get; set; }
 	}
 	[CCode (cheader_filename = "gd-notification.h", type_id = "gd_notification_get_type ()")]
 	public class Notification : Gtk.Bin, Atk.Implementor, Gtk.Buildable {

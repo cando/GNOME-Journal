@@ -38,16 +38,28 @@ private class Journal.SearchManager : Object {
         search_proxy = new Zeitgeist.Index ();
     }
     
-    public async int search_simple (string text, int offset) {
+    public async int search_simple (string text, string filter, int offset) {
         days_map.clear ();
         var tr = new Zeitgeist.TimeRange.anytime ();
+        var ptr_arr = new PtrArray ();
         var event = new Zeitgeist.Event ();
         event.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
         var subject = new Zeitgeist.Subject ();
-        subject.set_interpretation ("!" + Zeitgeist.NFO_SOFTWARE);
-        event.add_subject (subject);
-        var ptr_arr = new PtrArray ();
-        ptr_arr.add (event);
+        
+//        if (filter != Zeitgeist.NFO_SOFTWARE) {
+//            var event_app = new Zeitgeist.Event ();
+//            event_app.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
+//            var subject_app = new Zeitgeist.Subject ();
+//            subject_app.set_interpretation ("!" + Zeitgeist.NFO_SOFTWARE);
+//            event_app.add_subject (subject_app);
+//            ptr_arr.add (event_app);
+//        }
+//        else if (filter != ""){
+        if (filter != "")
+            subject.set_interpretation (filter);
+            
+            event.add_subject (subject);
+            ptr_arr.add (event);
         
         Zeitgeist.ResultSet rs;
         try {
@@ -137,9 +149,12 @@ private class Journal.SearchWidget : Toolbar {
         get; private set;
     }
     
-    private uint search_timeout;
+    private ComboBoxText filter_combobox;
     
-    public signal void search (string text);
+    private uint search_timeout;
+    private string current_filter;
+    
+    public signal void search (string text, string filter);
     
     public SearchWidget (){
         this.search_timeout = 0;
@@ -170,7 +185,7 @@ private class Journal.SearchWidget : Toolbar {
                 this.search_timeout = 0;
                 var text_l = this.entry.get_text ().down ();
                 if (text != null && text != "")
-                    search (text_l);
+                    search (text_l, current_filter);
                 return false;
             });
         });
@@ -178,16 +193,35 @@ private class Journal.SearchWidget : Toolbar {
         this.entry.activate.connect(() => {
             var text_l = this.entry.get_text ().down ();
             if (text_l != null && text_l != "")
-                search (text_l);
+                search (text_l, current_filter);
         });
         
         this.entry.icon_release.connect (() => {
             this.entry.set_text ("");
         });
         
+        filter_combobox = new ComboBoxText ();
+        filter_combobox.set_focus_on_click (false);
+        current_filter = "";
+        foreach (string text in Utils.categories_map.keys) 
+            filter_combobox.append_text (text);
+        filter_combobox.set_active(0);
+
+        filter_combobox.changed.connect( () => {
+            var active = this.filter_combobox.get_active_text ();
+            current_filter = Utils.categories_map.get (active);
+            var text_l = this.entry.get_text ().down ();
+            if (text_l != null && text_l != "")
+                search (text_l, current_filter);
+            });
+            
+        var hbox = new Box (Orientation.HORIZONTAL, 5);
+        hbox.pack_start (entry, true, true, 0);
+        hbox.pack_start (filter_combobox, false, false, 0);
+        
         var item = new ToolItem();
         item.set_expand (true);
-        item.add (entry);
+        item.add (hbox);
         
         this.insert (item, 0);
     }

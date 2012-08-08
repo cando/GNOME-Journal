@@ -29,11 +29,26 @@ private class Journal.Utils : Object{
     public const int LIST_VIEW_SIZE = 48;
     
     public static GLib.Settings settings;
+    public static Gee.HashMap<string, string> categories_map;
     private static Gnome.DesktopThumbnailFactory factory;
     
     static construct{
         settings = new GLib.Settings ("org.gnome.journal");
         factory = new Gnome.DesktopThumbnailFactory (Gnome.ThumbnailSize.NORMAL);
+        categories_map = new Gee.HashMap<string, string> ();
+        
+        //Initialize categories_map
+        categories_map.set (_("All Activities"), "");
+        categories_map.set (_("Worked with Documents"), Zeitgeist.NFO_DOCUMENT);
+        categories_map.set (_("Hacked on some Code"), Zeitgeist.NFO_SOURCE_CODE);
+        categories_map.set (_("Worked with Pictures"), Zeitgeist.NFO_IMAGE);
+        categories_map.set (_("Listened to Music"), Zeitgeist.NFO_AUDIO);
+        categories_map.set (_("Watched Videos"), Zeitgeist.NFO_VIDEO);
+        categories_map.set (_("Used Applications"), Zeitgeist.NFO_APPLICATION);
+        categories_map.set (_("Surfed the Web"), Zeitgeist.NFO_WEBSITE);
+        categories_map.set (_("Worked with Tasks"), Zeitgeist.NCAL_TODO);
+        categories_map.set (_("Worked with Archives"), Zeitgeist.NFO_ARCHIVE);
+        categories_map.set (_("Visited Places"), Zeitgeist.NFO_FOLDER);
     }
 
     public static string get_pkgdata (string? file_name = null) {

@@ -1081,6 +1081,7 @@ private class Journal.ActivityModel : Object {
     }
     
     string last_search_query;
+    string last_search_filter;
     int last_search_offset;
     
     public signal void activities_loaded (string day);
@@ -1176,15 +1177,19 @@ private class Journal.ActivityModel : Object {
     
     public async void load_other_results () {
         last_search_offset = yield 
-            this.search_manager.search_simple (last_search_query, 
+            this.search_manager.search_simple (last_search_query,
+                                               last_search_filter,
                                                last_search_offset);
     }
     
-    public async void search (string query) {
+    public async void search (string query, string filter) {
         new_search_query ();
         searched_activities.clear ();
         last_search_query = query;
+        last_search_filter = filter;
         last_search_offset = 0;
-        last_search_offset = yield this.search_manager.search_simple (query, 0);
+        last_search_offset = yield this.search_manager.search_simple (query, 
+                                                                      filter,
+                                                                      0);
     }
 }
