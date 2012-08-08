@@ -21,7 +21,7 @@
 using Gtk;
 
 private class Journal.SearchManager : Object {
-    private const int MAX_NUM_RESULTS = 300;
+    private const int MAX_NUM_RESULTS = 100;
     private Zeitgeist.Index search_proxy;
     
     private Gee.List<Zeitgeist.Event> searched_events;

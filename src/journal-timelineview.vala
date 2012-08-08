@@ -107,6 +107,8 @@ private class Journal.VTL : Box {
                  if (days_loaded.size == 0) {
                     if (dates_added.size == 0)
                         bubble_c.show_no_results ();
+                    else
+                        bubble_c.show_no_more_results ();
                     return;
                  }
                  else if (dates_added.size == 0) {
@@ -421,6 +423,12 @@ private class Journal.BubbleContainer : EventBox {
         no_results_label = new Label (_("Sorry...no results found :("));
         no_results_label.get_style_context ().add_class ("search-labels");
         this.main_vbox.pack_start (no_results_label, true, true);
+        this.show_all ();
+    }
+    public void show_no_more_results () {
+        no_results_label = new Label (_("No more results found :("));
+        no_results_label.get_style_context ().add_class ("search-labels");
+        this.main_vbox.pack_end (no_results_label, true, true);
         this.show_all ();
     }
     
