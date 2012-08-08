@@ -21,7 +21,7 @@
 using Gtk;
 
 private class Journal.SearchManager : Object {
-    private const int MAX_NUM_RESULTS = 25;
+    private const int MAX_NUM_RESULTS = 300;
     private Zeitgeist.Index search_proxy;
     
     private Gee.List<Zeitgeist.Event> searched_events;
@@ -56,7 +56,7 @@ private class Journal.SearchManager : Object {
                                            (owned) ptr_arr,
                                            offset,
                                            MAX_NUM_RESULTS,
-                                           Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
+                                           Zeitgeist.ResultType.MOST_RECENT_EVENTS,
                                            null);
             
            foreach (Zeitgeist.Event e in rs)
@@ -90,7 +90,7 @@ private class Journal.SearchManager : Object {
                                                              Zeitgeist.StorageState.ANY,
                                                              offset,
                                                              MAX_NUM_RESULTS,
-                                                             Zeitgeist.ResultType.MOST_RECENT_SUBJECTS,
+                                                             Zeitgeist.ResultType.MOST_RECENT_EVENTS,
                                                              null,
                                                              out relevancies);
             foreach (Zeitgeist.Event e in rs)

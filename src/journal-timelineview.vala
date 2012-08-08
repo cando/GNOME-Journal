@@ -346,7 +346,7 @@ private class Journal.BubbleContainer : EventBox {
         fading_timeline.put (right_c, 430, 0);
         
         right_c.margin_right = 20;
-        main_vbox.pack_start (fading_timeline, false, false, 0);
+        main_vbox.pack_end (fading_timeline, false, false, 0);
     }
     
     public void append_date_and_reorder (Widget date, int index) {

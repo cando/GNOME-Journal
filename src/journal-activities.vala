@@ -967,11 +967,19 @@ private class Journal.DayActivityModel : Object {
         get; private set;
     }
     
+    private Gee.HashMap<string, Gee.List<SingleActivity>> morning_map;
+    private Gee.HashMap<string, Gee.List<SingleActivity>> afternoon_map;
+    private Gee.HashMap<string, Gee.List<SingleActivity>> evening_map;
+    
     public signal void launch_composite_activity (CompositeActivity activity);
 
     public DayActivityModel (string day) {
         this.day = day;
         activities = new Gee.ArrayList<GenericActivity> ();
+        
+        morning_map = new Gee.HashMap<string, Gee.List<SingleActivity>> ();
+        afternoon_map = new Gee.HashMap<string, Gee.List<SingleActivity>> ();
+        evening_map = new Gee.HashMap<string, Gee.List<SingleActivity>> ();
     }
     
     private void add_activity (SingleActivity activity, 
@@ -1012,9 +1020,6 @@ private class Journal.DayActivityModel : Object {
     }
     
     public void add_activities (Gee.List<Zeitgeist.Event> event_list) {
-        var morning_map = new Gee.HashMap<string, Gee.List<SingleActivity>> ();
-        var afternoon_map = new Gee.HashMap<string, Gee.List<SingleActivity>> ();
-        var evening_map = new Gee.HashMap<string, Gee.List<SingleActivity>> ();
         foreach (Zeitgeist.Event e in event_list) {
             SingleActivity activity = ActivityFactory.get_activity_for_event (e);
             int64 time = e.get_timestamp () / 1000;
@@ -1040,6 +1045,8 @@ private class Journal.DayActivityModel : Object {
         create_composite_activities (morning_map, out morning_activities, _("Morning"));
         create_composite_activities (afternoon_map, out afternoon_activities, _("Afternoon"));
         create_composite_activities (evening_map, out evening_activities, _("Evening"));
+        
+        activities.clear ();
         
         activities.add_all (morning_activities);
         activities.add_all (afternoon_activities);

@@ -221,6 +221,12 @@ private class Journal.Utils : Object{
         return retval;
     }
     
+    public static bool is_esc_event (Gdk.EventKey event) {
+        var keyval = event.keyval;
+        var retval = (keyval == Gdk.Key.Escape);
+        return retval;
+    }
+    
     //DATE UTILS
     public static DateTime get_date_for_event (Zeitgeist.Event e) {
         int64 timestamp = e.get_timestamp () / 1000;
