@@ -528,8 +528,8 @@ private class Journal.CompositeAudioActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        this.title = _("Listened to Music");
-        var text = _("Listened to Music (%d)");
+        this.title = _("Listened to Audio");
+        var text = _("Listened to Audio (%d)");
         return text.printf (activities.size);
     }
     
@@ -794,8 +794,8 @@ private class Journal.CompositeFolderActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        this.title = _("Visited Places");
-        var text = _("Visited %d Places");
+        this.title = _("Visited Folders");
+        var text = _("Visited %d Folders");
         return text.printf (activities.size);
     }
     

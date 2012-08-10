@@ -46,6 +46,7 @@ private class Journal.SearchManager : Object {
         event.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
         var subject = new Zeitgeist.Subject ();
         
+        //FIXME why can't i add two events to a ptr_arr?
 //        if (filter != Zeitgeist.NFO_SOFTWARE) {
 //            var event_app = new Zeitgeist.Event ();
 //            event_app.set_interpretation ("!" + Zeitgeist.ZG_LEAVE_EVENT);
@@ -164,6 +165,8 @@ private class Journal.SearchWidget : Toolbar {
         entry.width_request = 260;
         entry.secondary_icon_sensitive = false;
         entry.secondary_icon_activatable = false;
+        entry.set_text ("Type to search...");
+        entry.select_region(0, entry.get_text().length);
         
         this.entry.changed.connect(() => {
             var text = this.entry.get_text();

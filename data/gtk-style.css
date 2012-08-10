@@ -96,6 +96,11 @@ GtkScale.mark {
     background-color: @journal_label_hover_color;
 }
 
+.timenav {
+    background-color: @journal_roundbox_bg_color;
+    border-color: @journal_timeline_color;
+}
+
 /* SEARCH */
 .search-labels {
     font-weight: bold; 
@@ -105,7 +110,6 @@ GtkScale.mark {
 /* OSD STYLE */
 .separator {
     -GtkWidget-wide-separators: true;
-    -GtkWidget-separator-height: 1;
 }
 
 .throbber {

@@ -89,8 +89,9 @@ private class Journal.VTL : Box {
         
         vnav = new TimelineNavigator (Orientation.VERTICAL);
         vnav.go_to_date.connect ((date) => {this.jump_to_day (date);});
-
-        this.pack_start (vnav, false, false, 9);
+        
+        this.pack_start (new Label(""), false, false, 10);
+        this.pack_start (vnav, false, false, 0);
         this.pack_start (viewport, true, true, 0);
        
        if (type == VTLType.NORMAL)

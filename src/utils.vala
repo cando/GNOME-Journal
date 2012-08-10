@@ -39,16 +39,15 @@ private class Journal.Utils : Object{
         
         //Initialize categories_map
         categories_map.set (_("All Activities"), "");
-        categories_map.set (_("Worked with Documents"), Zeitgeist.NFO_DOCUMENT);
-        categories_map.set (_("Hacked on some Code"), Zeitgeist.NFO_SOURCE_CODE);
-        categories_map.set (_("Worked with Pictures"), Zeitgeist.NFO_IMAGE);
-        categories_map.set (_("Listened to Music"), Zeitgeist.NFO_AUDIO);
-        categories_map.set (_("Watched Videos"), Zeitgeist.NFO_VIDEO);
-        categories_map.set (_("Used Applications"), Zeitgeist.NFO_APPLICATION);
-        categories_map.set (_("Surfed the Web"), Zeitgeist.NFO_WEBSITE);
-        categories_map.set (_("Worked with Tasks"), Zeitgeist.NCAL_TODO);
-        categories_map.set (_("Worked with Archives"), Zeitgeist.NFO_ARCHIVE);
-        categories_map.set (_("Visited Places"), Zeitgeist.NFO_FOLDER);
+        categories_map.set (_("Documents"), Zeitgeist.NFO_DOCUMENT);
+        categories_map.set (_("Code"), Zeitgeist.NFO_SOURCE_CODE);
+        categories_map.set (_("Pictures"), Zeitgeist.NFO_IMAGE);
+        categories_map.set (_("Audio"), Zeitgeist.NFO_AUDIO);
+        categories_map.set (_("Video"), Zeitgeist.NFO_VIDEO);
+        categories_map.set (_("Web"), Zeitgeist.NFO_WEBSITE);
+        categories_map.set (_("Tasks"), Zeitgeist.NCAL_TODO);
+        categories_map.set (_("Archives"), Zeitgeist.NFO_ARCHIVE);
+        categories_map.set (_("Folders"), Zeitgeist.NFO_FOLDER);
     }
 
     public static string get_pkgdata (string? file_name = null) {
