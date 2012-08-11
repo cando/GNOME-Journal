@@ -204,12 +204,17 @@ public class Journal.ZeitgeistBackend: GLib.Object
         int64 real_end = tr.get_end ();
         int64 tmp_end = real_end;
         int64 tmp_start = tmp_end - Zeitgeist.Timestamp.DAY;
+
         while (real_start != tmp_start) {
             var new_tr = new Zeitgeist.TimeRange (tmp_start, tmp_end);
             load_events_for_timerange (new_tr);
             tmp_end = tmp_start;
             tmp_start = tmp_end - Zeitgeist.Timestamp.DAY;
         }
+        
+        //Load the last day!
+        var new_tr = new Zeitgeist.TimeRange (tmp_start, tmp_end);
+        load_events_for_timerange (new_tr);
     }
     
     public Gee.ArrayList<Zeitgeist.Event>? get_events_for_date (string ymd) {

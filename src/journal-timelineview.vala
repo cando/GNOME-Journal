@@ -88,13 +88,15 @@ private class Journal.VTL : Box {
         container.pack_start (bubble_c, true, true, 0);
         
         vnav = new TimelineNavigator (Orientation.VERTICAL);
-        vnav.go_to_date.connect ((date) => {this.jump_to_day (date);});
+        vnav.go_to_date.connect ((date, type) => {
+            this.jump_to_day (date, type);
+        });
         
         this.pack_start (new Label(""), false, false, 10);
         this.pack_start (vnav, false, false, 0);
         this.pack_start (viewport, true, true, 0);
        
-       if (type == VTLType.NORMAL)
+       if (type == VTLType.NORMAL) {
            model.activities_loaded.connect ((day_loaded)=> {
                  load_activities (day_loaded);
                  //Check if the last date is effetely loaded--> mean inserted in the
@@ -102,11 +104,18 @@ private class Journal.VTL : Box {
                  string date = dates_added.get (dates_added.size - 1);
                  check_finished_loading (date);
             });
+            
+            model.end_activities_loaded.connect (() => {
+                if (date_to_jump != null)
+                    jump_to_day (date_to_jump);
+            });
+        }
         else {
             model.new_search_query.connect (() => {
                 clear_activities ();
                 bubble_c.show_searching ();
             });
+            
             model.searched_activities_loaded.connect ((days_loaded)=> {
                  if (days_loaded.size == 0) {
                     if (dates_added.size == 0)
@@ -184,12 +193,17 @@ private class Journal.VTL : Box {
     
     private void load_activities (string date) {
         if (dates_added.contains (date)) {
-            //we are receving new events from the monitor
-            //Let's delete the last day
             if (type == VTLType.SEARCH)
+                //Remove and update the last day in the search
                 bubble_c.remove_last_day ();
-            else
-                bubble_c.remove_first_day ();
+            else {
+                if (Utils.is_today (date))
+                    //we are receiving new events from the monitor
+                    //Let's delete the last day
+                    bubble_c.remove_first_day ();
+                else
+                    return;
+            }
         }
         
         int index;
@@ -213,9 +227,6 @@ private class Journal.VTL : Box {
         bubble_c.append_bubbles (activity_list.activities);
         
         bubble_c.show_all ();
-        
-        if (date_to_jump != null)
-            jump_to_day (date_to_jump);
     }
     
     private DateTime find_nearest_date (DateTime date) {
@@ -247,7 +258,7 @@ private class Journal.VTL : Box {
             vadj.value = double.min (y, vadj.upper - vadj.page_size);
     }
     
-    private void jump_to_day (DateTime date) {
+    private void jump_to_day (DateTime date, RangeType? type = null) {
         string date_s = date.format("%Y-%m-%d");
         if (dates_widget.has_key (date_s)) {
             internal_jump_on_scroll (date, date_s);
@@ -265,7 +276,7 @@ private class Journal.VTL : Box {
                 }
                 return;
             }
-            model.load_activities (date);
+            model.load_activities (date, type);
             date_to_jump = date;
             on_loading = true;
         }
@@ -286,31 +297,6 @@ private class Journal.VTL : Box {
             }
             on_loading = true;
         }
-        
-        //We are moving so we should highlight the right TimelineNavigator's label
-        //TODO
-//        int current_value;
-//        if (!dates_widget.has_key (vnav.current_highlighted)) {
-//            var widget = dates_widget.get (vnav.current_highlighted);
-//            widget.translate_coordinates (container, 
-//                                               0, 0, null, 
-//                                               out current_value);
-//        }
-//        else {
-//            var date = Utils.datetime_from_string (vnav.current_highlighted);
-//            var nearest_date = find_nearest_date (date);
-//            var nearest_date_s = nearest_date.format ("%Y-%m-%d");
-//            var widget = dates_widget.get (vnav.current_highlighted);
-//            widget.translate_coordinates (container, 
-//                                               0, 0, null, 
-//                                               out current_value);
-//        }
-//        if (current_value < y && y > old_y)
-//                vnav.highlight_next ();
-//        else if (current_value > y && y < old_y)
-//                vnav.highlight_previous ();
-//        
-//        old_y = y;
     }
 }
 

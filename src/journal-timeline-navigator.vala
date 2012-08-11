@@ -21,10 +21,10 @@
 
 using Gtk;
 
-enum Column {
-    IMPORTANT,
+enum RangeType {
     YEAR,
     MONTH,
+    THIS_WEEK,
     WEEK,
     DAY
 }
@@ -45,7 +45,7 @@ private class Journal.TimelineNavigator : Frame {
     
     private ScrolledWindow scrolled_window;
     
-    public signal void go_to_date (DateTime date);
+    public signal void go_to_date (DateTime date, RangeType type);
 
     public TimelineNavigator (Orientation orientation){
         Object ();
@@ -76,7 +76,7 @@ private class Journal.TimelineNavigator : Frame {
         
         model = new TreeStore (3, typeof (DateTime), // Date
                                   typeof (string),   // String repr. of the Date
-                                  typeof (Column));  // Column type (used for padding)
+                                  typeof (RangeType));  // RangeType type (used for padding)
         view = new TreeView ();
         model.set_sort_func (0, (model, a,b) => {
             Value f;
@@ -99,16 +99,16 @@ private class Journal.TimelineNavigator : Frame {
         TreeModel model_f;
         TreeIter iter;
         DateTime date;
-        Column type;
+        RangeType type;
         if (selection == null)
             return;
         if(selection.get_selected (out model_f, out iter))
         {
             model_f.get(iter, 0, out date, 2, out type);
-            if (type == Column.YEAR || type == Column.MONTH) 
+            if (type == RangeType.YEAR || type == RangeType.MONTH) 
                 return;
             else
-                this.go_to_date (date);
+                this.go_to_date (date, type);
         }
     }
 
@@ -139,7 +139,6 @@ private class Journal.TimelineNavigator : Frame {
         var today = Utils.get_start_of_today ();
         var this_year_added = false;
         var this_month_added = false;
-        var this_week_added = false;
         foreach (DateTime key in count_map.keys) {
             int diff_days = (int)Math.round(((double)(today.difference (key)) / 
                                              (double)TimeSpan.DAY));
@@ -148,24 +147,36 @@ private class Journal.TimelineNavigator : Frame {
                 switch (diff_days){
                     case 0: 
                         model.append (out root, null);
-                        model.set (root, 0, key, 1, _("Today"), 2, Column.IMPORTANT);
+                        model.set (root, 0, key, 1, _("Today"), 2, RangeType.DAY);
                         break;
                     case 1:
                         model.append (out root, null);
-                        model.set (root, 0, key, 1, _("Yesterday"), 2, Column.IMPORTANT); 
+                        model.set (root, 0, key, 1, _("Yesterday"), 2, RangeType.DAY); 
                         break;
                     case 2:
                         var bef_yesterday = today.add_days (-2);
                         var text = bef_yesterday.format("%A");
                         model.append (out root, null);
-                        model.set (root, 0, key, 1, text, 2, Column.IMPORTANT);
+                        model.set (root, 0, key, 1, text, 2, RangeType.DAY);
                         break;
                     case 3: case 4: case 5: case 6: case 7:
-                        if (this_week_added)
+                        var next = model.iter_children (out root, null);
+                        var result = -2;
+                        while (next) {
+                            DateTime t_date;
+                            RangeType type;
+                            model.get (root, 0, out t_date, 2, out type);
+                            if (type == RangeType.THIS_WEEK) {
+                                result = t_date.compare (key);
+                                break;
+                            }
+                            next = model.iter_next (ref root);
+                        }
+                        if (result == -2)
+                            model.append (out root, null);
+                        else if (result == -1)
                             break;
-                        model.append (out root, null);
-                        model.set (root, 0, key, 1, _("This week"), 2, Column.IMPORTANT);
-                        this_week_added = true;
+                        model.set (root, 0, key, 1, _("This week"), 2, RangeType.THIS_WEEK);
                         break;
                     default: break;
                 }
@@ -174,7 +185,7 @@ private class Journal.TimelineNavigator : Frame {
                                                      today.get_month (),
                                                      1, 0, 0, 0);
                 model.append (out root, null);
-                model.set (root, 0, this_month, 1, _("This month"), 2, Column.MONTH);
+                model.set (root, 0, this_month, 1, _("This month"), 2, RangeType.MONTH);
                 this_month_added = true;
             } else if (!this_year_added) {
                 model.append (out root, null);
@@ -182,7 +193,7 @@ private class Journal.TimelineNavigator : Frame {
                 model.set (root, 
                            0, this_year_date, 
                            1, _("This year"),
-                           2, Column.YEAR);
+                           2, RangeType.YEAR);
                 this_year_added = true;
             } else {
                 var year = key.get_year ();
@@ -190,7 +201,7 @@ private class Journal.TimelineNavigator : Frame {
                 var day = key.get_day_of_month ();
                 var week = (day / 7) + 1;
                
-                Column type;
+                RangeType type;
                 DateTime date;
                 var found_year = false;
                 var found_month = false;
@@ -199,7 +210,7 @@ private class Journal.TimelineNavigator : Frame {
                 var next = model.iter_children (out year_iter, null);
                 while (next) {
                     model.get (year_iter, 0, out date, 2, out type);
-                    if (type == Column.YEAR) {
+                    if (type == RangeType.YEAR) {
                         if (date.get_year () == year) {
                             found_year = true;
                             TreeIter month_iter;
@@ -221,6 +232,7 @@ private class Journal.TimelineNavigator : Frame {
                                         }
                                         next = model.iter_next (ref week_iter);
                                      }
+                                     //Add week if not found
                                      if (!found_week) {
                                         model.append (out week_iter, month_iter);
                                         int new_day;
@@ -232,32 +244,41 @@ private class Journal.TimelineNavigator : Frame {
                                         model.set (week_iter, 
                                                    0, new_date, 
                                                    1, week.to_string () + _("° week"),
-                                                   2, Column.WEEK);
+                                                   2, RangeType.WEEK);
                                      }
+                                     //Add day always
+                                     TreeIter day_iter;
+                                     model.append (out day_iter, week_iter);
+                                     model.set (day_iter, 
+                                                0, key, 
+                                                1, key.format(_("%A, %e")),
+                                                2, RangeType.DAY);
                                      break;
                                 }
                                 next = model.iter_next (ref month_iter);
                             }
+                            //Add month if not found
                             if (!found_month) {
                                 model.append (out month_iter, year_iter);
                                 var new_date = new DateTime.local (year, month, 1, 0, 0, 0);
                                 model.set (month_iter, 
                                            0, new_date, 
                                            1, new_date.format(_("%B")),
-                                           2, Column.MONTH);
+                                           2, RangeType.MONTH);
                             }
                             break;
                         }
                     }
                     next = model.iter_next (ref year_iter);
                 }
+                //Add year if not found
                 if (!found_year) {
                     model.append (out year_iter, null);
                     DateTime new_date = new DateTime.local (year, 1, 1, 0, 0, 0);
                     model.set (year_iter, 
                                0, new_date, 
                                1, year.to_string (),
-                               2, Column.YEAR);
+                               2, RangeType.YEAR);
                 }
             }
         }

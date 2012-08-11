@@ -1080,11 +1080,14 @@ private class Journal.ActivityModel : Object {
         get; private set;
     }
     
-    string last_search_query;
-    string last_search_filter;
-    int last_search_offset;
+    private int num_days_requested;
+    
+    private string last_search_query;
+    private string last_search_filter;
+    private int last_search_offset;
     
     public signal void activities_loaded (string day);
+    public signal void end_activities_loaded ();
     public signal void launch_composite_activity (CompositeActivity activity);
     public signal void searched_activities_loaded (Gee.List<string> days_loaded);
     public signal void new_search_query ();
@@ -1104,6 +1107,7 @@ private class Journal.ActivityModel : Object {
             on_search_finished ();
         });
         
+        num_days_requested = 3; //On start we load three days
         last_search_query = "";
         last_search_offset = 0;
     }
@@ -1113,6 +1117,7 @@ private class Journal.ActivityModel : Object {
             load_other_days (1);
             return;
         }
+        num_days_requested--;
         if (activities.has_key (day))
             activities.unset (day);
         var model = new DayActivityModel (day);
@@ -1123,6 +1128,9 @@ private class Journal.ActivityModel : Object {
             this.launch_composite_activity (activity);
         });
         activities_loaded (day);
+        if (num_days_requested == 0)
+            //We have loaded all the days requested!
+            end_activities_loaded ();
     }
     
     private void on_search_finished () {
@@ -1152,21 +1160,48 @@ private class Journal.ActivityModel : Object {
         searched_activities_loaded (sorted_dates);
     }
 
-    public void load_activities (DateTime start) {
-        TimeVal tv;
-        TimeVal tv2;
-        //add some days to the jump date, permitting the user to navigate more.
-        // FIXME always 3? Something better?
-        DateTime larger_date = start.add_days (-3);
-        larger_date.to_timeval (out tv);
-
-        //FIXME how many days we should load? Same as above
-        var tmp_date = start.add_days (3);
-        tmp_date.to_timeval (out tv2);
+    public void load_activities (DateTime start, RangeType? type = null) {
+        TimeVal? tv = null;
+        TimeVal? tv2 = null;
+        if (type == null) {
+            //add some days to the jump date, permitting the user to navigate more.
+            var larger_date = start.add_days (-3);
+            larger_date.to_timeval (out tv);
+            var tmp_date = start.add_days (3);
+            tmp_date.to_timeval (out tv2);
+            
+            num_days_requested = 7;
+        }
+        else if (type == RangeType.THIS_WEEK) {
+            start.to_timeval (out tv);
+            var tmp_date = start.add_days (4);
+            tmp_date.to_timeval (out tv2);
+            
+            num_days_requested = 4;
+        }
+        else if (type == RangeType.WEEK) {
+            start.to_timeval (out tv);
+            var tmp_date = start.add_days (7);
+            tmp_date.to_timeval (out tv2);
+            
+            num_days_requested = 7;
+        }
+        else if (type == RangeType.DAY) {
+            start.to_timeval (out tv);
+            var tmp_date = start.add_days (1);
+            tmp_date.to_timeval (out tv2);
+            
+            num_days_requested = 1;
+        }
+        else {
+            warning ("Loading a whole month or year is still not implemented. 
+                    Please open a bug for this.");
+        }
         backend.load_events_for_date_range (tv, tv2);
     }
     
     public void load_other_days (int num_days) {
+        num_days_requested = num_days;
         TimeVal tv;
         TimeVal tv2;
         DateTime larger_date = backend.last_loaded_date.add_days (-num_days);

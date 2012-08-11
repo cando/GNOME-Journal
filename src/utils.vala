@@ -269,4 +269,10 @@ private class Journal.Utils : Object{
         int day = int.parse (tmp [2]);
         return new DateTime.local(year, month, day, 0, 0, 0);
     }
+  
+    public static bool is_today (string date) {
+        var tmp = Utils.datetime_from_string (date);
+        var today = Utils.get_start_of_today ();
+        return tmp.compare (today) == 0;
+    }
 }
