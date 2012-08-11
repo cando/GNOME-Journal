@@ -100,42 +100,13 @@ private class Journal.TimelineNavigator : Frame {
         TreeIter iter;
         DateTime date;
         Column type;
+        if (selection == null)
+            return;
         if(selection.get_selected (out model_f, out iter))
         {
             model_f.get(iter, 0, out date, 2, out type);
-            if (type == Column.YEAR) {
-                warning("year");
-                Column t;
-                var next = model.iter_next (ref iter);
-                while (next){
-                    model.get (iter, 2, out t);
-                    if (t != Column.MONTH)
-                        return;
-                    next = model.iter_next (ref iter);
-                }
-            }
-            else if (type == Column.MONTH) {
-                warning("month");
-                Column t;
-                var next = model.iter_next (ref iter);
-                while (next){
-                    model.get (iter, 2, out t);
-                    if (t != Column.WEEK)
-                        return;
-                    next = model.iter_next (ref iter);
-                }
-            }
-            else if (type == Column.WEEK) {
-                warning("week");
-                Column t;
-                var next = model.iter_next (ref iter);
-                while (next){
-                    model.get (iter, 2, out t);
-                    if (t != Column.DAY)
-                        return;
-                    next = model.iter_next (ref iter);
-                }
-            }
+            if (type == Column.YEAR || type == Column.MONTH) 
+                return;
             else
                 this.go_to_date (date);
         }
@@ -151,7 +122,7 @@ private class Journal.TimelineNavigator : Frame {
                   "height", 40);
         view.insert_column_with_attributes (-1, "Name", text, "text", 1);
         
-        setup_time_labels ();
+        setup_timebar ();
         scrolled_window.add_with_viewport (view);
         this.add (scrolled_window);
         
@@ -164,8 +135,7 @@ private class Journal.TimelineNavigator : Frame {
     }
     
     //WTF!!!!!!!!!!!!!!!
-    //FIXME not every week appears and remove the multiple weeks
-    private void setup_time_labels () {
+    private void setup_timebar () {
         var today = Utils.get_start_of_today ();
         var this_year_added = false;
         var this_month_added = false;
@@ -218,52 +188,53 @@ private class Journal.TimelineNavigator : Frame {
                 var year = key.get_year ();
                 var month = key.get_month ();
                 var day = key.get_day_of_month ();
-                var week = day % 7 + 1;
-                
-                model.foreach ((model_, path, year_iter) => {
-                    Column type;
-                    DateTime date;
-                    var found_year = false;
-                    var found_month = false;
-                    var found_week = false;
+                var week = (day / 7) + 1;
+               
+                Column type;
+                DateTime date;
+                var found_year = false;
+                var found_month = false;
+                var found_week = false;
+                TreeIter year_iter;
+                var next = model.iter_children (out year_iter, null);
+                while (next) {
                     model.get (year_iter, 0, out date, 2, out type);
                     if (type == Column.YEAR) {
                         if (date.get_year () == year) {
-                            warning("%d", year);
                             found_year = true;
                             TreeIter month_iter;
-                            var next = model.iter_children (out month_iter, year_iter);
+                            next = model.iter_children (out month_iter, year_iter);
                             while (next) {
                                 model.get (month_iter, 0, out date, 2, out type);
                                 if (date.get_month () == month) {
-                                    warning("\t%d", month);
                                     found_month = true;
                                     TreeIter week_iter;
                                     next = model.iter_children (out week_iter, month_iter);
                                     while (next) {
-                                        model.get (week_iter, 0, out date, 2, out type);
-                                        var day_ = date.get_day_of_month ();
-                                        var week_ = day_ % 7 + 1;
-                                        warning("\t  %d", week_);
+                                        DateTime w_date;
+                                        model.get (week_iter, 0, out w_date);
+                                        var day_ = w_date.get_day_of_month ();
+                                        var week_ = (day_ / 7) + 1;
                                         if (week_ == week) {
-                                            warning("\t  found %d", week);
                                             found_week = true;
                                             break;
                                         }
                                         next = model.iter_next (ref week_iter);
                                      }
-                                     warning("end");
                                      if (!found_week) {
                                         model.append (out week_iter, month_iter);
-                                        var day_ = date.get_day_of_month ();
-                                        var week_ = day_ % 7 + 1;
-                                        var new_day = (week_ - 1) * 7;
+                                        int new_day;
+                                        if (week == 1)
+                                            new_day = 1;
+                                        else
+                                            new_day = (week - 1) * 7;
                                         var new_date = new DateTime.local (year, month, new_day, 0, 0, 0);
                                         model.set (week_iter, 
                                                    0, new_date, 
-                                                   1, week_.to_string (),
+                                                   1, week.to_string () + _("° week"),
                                                    2, Column.WEEK);
                                      }
+                                     break;
                                 }
                                 next = model.iter_next (ref month_iter);
                             }
@@ -275,20 +246,19 @@ private class Journal.TimelineNavigator : Frame {
                                            1, new_date.format(_("%B")),
                                            2, Column.MONTH);
                             }
+                            break;
                         }
-                        if (!found_year) {
-                            model.append (out year_iter, null);
-                            DateTime new_date = new DateTime.local (year, 1, 1, 0, 0, 0);
-                            model.set (year_iter, 
-                                       0, new_date, 
-                                       1, year.to_string (),
-                                       2, Column.YEAR);
-                       }
                     }
-                    else
-                        return false;
-                    return true;
-                });
+                    next = model.iter_next (ref year_iter);
+                }
+                if (!found_year) {
+                    model.append (out year_iter, null);
+                    DateTime new_date = new DateTime.local (year, 1, 1, 0, 0, 0);
+                    model.set (year_iter, 
+                               0, new_date, 
+                               1, year.to_string (),
+                               2, Column.YEAR);
+                }
             }
         }
     }
