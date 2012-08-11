@@ -324,14 +324,14 @@ private class Journal.VideoActivity : SingleActivity {
     public VideoActivity (Zeitgeist.Event event) {
         Object (event:event);
     }
-    
-    public override void create_content () {
-        content = new VideoWidget (uri);
-    }
-    
-    public override void update_icon () {
-       //None
-    }
+//    
+//    public override void create_content () {
+//        content = new VideoWidget (uri);
+//    }
+//    
+//    public override void update_icon () {
+//       //None
+//    }
 }
 
 private class Journal.ApplicationActivity : SingleActivity {
