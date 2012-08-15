@@ -139,10 +139,14 @@ private class Journal.VTL : Box {
         }
         
         this.key_press_event.connect ((ev) => {
-            if (ev.keyval == Gdk.Key.Up)
+            if (ev.keyval == Gdk.Key.Up || 
+               (ev.keyval == Gdk.Key.space && (ev.state & 
+                                               Gdk.ModifierType.SHIFT_MASK) != 0))
                 this.scrollbar.move_slider (ScrollType.STEP_BACKWARD);
-            else if (ev.keyval == Gdk.Key.Down) 
+            else if (ev.keyval == Gdk.Key.Down || ev.keyval == Gdk.Key.space) 
                 this.scrollbar.move_slider (ScrollType.STEP_FORWARD);
+            else if (Utils.is_jump_start_event (ev))
+                this.jump_to_day (Utils.get_start_of_today ());
             return false;
         });
         

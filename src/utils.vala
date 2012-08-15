@@ -235,6 +235,18 @@ private class Journal.Utils : Object{
         return retval;
     }
     
+    public static bool is_jump_start_event (Gdk.EventKey event) {
+        var keyval = event.keyval;
+        var state = event.state;
+        var retval =
+        ((keyval == Gdk.Key.@1) ||
+         ((keyval == Gdk.Key. @1) &&
+          ((state & Gdk.ModifierType.MOD1_MASK) != 0)) ||
+         ((keyval == Gdk.Key.@1) &&
+          ((state & Gdk.ModifierType.CONTROL_MASK) != 0)));
+        return retval;
+    }
+    
     public static bool is_esc_event (Gdk.EventKey event) {
         var keyval = event.keyval;
         var retval = (keyval == Gdk.Key.Escape);
