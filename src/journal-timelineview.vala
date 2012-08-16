@@ -103,6 +103,7 @@ private class Journal.VTL : Box {
                  //GtkBox container
                  string date = dates_added.get (dates_added.size - 1);
                  check_finished_loading (date);
+                 vnav.grab_focus ();
             });
             
             model.end_activities_loaded.connect (() => {

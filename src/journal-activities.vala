@@ -1172,13 +1172,13 @@ private class Journal.ActivityModel : Object {
             
             num_days_requested = 7;
         }
-        else if (type == RangeType.THIS_WEEK) {
-            start.to_timeval (out tv);
-            var tmp_date = start.add_days (4);
-            tmp_date.to_timeval (out tv2);
-            
-            num_days_requested = 4;
-        }
+//        else if (type == RangeType.THIS_WEEK) {
+//            start.to_timeval (out tv);
+//            var tmp_date = start.add_days (4);
+//            tmp_date.to_timeval (out tv2);
+//            
+//            num_days_requested = 4;
+//        }
         else if (type == RangeType.WEEK) {
             start.to_timeval (out tv);
             var tmp_date = start.add_days (7);

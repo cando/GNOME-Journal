@@ -287,4 +287,15 @@ private class Journal.Utils : Object{
         var today = Utils.get_start_of_today ();
         return tmp.compare (today) == 0;
     }
+    
+    public static bool is_yesterday (string date) {
+        var tmp = Utils.datetime_from_string (date);
+        var y = Utils.get_start_of_today ().add_days (-1);
+        return tmp.compare (y) == 0;
+    }
+    
+    public static bool is_today_or_yesterday (DateTime date) {
+        var date_s = date.format("%Y-%m-%d");
+        return is_today (date_s) || is_yesterday (date_s);
+    }
 }
