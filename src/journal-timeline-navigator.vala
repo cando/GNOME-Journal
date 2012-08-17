@@ -46,7 +46,7 @@ private class Journal.TimelineNavigator : Frame {
     private Histogram histogram_proxy;
     private Gee.Map<DateTime?, uint> count_map;
     
-    private TreePath? expanded_week_row;
+    private TreeRowReference? expanded_week_row;
     private Gee.List<string> expanded_rows;
     private uint expand_timeout;
     
@@ -117,6 +117,7 @@ private class Journal.TimelineNavigator : Frame {
             return;
         if(selection.get_selected (out model_f, out iter))
         {
+            var path = model.get_path (iter);
             model_f.get(iter, 0, out date, 2, out type);
             if (type == RangeType.MORE) {
                 //Remove the "..." label and add the children or viceversa
@@ -124,21 +125,20 @@ private class Journal.TimelineNavigator : Frame {
                 TreeIter append_iter;
                 var next = model.iter_children (out child_iter, iter);
                 while (next) {
-                    DateTime d;
-                    string text;
-                    RangeType t;
-                    model.get (child_iter, 0, out d, 1, out text, 2, out t);
-                    model.append (out append_iter, iter);
-                    model.set (append_iter, 
-                               0, d, 
-                               1, text,
-                               2, t);
+//                    DateTime d;
+//                    string text;
+//                    RangeType t;
+//                    model.get (child_iter, 0, out d, 1, out text, 2, out t);
+//                    model.append (out append_iter, iter);
+//                    model.set (append_iter, 
+//                               0, d, 
+//                               1, text,
+//                               2, t);
                     next = model.iter_next (ref child_iter);
                 }
                 model.remove (ref iter);
             } 
             else if (type == RangeType.MONTH || type == RangeType.YEAR) {
-                var path = model.get_path (iter);
                 if (path != null) {
                     //FIXME gtk_tree_view_row_expanded doesn't work! why?
                     var i = expanded_rows.index_of (path.to_string ());
@@ -158,8 +158,13 @@ private class Journal.TimelineNavigator : Frame {
                     }
                 }
             }
-            else if (type == RangeType.DAY)
+            else if (type == RangeType.DAY) {
+                if (path.get_indices ().length == 1) {
+                    view.collapse_all ();
+                    expanded_rows.clear ();
+                }
                 this.go_to_date (date, type);
+            }
         }
     }
     
@@ -173,9 +178,10 @@ private class Journal.TimelineNavigator : Frame {
         }
         view.expand_row (path, false);
         //Collapse the previous expanded week row
-        if (expanded_week_row != null && expanded_week_row.compare (path) != 0)
-            view.collapse_row (expanded_week_row);
-        expanded_week_row = path;
+        if (expanded_week_row != null && expanded_week_row.get_path ().compare (path) != 0) {
+            view.collapse_row (expanded_week_row.get_path ());
+        }
+        expanded_week_row = new TreeRowReference (model, path);
     }
     
     private bool on_motion_notify (Gdk.EventMotion event) {
@@ -190,8 +196,10 @@ private class Journal.TimelineNavigator : Frame {
         model.get_iter_from_string (out iter, path.to_string ());
         model.get(iter, 0, out date, 2, out type);
         if (type == RangeType.WEEK || type == RangeType.LAST_WEEK) {
-            if (expand_timeout != 0)
+            if (expand_timeout != 0) {
                 Source.remove (expand_timeout);
+                expand_timeout = 0;
+            }
             expand_timeout = 
             Timeout.add (200, () => {
                 expand_week_row (path);
@@ -200,19 +208,23 @@ private class Journal.TimelineNavigator : Frame {
         }
         else if ((type != RangeType.DAY) || 
                 (type == RangeType.DAY && Utils.is_today_or_yesterday (date))){
-            if (expand_timeout != 0)
+            if (expand_timeout != 0) {
                 Source.remove (expand_timeout);
+                expand_timeout = 0;
+            }
             if (expanded_week_row != null)
-                view.collapse_row (expanded_week_row);
+                view.collapse_row (expanded_week_row.get_path ());
         }
         return false;
     }
     
     private bool on_leave_notify (Gdk.EventCrossing event) {
-        if (expanded_week_row != null)
-            view.collapse_row (expanded_week_row);
-        if (expand_timeout != 0)
+        if (expand_timeout != 0) {
             Source.remove (expand_timeout);
+            expand_timeout = 0;
+        }
+        if (expanded_week_row != null)
+            view.collapse_row (expanded_week_row.get_path ());
         
         return false;
     }
@@ -270,9 +282,11 @@ private class Journal.TimelineNavigator : Frame {
             model.get (i, 2, out type);
             if (type == RangeType.WEEK || type == RangeType.LAST_WEEK) {
                 //Let's select the last day in the week-->first iter in the week
-                expand_week_row (path);
-                if (expand_timeout != 0)
+                if (expand_timeout != 0) {
                     Source.remove (expand_timeout);
+                    expand_timeout = 0;
+                }
+                expand_week_row (path);
                 
                 TreeIter week_iter;
                 var next = model.iter_children (out week_iter, i);
