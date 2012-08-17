@@ -165,7 +165,7 @@ private class Journal.SearchWidget : Toolbar {
         entry.width_request = 260;
         entry.secondary_icon_sensitive = false;
         entry.secondary_icon_activatable = false;
-        entry.set_text ("Type to search...");
+        entry.set_text ("Type to search");
         entry.select_region(0, entry.get_text().length);
         
         this.entry.changed.connect(() => {

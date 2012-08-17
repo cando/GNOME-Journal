@@ -49,6 +49,7 @@ private class Journal.TimelineNavigator : Frame {
     private TreeRowReference? expanded_week_row;
     private Gee.List<string> expanded_rows;
     private uint expand_timeout;
+    private TreeRowReference? selected_day_row;
     
     private ScrolledWindow scrolled_window;
     
@@ -96,18 +97,36 @@ private class Journal.TimelineNavigator : Frame {
         });
         model.set_sort_column_id (0, SortType.DESCENDING);
         
-        view.cursor_changed.connect (on_cursor_change);
         view.motion_notify_event.connect (on_motion_notify);
         view.leave_notify_event.connect (on_leave_notify);
         
         expanded_week_row = null;
         expanded_rows = new Gee.ArrayList<string> ();
         expand_timeout = 0;
+        selected_day_row = null;
         
         setup_ui ();
     }
+    
+    private void try_collapse_rows () {
+        var to_be_removed = new Gee.ArrayList<string> ();
+        foreach (string p in expanded_rows) {
+            var path_ = new TreePath.from_string (p);
+            if (!selected_day_row.get_path ().is_descendant (path_)) {
+                view.collapse_row (path_);
+                to_be_removed.add (p);
+                foreach (string p2 in expanded_rows)
+                    if (p2.has_prefix (p)) {
+                        if (to_be_removed.index_of (p2) == -1)
+                            to_be_removed.add (p2);
+                    }
+            }
+        }
+        foreach (string p in to_be_removed) 
+            expanded_rows.remove (p);
+    }
 
-    private void on_cursor_change () {
+    private void on_selection_change () {
         var selection = view.get_selection();
         TreeModel model_f;
         TreeIter iter;
@@ -119,69 +138,21 @@ private class Journal.TimelineNavigator : Frame {
         {
             var path = model.get_path (iter);
             model_f.get(iter, 0, out date, 2, out type);
-            if (type == RangeType.MORE) {
-                //Remove the "..." label and add the children or viceversa
-                TreeIter child_iter;
-                TreeIter append_iter;
-                var next = model.iter_children (out child_iter, iter);
-                while (next) {
-//                    DateTime d;
-//                    string text;
-//                    RangeType t;
-//                    model.get (child_iter, 0, out d, 1, out text, 2, out t);
-//                    model.append (out append_iter, iter);
-//                    model.set (append_iter, 
-//                               0, d, 
-//                               1, text,
-//                               2, t);
-                    next = model.iter_next (ref child_iter);
-                }
-                model.remove (ref iter);
-            } 
-            else if (type == RangeType.MONTH || type == RangeType.YEAR) {
-                if (path != null) {
-                    //FIXME gtk_tree_view_row_expanded doesn't work! why?
-                    var i = expanded_rows.index_of (path.to_string ());
-                    if (i != -1) {
-                        view.collapse_row (path);
-                        expanded_rows.remove (path.to_string ());
-                    }
-                    else {
-                       foreach (string p in expanded_rows) {
-                           var new_p = new TreePath.from_string (p);
-                           if (!path.is_descendant (new_p)) 
-                               view.collapse_row (new_p);
-                        }
-                        expanded_rows.clear ();
-                        view.expand_row (path, false);
-                        expanded_rows.add (path.to_string ());
-                    }
-                }
-            }
-            else if (type == RangeType.DAY) {
-                if (path.get_indices ().length == 1) {
-                    view.collapse_all ();
-                    expanded_rows.clear ();
-                }
-                this.go_to_date (date, type);
-            }
+            try_collapse_rows ();
+            this.go_to_date (date, type);
         }
     }
     
     private void expand_week_row (TreePath path) {
-        if (path.get_indices ().length == 1) {
-            //If we are in this_week or last_week we collapse everything
-            //before expanding
-            //TODO collapse the "..."
-            view.collapse_all ();
-            expanded_rows.clear ();
-        }
         view.expand_row (path, false);
         //Collapse the previous expanded week row
-        if (expanded_week_row != null && expanded_week_row.get_path ().compare (path) != 0) {
+        if (expanded_week_row != null && expanded_week_row.get_path ().compare (path) != 0
+        && 
+        !selected_day_row.get_path ().is_descendant (expanded_week_row.get_path ())) {
             view.collapse_row (expanded_week_row.get_path ());
         }
         expanded_week_row = new TreeRowReference (model, path);
+        expanded_rows.add (path.to_string ());
     }
     
     private bool on_motion_notify (Gdk.EventMotion event) {
@@ -212,8 +183,9 @@ private class Journal.TimelineNavigator : Frame {
                 Source.remove (expand_timeout);
                 expand_timeout = 0;
             }
-            if (expanded_week_row != null)
-                view.collapse_row (expanded_week_row.get_path ());
+            if (expanded_week_row != null && 
+        !selected_day_row.get_path ().is_descendant (expanded_week_row.get_path ()))
+            view.collapse_row (expanded_week_row.get_path ());
         }
         return false;
     }
@@ -223,7 +195,8 @@ private class Journal.TimelineNavigator : Frame {
             Source.remove (expand_timeout);
             expand_timeout = 0;
         }
-        if (expanded_week_row != null)
+        if (expanded_week_row != null && 
+        !selected_day_row.get_path ().is_descendant (expanded_week_row.get_path ()))
             view.collapse_row (expanded_week_row.get_path ());
         
         return false;
@@ -275,6 +248,7 @@ private class Journal.TimelineNavigator : Frame {
 
         TreeIter iter;
         var selection = view.get_selection ();
+        selection.changed.connect (on_selection_change);
         selection.set_select_function ((selection, model, path, selected) => {
             TreeIter i;
             model.get_iter_from_string (out i, path.to_string ());
@@ -294,6 +268,31 @@ private class Journal.TimelineNavigator : Frame {
                     selection.select_iter (week_iter);
                 return false;
             }
+            else if (type == RangeType.YEAR || 
+                    type == RangeType.MONTH || 
+                    type == RangeType.MORE) {
+                if (expand_timeout != 0) {
+                    Source.remove (expand_timeout);
+                    expand_timeout = 0;
+                }
+                if (path != null) {
+                    //FIXME gtk_tree_view_row_expanded doesn't work! why?
+                    var i_ = expanded_rows.index_of (path.to_string ());
+                    if (i_ != -1) {
+                        view.collapse_row (path);
+                        expanded_rows.remove (path.to_string ());
+                    }
+                    else {
+                        try_collapse_rows ();
+                        view.expand_row (path, false);
+                        expanded_rows.add (path.to_string ());
+                        view.expand_to_path (selected_day_row.get_path ());
+                    }
+                }
+                return false;
+            }
+            else if (type == RangeType.DAY) 
+                selected_day_row = new TreeRowReference (model, path);
             return true;
         });
         //Select the first day on start---> Today!
@@ -302,12 +301,14 @@ private class Journal.TimelineNavigator : Frame {
     }
     
     private void setup_timebar () {
+        model.clear ();
         var today = Utils.get_start_of_today ();
         var this_year_added = false;
         var last_month_added = false;
         var this_month_added = false;
         var last_week_added = false;
         var this_week_added = false;
+        var years = new Gee.ArrayList<int> ();
         foreach (DateTime key in count_map.keys) {
             int diff_days = (int)Math.round(((double)(today.difference (key)) / 
                                              (double)TimeSpan.DAY));
@@ -396,6 +397,16 @@ private class Journal.TimelineNavigator : Frame {
                     var this_year_date = new DateTime.local (today.get_year (), 1, 1, 0, 0, 0);
                     model.set (root, 0, this_year_date, 1, _("..."), 2, RangeType.MORE);
                     this_year_added = true;
+                }
+            } else { //Other Years
+                int year = key.get_year ();
+                if (years.index_of (year) == -1) {
+                    model.append (out root, null);
+                    var year_date = new DateTime.local (key.get_year (), 1, 1, 0, 0, 0);
+                    model.set (root, 0, year_date, 
+                                     1, key.get_year ().to_string (),
+                                     2, RangeType.YEAR);
+                    years.add (year);
                 }
             }
         }
@@ -512,15 +523,6 @@ private class Journal.TimelineNavigator : Frame {
                         }
                     }
                     next = model.iter_next (ref year_iter);
-                }
-                //Add year if not found
-                if (!found_year && !found_near_months) {
-                    model.append (out year_iter, null);
-                    DateTime new_date = new DateTime.local (year, 1, 1, 0, 0, 0);
-                    model.set (year_iter, 
-                               0, new_date, 
-                               1, year.to_string (),
-                               2, RangeType.YEAR);
                 }
         }
     }

@@ -794,8 +794,8 @@ private class Journal.CompositeFolderActivity : CompositeActivity {
     }
     
     public override string create_title () {
-        this.title = _("Visited Folders");
-        var text = _("Visited %d Folders");
+        this.title = _("Worked with Folders");
+        var text = _("Worked with %d Folders");
         return text.printf (activities.size);
     }
     
