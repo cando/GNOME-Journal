@@ -22,10 +22,10 @@
 using Gtk;
 
 enum RangeType {
+    MORE, // The "..." iter
     YEAR,
     MONTH,
     WEEK,
-    THIS_WEEK,
     LAST_WEEK,
     DAY
 }
@@ -142,6 +142,20 @@ private class Journal.TimelineNavigator : Frame {
         }
     }
     
+    private void expand_week_row (TreePath path) {
+        if (path.get_indices ().length == 1) {
+            //If we are in this_week or last_week we collapse everything
+            //before expanding
+            view.collapse_all ();
+            expanded_rows.clear ();
+        }
+        view.expand_row (path, false);
+        //Collapse the previous expanded week row
+        if (expanded_week_row != null && expanded_week_row.compare (path) != 0)
+            view.collapse_row (expanded_week_row);
+        expanded_week_row = path;
+    }
+    
     private bool on_motion_notify (Gdk.EventMotion event) {
         //Expand weeks on mouse-hover
         TreePath path;
@@ -158,17 +172,7 @@ private class Journal.TimelineNavigator : Frame {
                 Source.remove (expand_timeout);
             expand_timeout = 
             Timeout.add (200, () => {
-                if (path.get_indices ().length == 1) {
-                    //If we are in this_week or last_week we collapse everything
-                    //before expanding
-                    view.collapse_all ();
-                    expanded_rows.clear ();
-                }
-                view.expand_row (path, false);
-                //Collapse the previous expanded week row
-                if (expanded_week_row != null && expanded_week_row.compare (path) != 0)
-                    view.collapse_row (expanded_week_row);
-                expanded_week_row = path;
+                expand_week_row (path);
                 return false;
             });
         }
@@ -235,24 +239,32 @@ private class Journal.TimelineNavigator : Frame {
 //            return false;
 //        });
 
-        //Select the first day---> Today!
         TreeIter iter;
         var selection = view.get_selection ();
-        //FIXME we can't select a week but we should select the first day of week.
-//        selection.set_select_function ((selection, model, path, selected) => {
-//            TreeIter i;
-//            model.get_iter_from_string (out i, path.to_string ());
-//            RangeType type;
-//            model.get (i, 2, out type);
-//            if (type == RangeType.WEEK || type == RangeType.LAST_WEEK)
-//                return false;
-//            return true;
-//        });
+        selection.set_select_function ((selection, model, path, selected) => {
+            TreeIter i;
+            model.get_iter_from_string (out i, path.to_string ());
+            RangeType type;
+            model.get (i, 2, out type);
+            if (type == RangeType.WEEK || type == RangeType.LAST_WEEK) {
+                //Let's select the last day in the week-->first iter in the week
+                expand_week_row (path);
+                if (expand_timeout != 0)
+                    Source.remove (expand_timeout);
+                
+                TreeIter week_iter;
+                var next = model.iter_children (out week_iter, i);
+                if (next)
+                    selection.select_iter (week_iter);
+                return false;
+            }
+            return true;
+        });
+        //Select the first day on start---> Today!
         model.get_iter_first (out iter);
         selection.select_iter (iter);
     }
     
-    //WTF!!!!!!!!!!!!!!!
     private void setup_timebar () {
         var today = Utils.get_start_of_today ();
         var this_year_added = false;
