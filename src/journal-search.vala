@@ -220,7 +220,7 @@ private class Journal.SearchWidget : Toolbar {
             
         var hbox = new Box (Orientation.HORIZONTAL, 5);
         hbox.pack_start (entry, true, true, 0);
-        hbox.pack_start (filter_combobox, false, false, 0);
+        //hbox.pack_start (filter_combobox, false, false, 0);
         
         var item = new ToolItem();
         item.set_expand (true);

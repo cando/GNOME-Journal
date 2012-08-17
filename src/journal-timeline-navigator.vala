@@ -37,12 +37,15 @@ interface Histogram : Object {
 
 private class Journal.TimelineNavigator : Frame {
     
+    private TreeStore model;
+    private TreeView view;
+    
     private Histogram histogram_proxy;
     private Gee.Map<DateTime?, uint> count_map;
     
-    private TreeStore model;
-    private TreeView view;
-    private TreePath? expanded_row;
+    private TreePath? expanded_week_row;
+    private Gee.List<string> expanded_rows;
+    private uint expand_timeout;
     
     private ScrolledWindow scrolled_window;
     
@@ -92,8 +95,11 @@ private class Journal.TimelineNavigator : Frame {
         
         view.cursor_changed.connect (on_cursor_change);
         view.motion_notify_event.connect (on_motion_notify);
+        view.leave_notify_event.connect (on_leave_notify);
         
-        expanded_row = null;
+        expanded_week_row = null;
+        expanded_rows = new Gee.ArrayList<string> ();
+        expand_timeout = 0;
         
         setup_ui ();
     }
@@ -109,13 +115,28 @@ private class Journal.TimelineNavigator : Frame {
         if(selection.get_selected (out model_f, out iter))
         {
             model_f.get(iter, 0, out date, 2, out type);
-            if (type != RangeType.DAY) {
-                view.collapse_all ();
+            if (type == RangeType.MONTH || type == RangeType.YEAR) {
                 var path = model.get_path (iter);
-                if (path != null)
-                    view.expand_row (path, false);
+                if (path != null) {
+                    //FIXME gtk_tree_view_row_expanded doesn't work! why?
+                    var i = expanded_rows.index_of (path.to_string ());
+                    if (i != -1) {
+                        view.collapse_row (path);
+                        expanded_rows.remove (path.to_string ());
+                    }
+                    else {
+                       foreach (string p in expanded_rows) {
+                           var new_p = new TreePath.from_string (p);
+                           if (!path.is_descendant (new_p)) 
+                               view.collapse_row (new_p);
+                        }
+                        expanded_rows.clear ();
+                        view.expand_row (path, false);
+                        expanded_rows.add (path.to_string ());
+                    }
+                }
             }
-            else
+            else if (type == RangeType.DAY)
                 this.go_to_date (date, type);
         }
     }
@@ -132,17 +153,32 @@ private class Journal.TimelineNavigator : Frame {
         model.get_iter_from_string (out iter, path.to_string ());
         model.get(iter, 0, out date, 2, out type);
         if (type == RangeType.WEEK || type == RangeType.LAST_WEEK) {
-            view.expand_row (path, false);
-            //Collapse the previous expanded week row
-            if (expanded_row != null && expanded_row.compare (path) != 0)
-                view.collapse_row (expanded_row);
-            expanded_row = path;
+            if (expand_timeout != 0)
+                Source.remove (expand_timeout);
+            expand_timeout = 
+            Timeout.add (200, () => {
+                view.expand_row (path, false);
+                //Collapse the previous expanded week row
+                if (expanded_week_row != null && expanded_week_row.compare (path) != 0)
+                    view.collapse_row (expanded_week_row);
+                expanded_week_row = path;
+                return false;
+            });
         }
         else if ((type != RangeType.DAY) || 
                 (type == RangeType.DAY && Utils.is_today_or_yesterday (date))){
-            if (expanded_row != null)
-                view.collapse_row (expanded_row);
+            if (expand_timeout != 0)
+                Source.remove (expand_timeout);
+            if (expanded_week_row != null)
+                view.collapse_row (expanded_week_row);
         }
+        return false;
+    }
+    
+    private bool on_leave_notify (Gdk.EventCrossing event) {
+        if (expanded_week_row != null)
+            view.collapse_row (expanded_week_row);
+        
         return false;
     }
 
@@ -151,6 +187,10 @@ private class Journal.TimelineNavigator : Frame {
         view.show_expanders = false;
         view.level_indentation = 10;
         view.set_headers_visible (false);
+        view.set_enable_search(false);
+        view.set_rules_hint(false);
+        view.set_reorderable(false);
+        view.set_enable_tree_lines(false);
         
         var text = new CellRendererText ();
         text.set_alignment (0, 0.5f);
@@ -166,10 +206,10 @@ private class Journal.TimelineNavigator : Frame {
             model.get (iter, 1, out name, 2, out type);
             cell.set ("text", name);
             if (type == RangeType.WEEK || type == RangeType.LAST_WEEK) {
-                cell.set ("foreground", "grey", "foreground-set", true);
+                cell.set ("sensitive", false);
             }
             else {
-                cell.set ("foreground-set", false);
+                cell.set ("sensitive", true);
             }
         });
         
@@ -189,6 +229,16 @@ private class Journal.TimelineNavigator : Frame {
         //Select the first day---> Today!
         TreeIter iter;
         var selection = view.get_selection ();
+        //FIXME we can't select a week but we should select the first day of week.
+//        selection.set_select_function ((selection, model, path, selected) => {
+//            TreeIter i;
+//            model.get_iter_from_string (out i, path.to_string ());
+//            RangeType type;
+//            model.get (i, 2, out type);
+//            if (type == RangeType.WEEK || type == RangeType.LAST_WEEK)
+//                return false;
+//            return true;
+//        });
         model.get_iter_first (out iter);
         selection.select_iter (iter);
     }
@@ -293,6 +343,10 @@ private class Journal.TimelineNavigator : Frame {
             }
         }
         foreach (DateTime key in count_map.keys) {
+                int diff_days = (int)Math.round(((double)(today.difference (key)) / 
+                                                (double)TimeSpan.DAY));
+                if (diff_days < 14)
+                    continue;
                 var year = key.get_year ();
                 var month = key.get_month ();
                 var day = key.get_day_of_month ();
