@@ -25,6 +25,7 @@ enum RangeType {
     YEAR,
     MONTH,
     WEEK,
+    THIS_WEEK,
     LAST_WEEK,
     DAY
 }
@@ -157,6 +158,12 @@ private class Journal.TimelineNavigator : Frame {
                 Source.remove (expand_timeout);
             expand_timeout = 
             Timeout.add (200, () => {
+                if (path.get_indices ().length == 1) {
+                    //If we are in this_week or last_week we collapse everything
+                    //before expanding
+                    view.collapse_all ();
+                    expanded_rows.clear ();
+                }
                 view.expand_row (path, false);
                 //Collapse the previous expanded week row
                 if (expanded_week_row != null && expanded_week_row.compare (path) != 0)
@@ -178,6 +185,8 @@ private class Journal.TimelineNavigator : Frame {
     private bool on_leave_notify (Gdk.EventCrossing event) {
         if (expanded_week_row != null)
             view.collapse_row (expanded_week_row);
+        if (expand_timeout != 0)
+            Source.remove (expand_timeout);
         
         return false;
     }
