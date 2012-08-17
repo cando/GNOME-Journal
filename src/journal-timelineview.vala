@@ -423,28 +423,28 @@ private class Journal.BubbleContainer : EventBox {
     
     public void show_no_results () {
         this.clear (true);
-        no_results_label = new Label (_("Sorry...no results found :("));
+        no_results_label = new Label (_("No matches found"));
         no_results_label.get_style_context ().add_class ("search-labels");
         this.main_vbox.pack_start (no_results_label, true, true);
         this.show_all ();
     }
     public void show_no_more_results () {
         this.more_results_button.destroy ();
-        no_results_label = new Label (_("No more results found :("));
+        no_results_label = new Label (_("No more matches found"));
         no_results_label.get_style_context ().add_class ("search-labels");
         this.main_vbox.pack_end (no_results_label, false, false);
         this.show_all ();
     }
     
     public void show_load_more () {
-        more_results_button = new Button.with_label (_("Load more results..."));
+        more_results_button = new Button.with_label (_("Click to load more results"));
         more_results_button.get_style_context ().add_class ("timeline-date");
         more_results_button.set_relief (Gtk.ReliefStyle.NONE);
         more_results_button.set_focus_on_click (false);
         var al = new Alignment (0.49f, 0, 0, 0);
         al.add (more_results_button);
         more_results_button.clicked.connect (() => {
-            more_results_button.set_label ("Searching...");
+            more_results_button.set_label ("Searching ...");
             load_more_results ();
         });
         this.main_vbox.pack_end (al, false, false);

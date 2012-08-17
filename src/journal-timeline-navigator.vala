@@ -18,11 +18,13 @@
  * Author: Stefano Candori <scandori@gnome.org>
  *
  */
+ 
+//TODO check TODO and FIXME
 
 using Gtk;
 
 enum RangeType {
-    MORE, // The "..." iter
+    MORE,
     YEAR,
     MONTH,
     WEEK,
@@ -116,7 +118,26 @@ private class Journal.TimelineNavigator : Frame {
         if(selection.get_selected (out model_f, out iter))
         {
             model_f.get(iter, 0, out date, 2, out type);
-            if (type == RangeType.MONTH || type == RangeType.YEAR) {
+            if (type == RangeType.MORE) {
+                //Remove the "..." label and add the children or viceversa
+                TreeIter child_iter;
+                TreeIter append_iter;
+                var next = model.iter_children (out child_iter, iter);
+                while (next) {
+                    DateTime d;
+                    string text;
+                    RangeType t;
+                    model.get (child_iter, 0, out d, 1, out text, 2, out t);
+                    model.append (out append_iter, iter);
+                    model.set (append_iter, 
+                               0, d, 
+                               1, text,
+                               2, t);
+                    next = model.iter_next (ref child_iter);
+                }
+                model.remove (ref iter);
+            } 
+            else if (type == RangeType.MONTH || type == RangeType.YEAR) {
                 var path = model.get_path (iter);
                 if (path != null) {
                     //FIXME gtk_tree_view_row_expanded doesn't work! why?
@@ -146,6 +167,7 @@ private class Journal.TimelineNavigator : Frame {
         if (path.get_indices ().length == 1) {
             //If we are in this_week or last_week we collapse everything
             //before expanding
+            //TODO collapse the "..."
             view.collapse_all ();
             expanded_rows.clear ();
         }
@@ -358,7 +380,7 @@ private class Journal.TimelineNavigator : Frame {
                 if (!this_year_added) {
                     model.append (out root, null);
                     var this_year_date = new DateTime.local (today.get_year (), 1, 1, 0, 0, 0);
-                    model.set (root, 0, this_year_date, 1, _("..."), 2, RangeType.YEAR);
+                    model.set (root, 0, this_year_date, 1, _("..."), 2, RangeType.MORE);
                     this_year_added = true;
                 }
             }
@@ -421,7 +443,7 @@ private class Journal.TimelineNavigator : Frame {
                     if (found_near_months)
                         break;
                         
-                    if (type == RangeType.YEAR) {
+                    if (type == RangeType.YEAR || type == RangeType.MORE) {
                         if (date.get_year () == year) {
                             found_year = true;
                             TreeIter month_iter;
