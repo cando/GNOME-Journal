@@ -358,8 +358,7 @@ private class Journal.TimelineNavigator : Frame {
                     continue;
                 var year = key.get_year ();
                 var month = key.get_month ();
-                var day = key.get_day_of_month ();
-                var week = (day / 7) + 1;
+                var week = key.get_week_of_year ();
                
                 RangeType type;
                 DateTime date;
@@ -380,8 +379,7 @@ private class Journal.TimelineNavigator : Frame {
                             while (next) {
                                 DateTime w_date;
                                 model.get (week_iter, 0, out w_date);
-                                var day_ = w_date.get_day_of_month ();
-                                var week_ = (day_ / 7) + 1;
+                                var week_ = w_date.get_week_of_year ();
                                 if (week_ == week) {
                                     found_week = true;
                                     break;
@@ -391,22 +389,11 @@ private class Journal.TimelineNavigator : Frame {
                             //Add week if not found
                             if (!found_week) {
                                 model.append (out week_iter, year_iter);
-                                int new_day;
-                                if (week == 1)
-                                    new_day = 1;
-                                else
-                                    new_day = (week - 1) * 7;
-                                var new_date = new DateTime.local (
-                                                                   year,
-                                                                   month, 
-                                                                   new_day, 
-                                                                   0, 0, 0);
-                               var text = _("Week ") + 
-                               new_date.get_week_of_year ().to_string ();
-                               model.set (week_iter, 
-                                                   0, new_date, 
-                                                   1, text,
-                                                   2, RangeType.WEEK);
+                                var text = _("Week ") + week.to_string ();
+                                model.set (week_iter, 
+                                                    0, get_start_of_week (key), 
+                                                    1, text,
+                                                    2, RangeType.WEEK);
                            }
                            //Add day always
                            TreeIter day_iter;
@@ -436,8 +423,7 @@ private class Journal.TimelineNavigator : Frame {
                                     while (next) {
                                         DateTime w_date;
                                         model.get (week_iter, 0, out w_date);
-                                        var day_ = w_date.get_day_of_month ();
-                                        var week_ = (day_ / 7) + 1;
+                                        var week_ = w_date.get_week_of_year ();
                                         if (week_ == week) {
                                             found_week = true;
                                             break;
@@ -447,20 +433,9 @@ private class Journal.TimelineNavigator : Frame {
                                      //Add week if not found
                                      if (!found_week) {
                                         model.append (out week_iter, month_iter);
-                                        int new_day;
-                                        if (week == 1)
-                                            new_day = 1;
-                                        else
-                                            new_day = (week - 1) * 7;
-                                        var new_date = new DateTime.local (
-                                                                       year,
-                                                                       month, 
-                                                                       new_day, 
-                                                                       0, 0, 0);
-                                        var text = _("Week ") + 
-                                        new_date.get_week_of_year ().to_string ();
+                                        var text = _("Week ") + week.to_string ();
                                         model.set (week_iter, 
-                                                   0, new_date, 
+                                                   0, get_start_of_week (key), 
                                                    1, text,
                                                    2, RangeType.WEEK);
                                      }
@@ -515,6 +490,21 @@ private class Journal.TimelineNavigator : Frame {
             text += _("th");
             
         return text;
+    }
+    
+    private DateTime get_start_of_week (DateTime key) {
+        //Return a DateTime representing the start of the week in which
+        //the argument fall in.
+        TimeVal tv;
+        Date d = {};
+        char[] s = new char[11];
+        key.to_timeval (out tv);
+        d.set_time_val (tv);
+        while (d.get_weekday () != DateWeekday.MONDAY)
+            d.subtract_days (1);
+        d.strftime (s, "%Y-%m-%d");
+        var date = Utils.datetime_from_string ((string)s);
+        return date;
     }
 }
 
