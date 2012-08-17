@@ -136,7 +136,6 @@ private class Journal.TimelineNavigator : Frame {
             return;
         if(selection.get_selected (out model_f, out iter))
         {
-            var path = model.get_path (iter);
             model_f.get(iter, 0, out date, 2, out type);
             try_collapse_rows ();
             this.go_to_date (date, type);
@@ -283,10 +282,8 @@ private class Journal.TimelineNavigator : Frame {
                         expanded_rows.remove (path.to_string ());
                     }
                     else {
-                        try_collapse_rows ();
                         view.expand_row (path, false);
                         expanded_rows.add (path.to_string ());
-                        view.expand_to_path (selected_day_row.get_path ());
                     }
                 }
                 return false;
