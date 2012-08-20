@@ -108,10 +108,12 @@ private class Journal.TimelineNavigator : Frame {
         setup_ui ();
     }
     
-    private void try_collapse_rows () {
+    private void try_collapse_rows (TreePath? path) {
         var to_be_removed = new Gee.ArrayList<string> ();
         foreach (string p in expanded_rows) {
             var path_ = new TreePath.from_string (p);
+            if (path!= null && path.is_descendant (path_))
+                continue;
             if (!selected_day_row.get_path ().is_descendant (path_)) {
                 view.collapse_row (path_);
                 to_be_removed.add (p);
@@ -137,7 +139,7 @@ private class Journal.TimelineNavigator : Frame {
         if(selection.get_selected (out model_f, out iter))
         {
             model_f.get(iter, 0, out date, 2, out type);
-            try_collapse_rows ();
+            try_collapse_rows (null);
             this.go_to_date (date, type);
         }
     }
@@ -282,6 +284,7 @@ private class Journal.TimelineNavigator : Frame {
                         expanded_rows.remove (path.to_string ());
                     }
                     else {
+                        try_collapse_rows (path);
                         view.expand_row (path, false);
                         expanded_rows.add (path.to_string ());
                     }
