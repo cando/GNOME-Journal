@@ -49,6 +49,8 @@ private class Journal.Utils : Object{
         categories_map.set (_("Archives"), Zeitgeist.NFO_ARCHIVE);
         categories_map.set (_("Folders"), Zeitgeist.NFO_FOLDER);
     }
+    
+    /*****PATH UTILS*****/
 
     public static string get_pkgdata (string? file_name = null) {
         return Path.build_filename (Config.PKGDATADIR, file_name);
@@ -61,15 +63,17 @@ private class Journal.Utils : Object{
     public static string get_icon (string? file_name = null) {
         return Path.build_filename (get_pkgdata (), "icons", file_name);
     }
+    
+    /*****THEME UTILS*****/
 
-    public static Gdk.RGBA get_journal_bg_color () {
-        var style = new Gtk.StyleContext ();
-        var path = new Gtk.WidgetPath ();
-        path.append_type (typeof (Gtk.Window));
-        style.set_path (path);
-        style.add_class ("theme_bg_color");
-        return style.get_background_color (0);
-    }
+//    public static Gdk.RGBA get_journal_bg_color () {
+//        var style = new Gtk.StyleContext ();
+//        var path = new Gtk.WidgetPath ();
+//        path.append_type (typeof (Gtk.Window));
+//        style.set_path (path);
+//        style.add_class ("theme_bg_color");
+//        return style.get_background_color (0);
+//    }
     
     public static Gdk.RGBA get_timeline_bg_color () {
         var style = new Gtk.StyleContext ();
@@ -89,14 +93,14 @@ private class Journal.Utils : Object{
         return style.get_color (0);
     }
     
-    public static Gdk.RGBA get_roundbox_bg_color () {
-        var style = new Gtk.StyleContext ();
-        var path = new Gtk.WidgetPath ();
-        path.append_type (typeof (Gtk.Window));
-        style.set_path (path);
-        style.add_class ("round-bubble-left");
-        return style.get_background_color (0);
-    }
+//    public static Gdk.RGBA get_roundbox_bg_color () {
+//        var style = new Gtk.StyleContext ();
+//        var path = new Gtk.WidgetPath ();
+//        path.append_type (typeof (Gtk.Window));
+//        style.set_path (path);
+//        style.add_class ("round-bubble-left");
+//        return style.get_background_color (0);
+//    }
     
     public static Gdk.RGBA get_roundbox_border_color () {
         var style = new Gtk.StyleContext ();
@@ -115,14 +119,8 @@ private class Journal.Utils : Object{
         style.add_class ("round-bubble-hover");
         return style.get_border_color (0);
     }
-
-    public static int getIconSize() {
-//        int view_type = settings.get_int ("mainview-type");
-//        if (view_type == Gd.MainViewType.LIST)
-//            return LIST_VIEW_SIZE;
-//        else
-           return ICON_VIEW_SIZE;
-    }
+    
+    /*****LOAD PIXBUF UTILS*****/
     
     public static Gdk.Pixbuf? load_pixbuf_from_name (string name, int size = 48) {
         IconInfo icon_info = 
@@ -212,6 +210,8 @@ private class Journal.Utils : Object{
     return result;
     }
     
+    /*****KEYBOARD UTILS*****/
+    
     public static bool is_search_event (Gdk.EventKey event) {
         var keyval = event.keyval;
         var state = event.state;
@@ -253,7 +253,8 @@ private class Journal.Utils : Object{
         return retval;
     }
     
-    //DATE UTILS
+    /*****DATE UTILS*****/
+    
     public static DateTime get_date_for_event (Zeitgeist.Event e) {
         int64 timestamp = e.get_timestamp () / 1000;
         DateTime date = new DateTime.from_unix_local (timestamp);
@@ -297,5 +298,11 @@ private class Journal.Utils : Object{
     public static bool is_today_or_yesterday (DateTime date) {
         var date_s = date.format("%Y-%m-%d");
         return is_today (date_s) || is_yesterday (date_s);
+    }
+    
+    /*****VARIOUS UTILS*****/
+    
+    public static int getIconSize() {
+        return ICON_VIEW_SIZE;
     }
 }

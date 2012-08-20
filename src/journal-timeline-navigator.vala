@@ -44,7 +44,6 @@ private class Journal.TimelineNavigator : Frame {
     private TreeView view;
     
     private Histogram histogram_proxy;
-    private Gee.Map<DateTime?, uint> count_map;
     
     private TreeRowReference? expanded_week_row;
     private Gee.List<string> expanded_rows;
@@ -62,6 +61,7 @@ private class Journal.TimelineNavigator : Frame {
         scrolled_window.set_policy (PolicyType.NEVER, PolicyType.AUTOMATIC);
         
         /**********HISTOGRAM DBUS STUFF**********/
+        Gee.HashMap<DateTime?, uint> count_map = new Gee.HashMap<DateTime?, uint> ();
         try {
             histogram_proxy = Bus.get_proxy_sync (
                                     BusType.SESSION, 
@@ -71,7 +71,6 @@ private class Journal.TimelineNavigator : Frame {
             size_t n = data. n_children ();
             int64 time = 0;
             uint count = 0;
-            this.count_map = new Gee.HashMap<DateTime?, uint> ();
             
             for (size_t j =0; j <n; j++) {
                 data.get_child (j, "(xu)", &time, &count);
@@ -106,13 +105,14 @@ private class Journal.TimelineNavigator : Frame {
         selected_day_row = null;
         
         setup_ui ();
+        set_events_count (count_map);
     }
     
     private void try_collapse_rows (TreePath? path) {
         var to_be_removed = new Gee.ArrayList<string> ();
         foreach (string p in expanded_rows) {
             var path_ = new TreePath.from_string (p);
-            if (path!= null && path.is_descendant (path_))
+            if (path != null && path.is_descendant (path_))
                 continue;
             if (!selected_day_row.get_path ().is_descendant (path_)) {
                 view.collapse_row (path_);
@@ -147,10 +147,12 @@ private class Journal.TimelineNavigator : Frame {
     private void expand_week_row (TreePath path) {
         view.expand_row (path, false);
         //Collapse the previous expanded week row
-        if (expanded_week_row != null && expanded_week_row.get_path ().compare (path) != 0
-        && 
-        !selected_day_row.get_path ().is_descendant (expanded_week_row.get_path ())) {
-            view.collapse_row (expanded_week_row.get_path ());
+        if (expanded_week_row != null) {
+            if (expanded_week_row.get_path ().compare (path) != 0 && 
+                !selected_day_row.get_path ().is_descendant (
+                expanded_week_row.get_path ())) {
+                view.collapse_row (expanded_week_row.get_path ());
+            }
         }
         expanded_week_row = new TreeRowReference (model, path);
         expanded_rows.add (path.to_string ());
@@ -236,7 +238,6 @@ private class Journal.TimelineNavigator : Frame {
         
         view.append_column (column);
         
-        setup_timebar ();
         scrolled_window.add_with_viewport (view);
         this.add (scrolled_window);
         
@@ -247,7 +248,6 @@ private class Journal.TimelineNavigator : Frame {
 //            return false;
 //        });
 
-        TreeIter iter;
         var selection = view.get_selection ();
         selection.changed.connect (on_selection_change);
         selection.set_select_function ((selection, model, path, selected) => {
@@ -295,12 +295,18 @@ private class Journal.TimelineNavigator : Frame {
                 selected_day_row = new TreeRowReference (model, path);
             return true;
         });
+    }
+    
+    public void set_events_count (Gee.HashMap<DateTime?, uint> count_map) {
+        setup_timebar (count_map);
         //Select the first day on start---> Today!
+        TreeIter iter;
+        var selection = view.get_selection ();
         model.get_iter_first (out iter);
         selection.select_iter (iter);
     }
     
-    private void setup_timebar () {
+    private void setup_timebar (Gee.HashMap<DateTime?, uint> count_map) {
         model.clear ();
         var today = Utils.get_start_of_today ();
         var this_year_added = false;

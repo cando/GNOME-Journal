@@ -56,6 +56,7 @@ private class Journal.VTL : Box {
 
     private Gee.List<string> dates_added;
     private Gee.Map<string, Widget?> dates_widget;
+    private Gee.Map<string, uint> search_count_map;
 
     //Date to jump when we have loaded new events
     private DateTime? date_to_jump;
@@ -112,9 +113,13 @@ private class Journal.VTL : Box {
             });
         }
         else {
+            //Map used for populating the timebar in the search view.
+            search_count_map = new Gee.HashMap<string, uint> ();
+                
             model.new_search_query.connect (() => {
                 clear_activities ();
                 bubble_c.show_searching ();
+                search_count_map.clear ();
             });
             
             model.searched_activities_loaded.connect ((days_loaded)=> {
@@ -128,14 +133,27 @@ private class Journal.VTL : Box {
                  else if (dates_added.size == 0) {
                     clear_activities ();
                  }
-                    
+                 
                  foreach (string day in days_loaded) {
                      load_activities (day);
+                     var list = model.searched_activities.get (day);
+                     var num = list.activities.size;
+                     if (num > 0)
+                        search_count_map.set (day, num);
                      string date = dates_added.get (dates_added.size - 1);
                      check_finished_loading (date);
                  }
                  
                  bubble_c.show_load_more ();
+                 
+                 //FIXME i'm doing this because Gee seems to not recognize
+                 // equality of DateTime keys in its maps (while it does for 
+                 //key strings).
+                 var map = new Gee.HashMap<DateTime?, uint> ();
+                 foreach(string d in search_count_map.keys)
+                    map.set (Utils.datetime_from_string (d), 
+                            search_count_map.get (d));
+                 vnav.set_events_count (map);
             });
         }
         
