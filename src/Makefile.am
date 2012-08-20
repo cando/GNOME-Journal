@@ -22,22 +22,21 @@ AM_VALAFLAGS =						\
 	--pkg Gd-1.0					\
 	--pkg custom					\
 	@JOURNAL_PACKAGES@				\
-	-g\
 	$(NULL)
 
 bin_PROGRAMS = gnome-journal
 
 gnome_journal_SOURCES =\
 	journal-activities.vala			\
-	app.vala						\
+	journal-app.vala					\
 	journal-activity-info-page.vala	\
 	journal-timeline-navigator.vala \
 	journal-media-actors.vala		\
 	journal-search.vala				\
 	main.vala						\
 	journal-timelineview.vala		\
-	utils.vala						\
-	zg-backend.vala					\
+	journal-utils.vala				\
+	journal-backend.vala			\
 	$(NULL)
 
 gnome_journal_LDADD = $(JOURNAL_LIBS) libgdprivate-1.0.la -lm
