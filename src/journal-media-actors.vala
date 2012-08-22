@@ -20,7 +20,7 @@
  */
  
 using Gtk;
-using Gst;
+//using Gst;
 
 private class Journal.ClickableLabel : EventBox {
     public Label label {
@@ -178,81 +178,82 @@ private class Journal.ImageContent : EventBox {
         return true;
     }
 }
-private class Journal.VideoWidget : EventBox {
 
-    private DrawingArea drawing_area;
-    private Element src;
-    private Element sink;
-    private ulong xid;
-    
-    private Button play_button;
-    private Image play_image;
-    private Image stop_image;
-    private bool playing;
+//private class Journal.VideoWidget : EventBox {
 
-    public VideoWidget (string uri) {
-        GLib.Object ();
-        this.set_visible_window (false);
-        this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
-                         Gdk.EventMask.LEAVE_NOTIFY_MASK |
-                         Gdk.EventMask.BUTTON_RELEASE_MASK);
-        create_widgets ();
-        
-        this.src = ElementFactory.make ("playbin", "player");
-        this.src.set_property("uri", uri);
-        this.sink = ElementFactory.make ("xvimagesink", "sink");
-        this.sink.set_property ("force-aspect-ratio", true);
-        
-        this.src.set_property("video-sink", sink);
-        
-        playing = false;
-    }
-    
-    private void create_widgets () {
-        var vbox = new Box (Orientation.VERTICAL, 0);
-        this.drawing_area = new DrawingArea ();
-        this.drawing_area.realize.connect(on_realize);
-        this.drawing_area.set_size_request (400, 300);
-        vbox.pack_start (this.drawing_area, true, true, 0);
-        
-        play_image = new Image.from_pixbuf (
-                         Utils.load_pixbuf_from_name ("media-playback-start"));
-        stop_image = new Image.from_pixbuf (
-                         Utils.load_pixbuf_from_name ("media-playback-stop"));
-        play_button = new Button ();
-        play_button.image = play_image;
-        play_button.clicked.connect (() => {
-            if (playing)
-                on_stop ();
-            else
-                on_play ();
-        });
+//    private DrawingArea drawing_area;
+//    private Element src;
+//    private Element sink;
+//    private ulong xid;
+//    
+//    private Button play_button;
+//    private Image play_image;
+//    private Image stop_image;
+//    private bool playing;
 
-        var bb = new ButtonBox (Orientation.HORIZONTAL);
-        bb.add (play_button);
-        vbox.pack_start (bb, false, false, 5);
+//    public VideoWidget (string uri) {
+//        GLib.Object ();
+//        this.set_visible_window (false);
+//        this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
+//                         Gdk.EventMask.LEAVE_NOTIFY_MASK |
+//                         Gdk.EventMask.BUTTON_RELEASE_MASK);
+//        create_widgets ();
+//        
+//        this.src = ElementFactory.make ("playbin", "player");
+//        this.src.set_property("uri", uri);
+//        this.sink = ElementFactory.make ("xvimagesink", "sink");
+//        this.sink.set_property ("force-aspect-ratio", true);
+//        
+//        this.src.set_property("video-sink", sink);
+//        
+//        playing = false;
+//    }
+//    
+//    private void create_widgets () {
+//        var vbox = new Box (Orientation.VERTICAL, 0);
+//        this.drawing_area = new DrawingArea ();
+//        this.drawing_area.realize.connect(on_realize);
+//        this.drawing_area.set_size_request (400, 300);
+//        vbox.pack_start (this.drawing_area, true, true, 0);
+//        
+//        play_image = new Image.from_pixbuf (
+//                         Utils.load_pixbuf_from_name ("media-playback-start"));
+//        stop_image = new Image.from_pixbuf (
+//                         Utils.load_pixbuf_from_name ("media-playback-stop"));
+//        play_button = new Button ();
+//        play_button.image = play_image;
+//        play_button.clicked.connect (() => {
+//            if (playing)
+//                on_stop ();
+//            else
+//                on_play ();
+//        });
 
-        add (vbox);
-    }
-    
-    private void on_realize() {
-        this.xid = (ulong)Gdk.X11Window.get_xid (this.drawing_area.get_window());
-    }
-    
-    private void on_play () {
-        playing = true;
-        play_button.image = stop_image;
-        var xoverlay = (XOverlay)this.sink;
-        xoverlay.set_xwindow_id (this.xid);
-        this.src.set_state (State.PLAYING);
-    }
+//        var bb = new ButtonBox (Orientation.HORIZONTAL);
+//        bb.add (play_button);
+//        vbox.pack_start (bb, false, false, 5);
 
-    private void on_stop () {
-        playing = false;
-        play_button.image = play_image;
-        this.src.set_state (State.READY);
-    }
-}
+//        add (vbox);
+//    }
+//    
+//    private void on_realize() {
+//        this.xid = (ulong)Gdk.X11Window.get_xid (this.drawing_area.get_window());
+//    }
+//    
+//    private void on_play () {
+//        playing = true;
+//        play_button.image = stop_image;
+//        var xoverlay = (XOverlay)this.sink;
+//        xoverlay.set_xwindow_id (this.xid);
+//        this.src.set_state (State.PLAYING);
+//    }
+
+//    private void on_stop () {
+//        playing = false;
+//        play_button.image = play_image;
+//        this.src.set_state (State.READY);
+//    }
+//}
 
 private class Journal.CompositeDocumentWidget : Box {
     public CompositeDocumentWidget (Gdk.Pixbuf? pixbuf, ClickableLabel[] uris) {
