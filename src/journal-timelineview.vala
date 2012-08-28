@@ -21,11 +21,11 @@
 
 //        FIXME :
 //        IMPORTANT!
+//        * Crash/High CPU with a new Zeitgeist db!
+//        SECONDARY:
 //        * Propagate Events
 //        * Better bubble's placing algorithm. Please maintain the time ordering.
-//        SECONDARY
 //        * Disable scrollbar on loading? On-loading message?
-//       CHECK TODO file
 using Gtk;
 using Cairo;
 
@@ -88,7 +88,7 @@ private class Journal.VTL : Box {
         });
         container.pack_start (bubble_c, true, true, 0);
         
-        vnav = new TimelineNavigator (Orientation.VERTICAL);
+        vnav = new TimelineNavigator (Orientation.VERTICAL, model);
         vnav.go_to_date.connect ((date, type) => {
             this.jump_to_day (date, type);
         });
@@ -149,11 +149,10 @@ private class Journal.VTL : Box {
                  //FIXME i'm doing this because Gee seems to not recognize
                  // equality of DateTime keys in its maps (while it does for 
                  //key strings).
-                 var map = new Gee.HashMap<DateTime?, uint> ();
+                 var list = new Gee.ArrayList<DateTime?> ();
                  foreach(string d in search_count_map.keys)
-                    map.set (Utils.datetime_from_string (d), 
-                            search_count_map.get (d));
-                 vnav.set_events_count (map);
+                    list.add (Utils.datetime_from_string (d));
+                 vnav.set_events_count (list);
             });
         }
         

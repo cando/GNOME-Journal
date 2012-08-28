@@ -19,30 +19,86 @@
  *
  */
  
+[DBus (name = "org.gnome.zeitgeist.Histogram")]
+interface Histogram : Object {
+    [DBus (signature = "a(xu)")]
+    public abstract Variant get_histogram_data () throws IOError;
+}
+
+private class Journal.ZeitgeistHistogram : GLib.Object 
+{
+    private Histogram histogram_proxy;
+    
+    public ZeitgeistHistogram () {
+        Object ();
+        try {
+            histogram_proxy = Bus.get_proxy_sync (
+                                    BusType.SESSION, 
+                                    "org.gnome.zeitgeist.Engine",
+                                    "/org/gnome/zeitgeist/journal/activity");
+        } catch (Error e) {
+            warning ("%s", e.message);
+        }
+    }
+    
+    public Gee.List<DateTime?> load_histogram_data () {
+        var days_list = new Gee.ArrayList<DateTime?> ((a,b) => {
+            DateTime first = (DateTime) a;
+            DateTime second = (DateTime) b;
+            return first.compare (second) == 0;
+        });
+       
+        try {
+            Variant data = histogram_proxy.get_histogram_data ();
+            size_t n = data. n_children ();
+            int64 time = 0;
+            uint count = 0;
+            
+            for (size_t j =0; j <n; j++) {
+                data.get_child (j, "(xu)", &time, &count);
+                DateTime date = new DateTime.from_unix_local (time);
+                days_list.add (date);
+            }
+        } catch (Error e) {
+            warning ("%s", e.message);
+        }
+        
+        return days_list;
+    }
+}
+
 //Taken from lp:synapse-project
 public class Journal.ZeitgeistBackend: GLib.Object
 {
     private Zeitgeist.Log zg_log;
     private Zeitgeist.Monitor zg_monitor;
+    private ZeitgeistHistogram histogram;
+    
     //Events that need to be classified (divided day by day)
     private Gee.ArrayList<Zeitgeist.Event> new_events;
-    private Gee.ArrayList<Zeitgeist.Event> all_app_events;
+    //The Map of the events divided day by day
     private Gee.Map<string, Gee.ArrayList<Zeitgeist.Event>> days_map;
+    //The list of the days with at least 1 Zeitgeist event
+    public Gee.List<DateTime?> days_list {
+        get; private set;
+    }
     
     public DateTime last_loaded_date {
         get; private set;
     }
 
     //Day is the day containing the events loaded
-    public signal void events_loaded (string? day);
+    public signal void events_loaded (string day);
 
     construct
     {
       zg_log = new Zeitgeist.Log ();
+      histogram = new ZeitgeistHistogram ();
       
       new_events = new Gee.ArrayList<Zeitgeist.Event> ();
-      all_app_events = new Gee.ArrayList<Zeitgeist.Event> ();
       days_map = new Gee.HashMap<string, Gee.ArrayList<Zeitgeist.Event>> ();
+      
+      days_list = histogram.load_histogram_data ();
       
       //Initialize Monitor
       var tr = new Zeitgeist.TimeRange.from_now ();
@@ -65,18 +121,6 @@ public class Journal.ZeitgeistBackend: GLib.Object
       });
       
       zg_log.install_monitor (zg_monitor);
-    }
-    
-    public void load_events_on_start ()
-    {
-      int64 end = Zeitgeist.Timestamp.next_midnight (Zeitgeist.Timestamp.now ());
-      int64 start = end - Zeitgeist.Timestamp.DAY;
-      for (int i = 0 ; i < 3; i++) {
-        var tr = new Zeitgeist.TimeRange (start, end);
-        load_events_for_timerange (tr);
-        end = start;
-        start = end - Zeitgeist.Timestamp.DAY;
-      }
     }
 
     private async void load_gtg_events (Zeitgeist.TimeRange tr, 
@@ -173,48 +217,45 @@ public class Journal.ZeitgeistBackend: GLib.Object
         load_gtg_events.begin(tr);
         load_events.begin (tr);
         
-        last_loaded_date = Utils.get_start_of_the_day (tr.get_start ());
+        last_loaded_date = Utils.get_start_of_the_day (tr.get_end ());
     }
     
     /*PUBLIC METHODS*/
-    public void load_events_for_date_range (TimeVal? start_date, TimeVal? end_date) {
-        int64 start = 0;
-        int64 end = 0;
-        Zeitgeist.TimeRange tr;
-        if (start_date == null && end_date == null)
-            tr = new Zeitgeist.TimeRange.anytime ();
-        else if (start_date != null && end_date == null) {
-            start = Zeitgeist.Timestamp.from_timeval (start_date);
-            tr = new Zeitgeist.TimeRange (start, int64.MAX);
+    public void load_events_on_start ()
+    {
+        int max_days = int.min (3, days_list.size);
+        load_days_list (days_list.slice (0, max_days));
+    }
+    
+    public void load_days_list (Gee.List<DateTime?> list) {
+        if (list.size == 0)
+            return;
+        int64 start;
+        int64 end;
+        for (int i = 0 ; i < list.size; i++) {
+            end = Zeitgeist.Timestamp.next_midnight (list.get (i).to_unix () * 1000);
+            start = end - Zeitgeist.Timestamp.DAY;
+            var tr = new Zeitgeist.TimeRange (start, end);
+            load_events_for_timerange (tr);
         }
-        else if (start_date == null && end_date != null) {
-            end = Zeitgeist.Timestamp.from_timeval (end_date);
-            tr = new Zeitgeist.TimeRange (0, end);
+    }
+    
+    public int load_other_days (int num_days) {
+        int index = days_list.index_of (last_loaded_date);
+        if (index == -1) {
+            critical ("[Load_other_days] Problem in loading new activities. Please file a bug.");
+            return -1;
         }
-        else {
-            start = Zeitgeist.Timestamp.from_timeval (start_date);
-            end = Zeitgeist.Timestamp.from_timeval (end_date);
-            tr = new Zeitgeist.TimeRange (start, end);
+        if (index + 1 == days_list.size) {
+            warning ("[Load_other_days] End of your activities. Load nothing");
+            return -1;
         }
+        var stop = int.min (index + 1 + num_days, days_list.size);
+        var to_load_list = days_list.slice (index + 1, stop);
         
-        //Since we query the database asking for MostRecentSubjects and not Most
-        //RecentEvents we need do load every day singularly, otherwise we'll show
-        //false results.
-        int64 real_start = tr.get_start ();
-        int64 real_end = tr.get_end ();
-        int64 tmp_end = real_end;
-        int64 tmp_start = tmp_end - Zeitgeist.Timestamp.DAY;
-
-        while (real_start != tmp_start) {
-            var new_tr = new Zeitgeist.TimeRange (tmp_start, tmp_end);
-            load_events_for_timerange (new_tr);
-            tmp_end = tmp_start;
-            tmp_start = tmp_end - Zeitgeist.Timestamp.DAY;
-        }
+        load_days_list (to_load_list);
         
-        //Load the last day!
-        var new_tr = new Zeitgeist.TimeRange (tmp_start, tmp_end);
-        load_events_for_timerange (new_tr);
+        return to_load_list.size;
     }
     
     public Gee.ArrayList<Zeitgeist.Event>? get_events_for_date (string ymd) {

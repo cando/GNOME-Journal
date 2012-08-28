@@ -147,7 +147,7 @@ private class Journal.Utils : Object{
         return pixbuf;
     }
     
-    public static Gdk.Pixbuf? load_pixbuf_from_icon (Icon icon, int size = 48) {
+    public static Gdk.Pixbuf? load_pixbuf_from_icon (Icon? icon, int size = 48) {
         IconInfo icon_info = null;
         if (icon != null)
             icon_info = 

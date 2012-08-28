@@ -1075,6 +1075,13 @@ private class Journal.ActivityModel : Object {
         get; private set;
     }
     
+    //The list of the days with Zeitgeist events
+    public Gee.List<DateTime?> days_list {
+        get {
+            return backend.days_list;
+        }
+    }
+    
     //Key: Date formatted YYYY-MM-DD
     public Gee.Map<string, DayActivityModel> searched_activities {
         get; private set;
@@ -1112,11 +1119,7 @@ private class Journal.ActivityModel : Object {
         last_search_offset = 0;
     }
     
-    private void on_events_loaded (string? day) {
-        if (day == null) {
-            load_other_days (1);
-            return;
-        }
+    private void on_events_loaded (string day) {
         num_days_requested--;
         if (activities.has_key (day))
             activities.unset (day);
@@ -1160,54 +1163,20 @@ private class Journal.ActivityModel : Object {
         searched_activities_loaded (sorted_dates);
     }
 
-    public void load_activities (DateTime start, RangeType? type = null) {
-        TimeVal? tv = null;
-        TimeVal? tv2 = null;
-        if (type == null) {
-            //add some days to the jump date, permitting the user to navigate more.
-            var larger_date = start.add_days (-3);
-            larger_date.to_timeval (out tv);
-            var tmp_date = start.add_days (3);
-            tmp_date.to_timeval (out tv2);
-            
-            num_days_requested = 7;
-        }
-//        else if (type == RangeType.THIS_WEEK) {
-//            start.to_timeval (out tv);
-//            var tmp_date = start.add_days (4);
-//            tmp_date.to_timeval (out tv2);
-//            
-//            num_days_requested = 4;
-//        }
-        else if (type == RangeType.WEEK) {
-            start.to_timeval (out tv);
-            var tmp_date = start.add_days (7);
-            tmp_date.to_timeval (out tv2);
-            
-            num_days_requested = 7;
-        }
-        else if (type == RangeType.DAY) {
-            start.to_timeval (out tv);
-            var tmp_date = start.add_days (1);
-            tmp_date.to_timeval (out tv2);
-            
-            num_days_requested = 1;
+    public void load_activities (DateTime start, RangeType type) {
+        if (type == RangeType.DAY) {
+            var list = new Gee.ArrayList<DateTime?> ();
+            list.add (start);
+            backend.load_days_list (list);
         }
         else {
-            warning ("Loading a whole month or year is still not implemented. 
+            warning ("Loading a whole week, month or year is still not implemented. 
                     Please open a bug for this.");
         }
-        backend.load_events_for_date_range (tv, tv2);
     }
     
     public void load_other_days (int num_days) {
-        num_days_requested = num_days;
-        TimeVal tv;
-        TimeVal tv2;
-        DateTime larger_date = backend.last_loaded_date.add_days (-num_days);
-        larger_date.to_timeval (out tv);
-        backend.last_loaded_date.to_timeval (out tv2);
-        backend.load_events_for_date_range (tv, tv2);
+        num_days_requested = backend.load_other_days (num_days);
     }
     
     public async void load_other_results () {

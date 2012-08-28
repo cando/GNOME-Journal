@@ -32,18 +32,9 @@ enum RangeType {
     DAY
 }
 
-[DBus (name = "org.gnome.zeitgeist.Histogram")]
-interface Histogram : Object {
-    [DBus (signature = "a(xu)")]
-    public abstract Variant get_histogram_data () throws IOError;
-}
-
 private class Journal.TimelineNavigator : Frame {
-    
     private TreeStore model;
     private TreeView view;
-    
-    private Histogram histogram_proxy;
     
     private TreeRowReference? expanded_week_row;
     private Gee.List<string> expanded_rows;
@@ -54,32 +45,11 @@ private class Journal.TimelineNavigator : Frame {
     
     public signal void go_to_date (DateTime date, RangeType type);
 
-    public TimelineNavigator (Orientation orientation){
+    public TimelineNavigator (Orientation orientation, ActivityModel activity_model){
         Object ();
         this.get_style_context ().add_class (STYLE_CLASS_SIDEBAR);
         scrolled_window = new ScrolledWindow (null, null);
         scrolled_window.set_policy (PolicyType.NEVER, PolicyType.AUTOMATIC);
-        
-        /**********HISTOGRAM DBUS STUFF**********/
-        Gee.HashMap<DateTime?, uint> count_map = new Gee.HashMap<DateTime?, uint> ();
-        try {
-            histogram_proxy = Bus.get_proxy_sync (
-                                    BusType.SESSION, 
-                                    "org.gnome.zeitgeist.Engine",
-                                    "/org/gnome/zeitgeist/journal/activity");
-            Variant data = histogram_proxy.get_histogram_data ();
-            size_t n = data. n_children ();
-            int64 time = 0;
-            uint count = 0;
-            
-            for (size_t j =0; j <n; j++) {
-                data.get_child (j, "(xu)", &time, &count);
-                DateTime date = new DateTime.from_unix_local (time);
-                count_map.set (date, count);
-            }
-        } catch (Error e) {
-            warning ("%s", e.message);
-        }
         
         model = new TreeStore (3, typeof (DateTime), // Date
                                   typeof (string),   // String repr. of the Date
@@ -105,7 +75,7 @@ private class Journal.TimelineNavigator : Frame {
         selected_day_row = null;
         
         setup_ui ();
-        set_events_count (count_map);
+        set_events_count (activity_model.days_list);
     }
     
     private void try_collapse_rows (TreePath? path) {
@@ -175,7 +145,7 @@ private class Journal.TimelineNavigator : Frame {
                 expand_timeout = 0;
             }
             expand_timeout = 
-            Timeout.add (200, () => {
+            Timeout.add (150, () => {
                 expand_week_row (path);
                 return false;
             });
@@ -297,8 +267,8 @@ private class Journal.TimelineNavigator : Frame {
         });
     }
     
-    public void set_events_count (Gee.HashMap<DateTime?, uint> count_map) {
-        setup_timebar (count_map);
+    public void set_events_count (Gee.List<DateTime?> days_list) {
+        setup_timebar (days_list);
         //Select the first day on start---> Today!
         TreeIter iter;
         var selection = view.get_selection ();
@@ -306,7 +276,7 @@ private class Journal.TimelineNavigator : Frame {
         selection.select_iter (iter);
     }
     
-    private void setup_timebar (Gee.HashMap<DateTime?, uint> count_map) {
+    private void setup_timebar (Gee.List<DateTime?> days_list) {
         model.clear ();
         var today = Utils.get_start_of_today ();
         var this_year_added = false;
@@ -315,7 +285,7 @@ private class Journal.TimelineNavigator : Frame {
         var last_week_added = false;
         var this_week_added = false;
         var years = new Gee.ArrayList<int> ();
-        foreach (DateTime key in count_map.keys) {
+        foreach (DateTime key in days_list) {
             int diff_days = (int)Math.round(((double)(today.difference (key)) / 
                                              (double)TimeSpan.DAY));
             TreeIter root;
@@ -416,7 +386,7 @@ private class Journal.TimelineNavigator : Frame {
                 }
             }
         }
-        foreach (DateTime key in count_map.keys) {
+        foreach (DateTime key in days_list) {
                 int diff_days = (int)Math.round(((double)(today.difference (key)) / 
                                                 (double)TimeSpan.DAY));
                 if (diff_days < 14)
