@@ -1105,7 +1105,7 @@ private class Journal.ActivityModel : Object {
         backend = new ZeitgeistBackend ();
         search_manager = new SearchManager ();
         
-        backend.load_events_on_start ();
+        num_days_requested = backend.load_events_on_start ();
         backend.events_loaded.connect ((day) => {
             on_events_loaded (day);
         });
@@ -1114,7 +1114,6 @@ private class Journal.ActivityModel : Object {
             on_search_finished ();
         });
         
-        num_days_requested = 3; //On start we load three days
         last_search_query = "";
         last_search_offset = 0;
     }
@@ -1168,6 +1167,7 @@ private class Journal.ActivityModel : Object {
             var list = new Gee.ArrayList<DateTime?> ();
             list.add (start);
             backend.load_days_list (list);
+            num_days_requested = 1;
         }
         else {
             warning ("Loading a whole week, month or year is still not implemented. 

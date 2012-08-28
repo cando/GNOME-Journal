@@ -221,10 +221,11 @@ public class Journal.ZeitgeistBackend: GLib.Object
     }
     
     /*PUBLIC METHODS*/
-    public void load_events_on_start ()
+    public int load_events_on_start ()
     {
         int max_days = int.min (3, days_list.size);
         load_days_list (days_list.slice (0, max_days));
+        return max_days;
     }
     
     public void load_days_list (Gee.List<DateTime?> list) {

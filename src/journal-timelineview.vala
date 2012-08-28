@@ -148,7 +148,7 @@ private class Journal.VTL : Box {
                  
                  //FIXME i'm doing this because Gee seems to not recognize
                  // equality of DateTime keys in its maps (while it does for 
-                 //key strings).
+                 //key strings)..or maybe i'm doing something weird.
                  var list = new Gee.ArrayList<DateTime?> ();
                  foreach(string d in search_count_map.keys)
                     list.add (Utils.datetime_from_string (d));
