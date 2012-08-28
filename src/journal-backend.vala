@@ -63,6 +63,9 @@ private class Journal.ZeitgeistHistogram : GLib.Object
             warning ("%s", e.message);
         }
         
+        if(days_list.size == 0)
+            //Let's add today at least!
+            days_list.add (Utils.get_start_of_today ());
         return days_list;
     }
 }

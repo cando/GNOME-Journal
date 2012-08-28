@@ -20,8 +20,6 @@
  */
 
 //        FIXME :
-//        IMPORTANT!
-//        * Crash/High CPU with a new Zeitgeist db!
 //        SECONDARY:
 //        * Propagate Events
 //        * Better bubble's placing algorithm. Please maintain the time ordering.
