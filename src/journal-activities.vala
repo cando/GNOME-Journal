@@ -1118,18 +1118,20 @@ private class Journal.ActivityModel : Object {
         last_search_offset = 0;
     }
     
-    private void on_events_loaded (string day) {
+    private void on_events_loaded (string? day) {
         num_days_requested--;
-        if (activities.has_key (day))
-            activities.unset (day);
-        var model = new DayActivityModel (day);
-        Gee.List<Zeitgeist.Event> event_list = backend.get_events_for_date (day);
-        model.add_activities (event_list);
-        activities.set (day, model);
-        model.launch_composite_activity.connect ((activity) => {
-            this.launch_composite_activity (activity);
-        });
-        activities_loaded (day);
+        if (day != null) {
+            if (activities.has_key (day))
+                activities.unset (day);
+            var model = new DayActivityModel (day);
+            Gee.List<Zeitgeist.Event> event_list = backend.get_events_for_date (day);
+            model.add_activities (event_list);
+            activities.set (day, model);
+            model.launch_composite_activity.connect ((activity) => {
+                this.launch_composite_activity (activity);
+            });
+            activities_loaded (day);
+        }
         if (num_days_requested == 0)
             //We have loaded all the days requested!
             end_activities_loaded ();

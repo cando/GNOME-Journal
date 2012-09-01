@@ -91,7 +91,7 @@ public class Journal.ZeitgeistBackend: GLib.Object
     }
 
     //Day is the day containing the events loaded
-    public signal void events_loaded (string day);
+    public signal void events_loaded (string? day);
 
     construct
     {
