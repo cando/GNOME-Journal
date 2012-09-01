@@ -38,9 +38,6 @@ AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE,"$GETTEXT_PACKAGE",[The name of the gettext d
 ALL_LINGUAS=""
 AM_GLIB_GNU_GETTEXT
 
-# GObject-introspection support
-GOBJECT_INTROSPECTION_REQUIRE([0.9.6])
-
 # GSettings support
 GLIB_GSETTINGS
 
