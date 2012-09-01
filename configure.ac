@@ -46,8 +46,6 @@ GLIB_GSETTINGS
 
 pkg_modules="gtk+-3.0 >= 3.4.0
 	     glib-2.0
-	     clutter-1.0 >= 1.10
-	     clutter-gtk-1.0 >= 1.0.1
 	     gee-1.0
 	     zeitgeist-1.0
 	     gnome-desktop-3.0
@@ -56,7 +54,7 @@ pkg_modules="gtk+-3.0 >= 3.4.0
 	     "
 PKG_CHECK_MODULES(JOURNAL, [$pkg_modules])
 
-JOURNAL_PACKAGES="--pkg gtk+-3.0 --pkg clutter-gtk-1.0 --pkg gdk-pixbuf-2.0 --pkg glib-2.0 --pkg gee-1.0 --pkg zeitgeist-1.0 --pkg gio-2.0 --pkg gio-unix-2.0"
+JOURNAL_PACKAGES="--pkg gtk+-3.0 --pkg gdk-pixbuf-2.0 --pkg glib-2.0 --pkg gee-1.0 --pkg zeitgeist-1.0 --pkg gio-2.0 --pkg gio-unix-2.0"
 AC_SUBST(JOURNAL_PACKAGES)
 
 AC_CONFIG_FILES([

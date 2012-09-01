@@ -134,8 +134,8 @@ public class Journal.App: GLib.Object {
             window.set_default_size (width, height);
         }
 
-//        if (Utils.settings.get_boolean ("window-maximized"))
-//            window.maximize ();
+        if (Utils.settings.get_boolean ("window-maximized"))
+            window.maximize ();
 
         var position = Utils.settings.get_value ("window-position");
         if (position.n_children () == 2) {
@@ -152,6 +152,9 @@ public class Journal.App: GLib.Object {
             Utils.settings.set_boolean ("window-maximized", maximized);
             return false;
         });
+        
+        window.delete_event.connect (() => { return quit (); });
+        window.key_press_event.connect (on_key_pressed);
         
         window.key_press_event.connect ((ev) => {
             if (Utils.is_search_event (ev)) {
@@ -206,9 +209,6 @@ public class Journal.App: GLib.Object {
         notebook = new Gtk.Notebook ();
         notebook.show_border = false;
         notebook.show_tabs = false;
-
-        window.delete_event.connect (() => { return quit (); });
-        window.key_press_event.connect (on_key_pressed);
         
         search_bar = new SearchWidget ();
         search_bar.search.connect ((query, filter) => {

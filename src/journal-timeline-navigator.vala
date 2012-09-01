@@ -18,8 +18,6 @@
  * Author: Stefano Candori <scandori@gnome.org>
  *
  */
- 
-//TODO check TODO and FIXME
 
 using Gtk;
 
