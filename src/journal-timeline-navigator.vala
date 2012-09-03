@@ -277,6 +277,12 @@ private class Journal.TimelineNavigator : Frame {
     private void setup_timebar (Gee.List<DateTime?> days_list) {
         model.clear ();
         var today = Utils.get_start_of_today ();
+        var tmp = today.add_months (-1);
+        var last_month_start = new DateTime.local (tmp.get_year (), 
+                                                   tmp.get_month (),
+                                                   1, 0, 0, 0);
+        int diff_days_last_month = (int)Math.round(((double)(today.difference (last_month_start)) / 
+                                   (double)TimeSpan.DAY));
         var this_year_added = false;
         var last_month_added = false;
         var this_month_added = false;
@@ -323,7 +329,7 @@ private class Journal.TimelineNavigator : Frame {
                 }
             }
             else if(!skip_this_week && 
-                    diff_days < this_week_end) {
+                    diff_days <= this_week_end) {
                 if (!this_week_added) {
                     model.append (out root, null);
                     model.set (root, 0, key, 1, _("This week"), 2, RangeType.WEEK);
@@ -345,8 +351,8 @@ private class Journal.TimelineNavigator : Frame {
                     }
                     next = model.iter_next (ref root);
                 }
-            } else if (diff_days > last_week_start && 
-                       diff_days < last_week_end) {
+            }else if (diff_days >= last_week_start && 
+                       diff_days <= last_week_end) {
                 if (!last_week_added) {
                     model.append (out root, null);
                     model.set (root, 0, key, 1, _("Last week"), 2, RangeType.LAST_WEEK);
@@ -368,8 +374,9 @@ private class Journal.TimelineNavigator : Frame {
                     }
                     next = model.iter_next (ref root);
                 }
-            } else if (diff_days < 31) { //This month
+            } else if (today.get_day_of_month () - last_week_end - 1 > 0) { //This month
                 if (!this_month_added) {
+                    warning("%d",diff_days);
                     var this_month = new DateTime.local (today.get_year (), 
                                                          today.get_month (),
                                                          1, 0, 0, 0);
@@ -378,7 +385,7 @@ private class Journal.TimelineNavigator : Frame {
                     model.set (root, 0, this_month, 1, text, 2, RangeType.MONTH);
                     this_month_added = true;
                 }
-            } else if (diff_days < 60) { //Last month
+            } else if (diff_days <= diff_days_last_month) { //Last month
                 if (!last_month_added) {
                     var new_date = today.add_months (-1);
                     var last_month = new DateTime.local (new_date.get_year (), 
@@ -411,7 +418,7 @@ private class Journal.TimelineNavigator : Frame {
         foreach (DateTime key in days_list) {
                 int diff_days = (int)Math.round(((double)(today.difference (key)) / 
                                                 (double)TimeSpan.DAY));
-                if (diff_days < last_week_end)
+                if (diff_days < last_week_end + 1)
                     continue;
                 var year = key.get_year ();
                 var month = key.get_month ();
