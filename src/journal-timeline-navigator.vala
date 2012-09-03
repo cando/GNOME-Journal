@@ -293,6 +293,25 @@ private class Journal.TimelineNavigator : Frame {
         var this_week_end = -1;
         var skip_this_week = false;
         var years = new Gee.ArrayList<int> ();
+        //Initialize this week and last week range time
+        int num = today.get_day_of_week ();
+        switch (num) {
+            case 1: //Monday
+                skip_this_week = true;
+                last_week_start = 2; //Two days from today (Saturday)
+                last_week_end = 7; //Monday
+                break;
+            case 2: //Tuesday
+                skip_this_week = true;
+                last_week_start = 2; //Two days from today (Sunday)
+                last_week_end = 8; //Monday
+                break;
+            default:
+                this_week_end = num;
+                last_week_start = num + 1;
+                last_week_end = last_week_start + 7;
+                break;
+        }
         foreach (DateTime key in days_list) {
             int diff_days = (int)Math.round(((double)(today.difference (key)) / 
                                              (double)TimeSpan.DAY));
@@ -302,24 +321,6 @@ private class Journal.TimelineNavigator : Frame {
                     case 0: 
                         model.append (out root, null);
                         model.set (root, 0, key, 1, _("Today"), 2, RangeType.DAY); 
-                        int num = key.get_day_of_week ();
-                        switch (num) {
-                            case 1: //Monday
-                                skip_this_week = true;
-                                last_week_start = 2; //Two days from today (Saturday)
-                                last_week_end = 7; //Monday
-                                break;
-                            case 2: //Tuesday
-                                skip_this_week = true;
-                                last_week_start = 2; //Two days from today (Sunday)
-                                last_week_end = 8; //Monday
-                                break;
-                            default:
-                                this_week_end = num;
-                                last_week_start = num + 1;
-                                last_week_end = last_week_start + 7;
-                                break;
-                        }
                         break;
                     case 1:
                         model.append (out root, null);
@@ -376,7 +377,6 @@ private class Journal.TimelineNavigator : Frame {
                 }
             } else if (today.get_day_of_month () - last_week_end - 1 > 0) { //This month
                 if (!this_month_added) {
-                    warning("%d",diff_days);
                     var this_month = new DateTime.local (today.get_year (), 
                                                          today.get_month (),
                                                          1, 0, 0, 0);
@@ -560,14 +560,6 @@ private class Journal.TimelineNavigator : Frame {
         d.strftime (s, "%Y-%m-%d");
         var date = Utils.datetime_from_string ((string)s);
         return date;
-    }
-    
-    private DateWeekday get_day_of_week (DateTime key) {
-        TimeVal tv;
-        Date d = {};
-        key.to_timeval (out tv);
-        d.set_time_val (tv);
-        return d.get_weekday ();
     }
 }
 
