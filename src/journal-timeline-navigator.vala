@@ -34,10 +34,12 @@ private class Journal.TimelineNavigator : Frame {
     private TreeStore model;
     private TreeView view;
     
+    private Gee.List<DateTime?> days_list;
     private TreeRowReference? expanded_week_row;
     private Gee.List<string> expanded_rows;
     private uint expand_timeout;
     private TreeRowReference? selected_day_row;
+    private bool show_more;
     
     private ScrolledWindow scrolled_window;
     
@@ -71,6 +73,7 @@ private class Journal.TimelineNavigator : Frame {
         expanded_rows = new Gee.ArrayList<string> ();
         expand_timeout = 0;
         selected_day_row = null;
+        show_more = true;
         
         setup_ui ();
         set_events_count (activity_model.days_list);
@@ -274,8 +277,9 @@ private class Journal.TimelineNavigator : Frame {
         selection.select_iter (iter);
     }
     
-    private void setup_timebar (Gee.List<DateTime?> days_list) {
+    private void setup_timebar (Gee.List<DateTime?> list) {
         model.clear ();
+        days_list = list;
         var today = Utils.get_start_of_today ();
         var tmp = today.add_months (-1);
         var last_month_start = new DateTime.local (tmp.get_year (), 
@@ -396,11 +400,11 @@ private class Journal.TimelineNavigator : Frame {
                     model.set (root, 0, last_month, 1, text, 2, RangeType.MONTH);
                     last_month_added = true;
                 }
-            } else if (diff_days < 365) { //Other Months of the year
+            } else if (diff_days < 365 && show_more) { //Other Months of the year
                 if (!this_year_added) {
                     model.append (out root, null);
                     var this_year_date = new DateTime.local (today.get_year (), 1, 1, 0, 0, 0);
-                    model.set (root, 0, this_year_date, 1, _("..."), 2, RangeType.MORE);
+                    model.set (root, 0, this_year_date, 1, _("This Year"), 2, RangeType.MORE);
                     this_year_added = true;
                 }
             } else { //Other Years

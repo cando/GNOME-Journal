@@ -69,7 +69,7 @@ private class Journal.SearchManager : Object {
                                            (owned) ptr_arr,
                                            offset,
                                            MAX_NUM_RESULTS,
-                                           Zeitgeist.ResultType.MOST_RECENT_EVENTS,
+                                           Zeitgeist.ResultType.RELEVANCY,
                                            null);
             
            foreach (Zeitgeist.Event e in rs)
@@ -83,7 +83,7 @@ private class Journal.SearchManager : Object {
        }
 
        fill_days_map ();
-       return offset + MAX_NUM_RESULTS + 1;
+       return offset + MAX_NUM_RESULTS;
    }
     
     public async int search_with_relevancies (string text, 
@@ -116,7 +116,7 @@ private class Journal.SearchManager : Object {
          }
 
          fill_days_map ();
-         return offset + MAX_NUM_RESULTS + 1;
+         return offset + MAX_NUM_RESULTS;
     }
     
     private void fill_days_map () {
