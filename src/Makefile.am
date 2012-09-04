@@ -28,15 +28,16 @@ bin_PROGRAMS = gnome-journal
 
 gnome_journal_SOURCES =\
 	journal-activities.vala			\
-	journal-app.vala					\
+	journal-app.vala				\
 	journal-activity-info-page.vala	\
-	journal-timeline-navigator.vala \
+	journal-backend.vala			\
 	journal-media-actors.vala		\
+	journal-previewer.vala			\
 	journal-search.vala				\
 	main.vala						\
 	journal-timelineview.vala		\
+	journal-timeline-navigator.vala \
 	journal-utils.vala				\
-	journal-backend.vala			\
 	$(NULL)
 
 gnome_journal_LDADD = $(JOURNAL_LIBS) libgdprivate-1.0.la -lm

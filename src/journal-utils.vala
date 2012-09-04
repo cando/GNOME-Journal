@@ -30,11 +30,15 @@ private class Journal.Utils : Object{
     
     public static GLib.Settings settings;
     public static Gee.HashMap<string, string> categories_map;
+    public static Gtk.Window window;
     private static Gnome.DesktopThumbnailFactory factory;
+    
+    public static Previewer previewer;
     
     static construct{
         settings = new GLib.Settings ("org.gnome.journal");
         factory = new Gnome.DesktopThumbnailFactory (Gnome.ThumbnailSize.NORMAL);
+        previewer = new Previewer ();
         categories_map = new Gee.HashMap<string, string> ();
         
         //Initialize categories_map

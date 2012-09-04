@@ -783,7 +783,17 @@ private class Journal.ActivityBubble : EventBox {
        this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
                          Gdk.EventMask.LEAVE_NOTIFY_MASK |
                          Gdk.EventMask.BUTTON_RELEASE_MASK);
-       this.button_release_event.connect ((ev) => {activity.launch (); return false;});
+       this.button_release_event.connect ((ev) => {
+            if (activity is SingleActivity) {
+                if (ev.button == 1)
+                    activity.launch ();
+                else if (ev.button == 3 || ev.button == 2)
+                    Utils.previewer.show_file (((SingleActivity)activity).uri);
+            }
+            else
+                activity.launch (); 
+            return false;
+       });
        this.enter_notify_event.connect ((ev) => {
             hover = true; 
             queue_draw (); 

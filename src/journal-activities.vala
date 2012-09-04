@@ -480,9 +480,9 @@ private class Journal.CompositeActivity : GenericActivity {
         int i = 0;
         int j = 0;
         while (j < num) {
-            var activity = activities.get (i);
+            var activity = activities.get (i) as SingleActivity;
             if (activity.exists) {
-                var content = new ClickableLabel (activity.title);
+                var content = new ClickableLabel (activity);
                 content.clicked.connect (() => {activity.launch ();});
                 uris[j] = content;
                 j++;
@@ -602,9 +602,9 @@ private class Journal.CompositeImageActivity : CompositeActivity {
         int i = 0;
         int j = 0;
         while (j < num){
-            var activity = activities.get (i);
+            var activity = activities.get (i) as SingleActivity;
             if (activity.exists) {
-                var content = new ImageContent.from_pixbuf (activity.icon);
+                var content = new ImageContent.from_pixbuf (activity);
                 content.highlight_items = true;
                 content.clicked.connect (() => {activity.launch ();});
                 activity.thumb_loaded.connect (() => {
@@ -674,9 +674,9 @@ private class Journal.CompositeApplicationActivity : CompositeActivity {
         int i = 0;
         int j = 0;
         while (j < num){
-            var activity = activities.get (i);
+            var activity = activities.get (i) as SingleActivity;
             if (activity.exists) {
-                var content = new ImageContent.from_pixbuf (activity.icon);
+                var content = new ImageContent.from_pixbuf (activity);
                 content.highlight_items = true;
                 content.clicked.connect ((ev) => {
                     activity.launch ();

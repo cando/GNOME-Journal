@@ -23,19 +23,22 @@ using Gtk;
 //using Gst;
 
 private class Journal.ClickableLabel : EventBox {
+    private SingleActivity activity;
+    
     public Label label {
         get; private set;
     }
 
     public signal void clicked ();
     
-    public ClickableLabel (string text) {
+    public ClickableLabel (SingleActivity activity) {
+        this.activity = activity;
         this.set_visible_window (false);
         this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
                          Gdk.EventMask.LEAVE_NOTIFY_MASK |
                          Gdk.EventMask.BUTTON_RELEASE_MASK);
         
-        label = new Label (text);
+        label = new Label (activity.title);
         this.add (label);
     }
      
@@ -50,13 +53,17 @@ private class Journal.ClickableLabel : EventBox {
     }
     
     public override  bool button_release_event (Gdk.EventButton event) {
-        clicked ();
+        if (event.button == 1) //left-click
+            clicked ();
+        else if (event.button == 3 || event.button == 2) //right-click or middle-click
+            Utils.previewer.show_file (activity.uri);
         return true;
     }
 }
 
 private class Journal.ImageContent : EventBox {
 
+    private SingleActivity activity;
     private Image image;
     private Gdk.Pixbuf pixbuf;
     
@@ -79,8 +86,9 @@ private class Journal.ImageContent : EventBox {
     
     public signal void clicked ();
 
-    private ImageContent (bool highlight_items=false) {
+    private ImageContent (SingleActivity activity, bool highlight_items=false) {
         GLib.Object ();
+        this.activity = activity;
         this.name = "image-box";
         this.add_events (Gdk.EventMask.ENTER_NOTIFY_MASK |
                          Gdk.EventMask.LEAVE_NOTIFY_MASK |
@@ -91,7 +99,9 @@ private class Journal.ImageContent : EventBox {
         this.highlight_items = highlight_items;
     }
     
-    public ImageContent.from_uri (string uri, bool highlight_items=false) {
+    public ImageContent.from_uri (SingleActivity activity,
+                                  string uri, 
+                                  bool highlight_items=false) {
         try {
             pixbuf =  new Gdk.Pixbuf.from_file (uri);
         } catch (Error e) {
@@ -99,12 +109,13 @@ private class Journal.ImageContent : EventBox {
             pixbuf = Utils.load_fallback_icon ();
         }
         if (pixbuf != null)
-            this.from_pixbuf (pixbuf, highlight_items);
+            this.from_pixbuf (activity, highlight_items);
     }
     
-     public ImageContent.from_pixbuf (Gdk.Pixbuf pixbuf, bool highlight_items=false) {
-        this (highlight_items);
-        this.pixbuf = pixbuf;
+     public ImageContent.from_pixbuf (SingleActivity activity,
+                                      bool highlight_items=false) {
+        this (activity, highlight_items);
+        this.pixbuf = activity.icon;
         image = new Image.from_pixbuf (pixbuf);
         image.draw.connect (on_draw);
         
@@ -174,7 +185,10 @@ private class Journal.ImageContent : EventBox {
     }
     
     public override  bool button_release_event (Gdk.EventButton event) {
-        clicked ();
+        if (event.button == 1) //left-click
+            clicked ();
+        else if (event.button == 3 || event.button == 2) //right-click or middle-click
+            Utils.previewer.show_file (activity.uri);
         return true;
     }
 }

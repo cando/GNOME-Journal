@@ -124,6 +124,8 @@ public class Journal.App: GLib.Object {
         window.show_menubar = false;
         //window.hide_titlebar_when_maximized = true;
         window.set_default_size (840, 680);
+        //Let's save the window pointer to get the xid when needed
+        Utils.window = window;
 
         // restore window geometry/position
         var size = Utils.settings.get_value ("window-size");
