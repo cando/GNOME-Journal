@@ -55,12 +55,24 @@ PKG_CHECK_MODULES(JOURNAL, [$pkg_modules])
 JOURNAL_PACKAGES="--pkg gtk+-3.0 --pkg gdk-pixbuf-2.0 --pkg glib-2.0 --pkg gee-1.0 --pkg zeitgeist-1.0 --pkg gio-2.0 --pkg gio-unix-2.0 --pkg gdk-x11-3.0"
 AC_SUBST(JOURNAL_PACKAGES)
 
-# Check for Sushi (NautilusPreviewer).
-AC_PATH_PROG(SUSHI, sushi, 0)
-if test x$SUSHI = x0; then
-   HAVE_SUSHI=0
-else
-   HAVE_SUSHI=1
+#################################################
+# Configure option: --enable-previews
+#################################################
+
+AC_ARG_ENABLE([previews],
+            AS_HELP_STRING([--enable-previews], [Enable activities previews]),
+            [enable_previews=$enableval],[enable_previews="yes"])
+
+AM_CONDITIONAL(HAVE_PREVIEWS, test "x$enable_previews" != "xno")
+
+HAVE_SUSHI=0
+if test "x$enable_previews" != "xno"; then
+    # check for SUSHI
+    AC_CHECK_PROG(SUSHI, sushi, yes, no)
+    if test "x$SUSHI" = "xno"; then
+      AC_MSG_ERROR("You need sushi in order to enable previews")
+    fi
+    HAVE_SUSHI=1
 fi
 
 AC_SUBST(HAVE_SUSHI)
@@ -83,7 +95,11 @@ AC_MSG_NOTICE([
 
         GNOME Journal $VERSION
         =================
-
-        prefix:                   ${prefix}
-        c compiler:               ${CC} ${CFLAGS}
+        
+        Build environment
+            prefix:                   ${prefix}
+            c compiler:               ${CC} ${CFLAGS}
+        
+        Optional dependencies
+            previews:              ${enable_previews}
 ])
