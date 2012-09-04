@@ -49,6 +49,7 @@ namespace Gd {
 		public bool selection_mode { get; set construct; }
 		public int view_type { get; set; }
 		public signal void item_activated (string object, Gtk.TreePath p0);
+		public signal void show_preview (string object, Gtk.TreePath p0);
 		public signal void selection_mode_request ();
 		public signal void view_selection_changed ();
 	}

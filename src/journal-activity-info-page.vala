@@ -45,6 +45,9 @@ private class Journal.ActivityInfoPage : Box {
         view.item_activated.connect ((o, path) => { 
             this.launch_item (path);
         });
+        view.show_preview.connect ((o, path) => { 
+            this.show_preview (path);
+        });
         
         scrolled_window = new ScrolledWindow (null, null);
         scrolled_window.set_policy (PolicyType.AUTOMATIC, PolicyType.AUTOMATIC);
@@ -106,6 +109,18 @@ private class Journal.ActivityInfoPage : Box {
                 } catch (Error e) {
                     warning ("Error in launching: "+ uri.get_string ());
                 }
+                return true;
+            }
+            return false;
+        });
+    }
+    
+    private void show_preview (TreePath path_in) {
+        this.model.foreach ((model, path, iter) => {
+            Value uri;
+            this.model.get_value (iter, 0, out uri);
+            if (path.compare (path_in) == 0) {
+                Utils.previewer.show_file (uri.get_string ());
                 return true;
             }
             return false;

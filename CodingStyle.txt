@@ -1,4 +1,4 @@
-GNOME Boxes Coding Style
+GNOME Journal Coding Style
 ========================
 
 The coding style to respect in this project is very similar to most

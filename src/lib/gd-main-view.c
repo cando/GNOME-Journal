@@ -48,6 +48,7 @@ enum {
 
 enum {
   ITEM_ACTIVATED = 1,
+  SHOW_PREVIEW,
   SELECTION_MODE_REQUEST,
   VIEW_SELECTION_CHANGED,
   NUM_SIGNALS
@@ -178,6 +179,14 @@ gd_main_view_class_init (GdMainViewClass *klass)
 
   signals[ITEM_ACTIVATED] =
     g_signal_new ("item-activated",
+                  GD_TYPE_MAIN_VIEW,
+                  G_SIGNAL_RUN_LAST,
+                  0, NULL, NULL, NULL,
+                  G_TYPE_NONE, 2,
+                  G_TYPE_STRING, 
+                  GTK_TYPE_TREE_PATH);
+  signals[SHOW_PREVIEW] =
+    g_signal_new ("show-preview",
                   GD_TYPE_MAIN_VIEW,
                   G_SIGNAL_RUN_LAST,
                   0, NULL, NULL, NULL,
@@ -354,7 +363,11 @@ on_button_release_view_mode (GdMainView *self,
                       GD_MAIN_COLUMN_URI, &id,
                       -1);
 
-  g_signal_emit (self, signals[ITEM_ACTIVATED], 0, id, path);
+  if (event->button == 2) {
+    g_signal_emit (self, signals[SHOW_PREVIEW], 0, id, path);
+  }
+  else if ((event->button == 1))
+    g_signal_emit (self, signals[ITEM_ACTIVATED], 0, id, path);
   g_free (id);
 
   return FALSE;
