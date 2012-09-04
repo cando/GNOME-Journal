@@ -14,5 +14,8 @@ public const string GETTEXT_PACKAGE;
 public const string LOCALEDIR; /* /usr/local/share/locale */
 public const string PKGDATADIR; /* /usr/local/share/gnome-contacts */
 public const string PKGLIBDIR; /* /usr/local/lib/gnome-contacts */
+
+/* Check for SUSHI (NautilusPreviewer)*/
+public const string HAVE_SUSHI;
 }
 

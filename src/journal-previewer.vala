@@ -29,6 +29,9 @@ private class Journal.Previewer : GLib.Object
     private NautilusPreviewer previewer_proxy;
     
     public async void show_file (string uri) {
+        //We need sushi (NautilusPreviewer) for previews
+        if (Config.HAVE_SUSHI == "0")
+            return;
         try {
             previewer_proxy = yield Bus.get_proxy (
                                     BusType.SESSION, 

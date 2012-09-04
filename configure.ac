@@ -55,6 +55,16 @@ PKG_CHECK_MODULES(JOURNAL, [$pkg_modules])
 JOURNAL_PACKAGES="--pkg gtk+-3.0 --pkg gdk-pixbuf-2.0 --pkg glib-2.0 --pkg gee-1.0 --pkg zeitgeist-1.0 --pkg gio-2.0 --pkg gio-unix-2.0 --pkg gdk-x11-3.0"
 AC_SUBST(JOURNAL_PACKAGES)
 
+# Check for Sushi (NautilusPreviewer).
+AC_PATH_PROG(SUSHI, sushi, 0)
+if test x$SUSHI = x0; then
+   HAVE_SUSHI=0
+else
+   HAVE_SUSHI=1
+fi
+
+AC_SUBST(HAVE_SUSHI)
+
 AC_CONFIG_FILES([
   Makefile
   src/Makefile

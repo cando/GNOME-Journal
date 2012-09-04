@@ -9,6 +9,7 @@ AM_CPPFLAGS = \
 	-DLOCALEDIR=\""$(localedir)"\" \
 	-DPKGDATADIR=\""$(pkgdatadir)"\" \
 	-DPKGLIBDIR=\""$(pkglibdir)"\" \
+	-DHAVE_SUSHI=\""$(HAVE_SUSHI)"\"\
 	-DGNOME_DESKTOP_USE_UNSTABLE_API \
 	$(NULL)
 
