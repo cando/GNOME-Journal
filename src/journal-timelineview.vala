@@ -787,7 +787,7 @@ private class Journal.ActivityBubble : EventBox {
             if (activity is SingleActivity) {
                 if (ev.button == 1)
                     activity.launch ();
-                else if (ev.button == 3 || ev.button == 2)
+                else if (ev.button == 2)
                     Utils.previewer.show_file (((SingleActivity)activity).uri);
             }
             else

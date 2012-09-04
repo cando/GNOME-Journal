@@ -55,7 +55,7 @@ private class Journal.ClickableLabel : EventBox {
     public override  bool button_release_event (Gdk.EventButton event) {
         if (event.button == 1) //left-click
             clicked ();
-        else if (event.button == 3 || event.button == 2) //right-click or middle-click
+        else if (event.button == 2) //middle-click
             Utils.previewer.show_file (activity.uri);
         return true;
     }
@@ -187,7 +187,7 @@ private class Journal.ImageContent : EventBox {
     public override  bool button_release_event (Gdk.EventButton event) {
         if (event.button == 1) //left-click
             clicked ();
-        else if (event.button == 3 || event.button == 2) //right-click or middle-click
+        else if (event.button == 2) //middle-click
             Utils.previewer.show_file (activity.uri);
         return true;
     }
