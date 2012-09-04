@@ -53,7 +53,7 @@ from the Rygel Coding Style.
    fetch_the_document ();
 
  * Each class should go in a separate .vala file & named according to
-   the class in it. E.g Boxes.SpiceDisplay class should go under
+   the class in it. E.g Journal.SpiceDisplay class should go under
    spice-display.vala.
 
  * Avoid putting more than 3 'using' statements in each .vala file. If
@@ -63,7 +63,7 @@ from the Rygel Coding Style.
  * Declare the namespace(s) of the class/errordomain with the
    class/errordomain itself. Like this:
 
-   private class Boxes.Hello {
+   private class Journal.Hello {
    ...
    };
 
